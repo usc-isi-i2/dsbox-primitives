@@ -4,10 +4,13 @@ from primitive_interfaces.base import CallResult
 from d3m_metadata import container, hyperparams, metadata
 from d3m_metadata.container import DataFrame, List, ndarray
 import typing
+import math
+import stopit #  type: ignore
 
 from .relation_matrix_all import get_relation_matrix
 from .helper import Aggregator
 from .relationMatrix2foreignKey import relationMat2foreignKey
+from . import config
 
 
 Inputs = typing.Union[List[DataFrame], List[str]]   # tables, their names, master table name and column
@@ -27,32 +30,25 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
     __author__ = 'USC ISI'
     metadata = metadata.PrimitiveMetadata({
         'id': 'dsbox-multi-table-featurization-aggregation',
-        'version': 'v1.0',        
+        'version': 'v' + config.VERSION,       
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation',
         'python_path': 'd3m.primitives.dsbox.multiTableFeaturization',
-        'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION, # TODO: change this
-        'algorithm_types': [metadata.PrimitiveAlgorithmType.DATA_PROFILING, ],  # TODO: change this
+        'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION,
+        'algorithm_types': [metadata.PrimitiveAlgorithmType.RELATIONAL_DATA_MINING, ],
         'keywords': ['multiple table'],
         'source': {
-            'name': __author__,
-            'uris': [
-                # Unstructured URIs. Link to file and link to repo in this case.
-                # 'https://github.com/usc-isi-i2/dsbox-profiling/blob/master/dsbox/datapreprocessing/profiler/data_profile.py',
-                # 'https://github.com/usc-isi-i2/dsbox-profiling.git',
-                ],
-        },
+            'name': config.D3M_PERFORMER_TEAM,
+            'uris': [ config.REPOSITORY ]
+            },
             # The same path the primitive is registered with entry points in setup.py.
-        'installation': [{
-                'type': metadata.PrimitiveInstallationType.PIP,
-                'package_uri': 'https://github.com/usc-isi-i2/dsbox-profiling.git' # TODO: change this
-            }],
+        'installation': [ config.INSTALLATION ],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
         # A metafeature about preconditions required for this primitive to operate well.
-        "precondition": [],
-        "hyperparms_to_tune": []
+        'precondition': [],
+        'hyperparms_to_tune': []
     })
 
     def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0, 
@@ -69,6 +65,34 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         self._verbose = hyperparams['verbose'] if hyperparams else 0
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+        
+        if (timeout is None):
+            big_table = self._core(inputs)
+            self._has_finished = True
+            self._iterations_done = True
+            return CallResult(big_table, self._has_finished, self._iterations_done)
+        else:
+            # setup the timeout
+            with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
+                assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
+
+                big_table = self._core(inputs)
+
+            if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
+                self._has_finished = True
+                self._iterations_done = True
+                return CallResult(big_table, self._has_finished, self._iterations_done)
+            elif to_ctx_mrg.state == to_ctx_mrg.TIMED_OUT:
+                self._has_finished = False
+                self._iterations_done = False
+                return CallResult(None, self._has_finished, self._iterations_done)
+
+
+
+    def _core(self, inputs) -> Outputs:
+        """
+        core calculations
+        """
         data = inputs[0]
         names = inputs[1][:-1]
         master_table_name = inputs[1][-1]
@@ -86,8 +110,4 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         aggregator = Aggregator(relations, data, names)
         big_table = aggregator.forward(master_table_name)
 
-        self._has_finished = True
-        self._iterations_done = True
-        return CallResult(big_table, self._has_finished, self._iterations_done)
-
-
+        return big_table
