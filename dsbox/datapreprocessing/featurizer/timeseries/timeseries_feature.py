@@ -13,7 +13,7 @@ from d3m_metadata.metadata import PrimitiveMetadata
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
 from primitive_interfaces.featurization import FeaturizationPrimitiveBase, CallResult
 
-import config
+from . import config
 
 Inputs = container.List[container.DataFrame]
 Outputs = container.ndarray
@@ -32,10 +32,10 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
 
     metadata = PrimitiveMetadata({
         "id": "dsbox.timeseries_featurization.random_projection",
-        "version": "v0.1.0",
-        "name": "DSBox Data Encoder",
-        "description": "Encode data, such as one-hot encoding for categorical data",
-        "python_path": "d3m.primitives.dsbox.Encoder",
+        "version": "0.1.0",
+        "name": "DSBox random projection timeseries featurization ",
+        "description": "A simple timeseries featurization using random projection",
+        "python_path": "d3m.primitives.dsbox.RandomProjectionTimeSeriesFeaturization",
         "primitive_family": "FEATURE_EXTRACTION",
         "algorithm_types": [ "RANDOM_PROJECTION" ],
         "source": {
