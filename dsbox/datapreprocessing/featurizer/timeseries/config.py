@@ -1,3 +1,4 @@
+import os
 from d3m_metadata import utils
 
 D3M_API_VERSION = '2018.1.26'
