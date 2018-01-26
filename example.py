@@ -12,10 +12,10 @@ import pandas as pd
 
 
 # step 1: prepare inputs
-data_path = "/Users/luofanghao/work/USC_lab/isi-II/work/DSBox_project/multiple_table/test_data/financial/"
-# data_path = "/Users/luofanghao/work/USC_lab/isi-II/work/DSBox_project/multiple_table/test_data/mutagenesis/"
-# master_col_name = "molecule.csv_molecule_id"
-master_col_name = "loan.csv_account_id" # master table and its primary key
+# data_path = "/Users/luofanghao/work/USC_lab/isi-II/work/DSBox_project/multiple_table/test_data/financial/"
+data_path = "/Users/luofanghao/work/USC_lab/isi-II/work/DSBox_project/multiple_table/test_data/mutagenesis/"
+master_col_name = "molecule.csv_molecule_id"
+# master_col_name = "loan.csv_account_id" # master table and its primary key
 names = listdir(data_path)
 tables_names = list(name for name in names) # list of table names
 

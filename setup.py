@@ -13,12 +13,15 @@ setup(name='dsbox-featurizer',
       install_requires=[
           'scipy>=0.19.0', 'numpy>=1.11.1', 'pandas>=0.20.1',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit',
-          'scikit-learn>=0.18.0'
+          'scikit-learn>=0.18.0',
+          'scipy', 'keras', 'Pillow', 'tensorflow', 'h5py'
       ],
       keywords='d3m_primitive',
       entry_points = {
           'd3m.primitives': [
-#              'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization'
+              'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
+              'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
+              'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature'
               'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization'
           ],
       }
