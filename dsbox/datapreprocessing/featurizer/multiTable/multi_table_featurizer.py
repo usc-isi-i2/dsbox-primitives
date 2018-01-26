@@ -33,7 +33,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'version': 'v' + config.VERSION,       
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation',
-        'python_path': 'd3m.primitives.dsbox.multiTableFeaturization',
+        'python_path': 'd3m.primitives.dsbox.MultiTableFeaturization',
         'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION,
         'algorithm_types': [metadata.PrimitiveAlgorithmType.RELATIONAL_DATA_MINING, ],
         'keywords': ['multiple table'],
@@ -76,6 +76,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
                 assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
 
+                # core computations
                 big_table = self._core(inputs)
 
             if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:

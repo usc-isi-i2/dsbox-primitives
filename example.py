@@ -1,4 +1,4 @@
-from dsbox.datapreprocessing.featurizer import MultiTableFeaturization
+from dsbox.datapreprocessing.featurizer.multiTable import MultiTableFeaturization
 from d3m_metadata.container import DataFrame, List
 from d3m_metadata import hyperparams, metadata
 from typing import Union
