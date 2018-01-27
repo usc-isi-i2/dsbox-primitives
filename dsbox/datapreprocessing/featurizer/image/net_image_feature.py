@@ -50,7 +50,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
     __author__ = 'USC ISI'
     metadata = metadata.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-resnet50',
-        'version': 'v' + config.VERSION,       
+        'version': config.VERSION,       
         'name': "DSBox Image Featurizer RestNet50",
         'description': 'Generate image features using RestNet50',
         'python_path': 'd3m.primitives.dsbox.ResNet50ImageFeature',
@@ -177,7 +177,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
     __author__ = 'USC ISI'
     metadata = metadata.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-vgg16',
-        'version': 'v' + config.VERSION,       
+        'version': config.VERSION,       
         'name': "DSBox Image Featurizer VGG16",
         'description': 'Generate image features using VGG16',
         'python_path': 'd3m.primitives.dsbox.Vgg16ImageFeature',

@@ -30,7 +30,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
     __author__ = 'USC ISI'
     metadata = metadata.PrimitiveMetadata({
         'id': 'dsbox-multi-table-featurization-aggregation',
-        'version': 'v' + config.VERSION,       
+        'version': config.VERSION,       
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation',
         'python_path': 'd3m.primitives.dsbox.MultiTableFeaturization',
