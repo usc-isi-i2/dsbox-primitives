@@ -20,6 +20,7 @@ import typing
 #from dsbox.planner.levelone import Primitive
 
 import numpy as np
+import sys
 
 Inputs = ndarray  # image tensor, has 4 dimensions
 Outputs = ndarray # extracted features
@@ -91,7 +92,10 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         #===========================================================
 
         if self._RESNET50_MODEL is None:
+            original = sys.stdout
+            sys.stdout = sys.stderr
             self._RESNET50_MODEL = resnet50.ResNet50(weights='imagenet')
+            sys.stdout = original
         self._layer_numbers = [-2, -4, -8, -11, -14, -18, -21, -24, -30, -33, -36]
         if self._layer_index < 0:
             self._layer_index = 0
@@ -214,7 +218,10 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
         #===========================================================
 
         if self._VGG16_MODEL is None:
+            original = sys.stdout
+            sys.stdout = sys.stderr
             self._VGG16_MODEL = vgg16.VGG16(weights='imagenet', include_top=False)
+            sys.stdout = original
         self._layer_numbers = [-1, -5, -9, -13, -16]
         if self._layer_index < 0:
             self._layer_index = 0
