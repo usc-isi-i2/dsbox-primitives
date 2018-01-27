@@ -1,4 +1,24 @@
 from setuptools import setup
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+
+class PostDevelopCommand(develop):
+    """Post-installation for development mode."""
+    def run(self):
+        import keras.applications.resnet50 as resnet50
+        import keras.applications.vgg16 as vgg16
+        resnet50.ResNet50(weights='imagenet')
+        vgg16.VGG16(weights='imagenet', include_top=False)
+        develop.run(self)
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+    def run(self):
+        import keras.applications.resnet50 as resnet50
+        import keras.applications.vgg16 as vgg16
+        resnet50.ResNet50(weights='imagenet')
+        vgg16.VGG16(weights='imagenet', include_top=False)
+        install.run(self)
 
 setup(name='dsbox-featurizer',
       version='0.1.0',
@@ -24,5 +44,9 @@ setup(name='dsbox-featurizer',
               'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
               'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization'
           ],
+      },
+      cmdclass={
+          'develop': PostDevelopCommand,
+          'install': PostInstallCommand,
       }
 )
