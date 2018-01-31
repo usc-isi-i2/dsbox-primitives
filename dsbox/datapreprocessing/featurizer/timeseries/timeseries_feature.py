@@ -32,7 +32,7 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
 
     metadata = PrimitiveMetadata({
         "id": "dsbox.timeseries_featurization.random_projection",
-        "version": "0.1.0",
+        "version": config.VERSION,
         "name": "DSBox random projection timeseries featurization ",
         "description": "A simple timeseries featurization using random projection",
         "python_path": "d3m.primitives.dsbox.RandomProjectionTimeSeriesFeaturization",
