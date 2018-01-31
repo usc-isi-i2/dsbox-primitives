@@ -104,12 +104,14 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
     def get_params(self) -> Params:
         if self._model:
             return Params(y_dim=self._y_dim,
-                          projection_param={'': self._model.get_params()})
+                          projection_param=self._model.get_params())
         else:
-            return Params()
+            return Params({'y_dim': 0, 'projection_param': {}})
 
     def set_params(self, *, params: Params) -> None:
         self._y_dim = params['y_dim']
-        self._model = GaussianRandomProjection()
-        self._model.set_params(params['projection_param'])
+        self._model = None
+        if params['projection_param']:
+            self._model = GaussianRandomProjection()
+            self._model.set_params(**params['projection_param'])
         
