@@ -27,7 +27,10 @@ setup(name='dsbox-featurizer',
       maintainer='Fanghao Luo',
       description='DSBox Featurization primitives',
       license='MIT',
-      packages=['dsbox', 'dsbox.datapreprocessing', 'dsbox.datapreprocessing.featurizer'],
+      packages=['dsbox', 'dsbox.datapreprocessing', 'dsbox.datapreprocessing.featurizer'
+      , 'dsbox.datapreprocessing.featurizer.multiTable'
+      , 'dsbox.datapreprocessing.featurizer.image'
+      , 'dsbox.datapreprocessing.featurizer.timeseries'],
       zip_safe=False,
       python_requires='>=3.6',
       install_requires=[
