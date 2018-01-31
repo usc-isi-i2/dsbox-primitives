@@ -6,7 +6,7 @@ from typing import Union
 class Hyperparams(hyperparams.Hyperparams):
     pass
 
-
+from dsbox.datapreprocessing.featurizer.multiTable import MultiTableFeaturization
 from os import listdir
 import pandas as pd
 
