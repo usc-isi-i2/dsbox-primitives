@@ -74,7 +74,12 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         else:
             X = np.zeros((len(inputs), self._y_dim))
         for i, series in enumerate(inputs):
-            X[i,:] = series.iloc[:self._y_dim, 0]
+            if (series.shape[0] < self._y_dim):
+                # pad with zeros
+                X[i,:series.shape[0]] = series.iloc[:series.shape[0], 0]
+            else:
+                # Truncate or just fit in
+                X[i,:] = series.iloc[:self._y_dim, 0]
         return CallResult(self._model.transform(X), True, 1)
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
