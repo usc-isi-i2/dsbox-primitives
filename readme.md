@@ -9,6 +9,10 @@ pip install -e git+https://github.com/usc-isi-i2/dsbox-featurizer.git#egg=dsbox-
 '''
 
 
+## pipeline
+
+follow: [nist/ta1-pipeline-submission](https://gitlab.datadrivendiscovery.org/nist/ta1-pipeline-submission/tree/master)
+
 ## Multiple Table Featurizer
 
 draft version.
