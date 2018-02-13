@@ -102,7 +102,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             relation_matrix.to_csv("./relation_matrix.csv", index=False)
         # step 2: get prime key - foreign key relationship
         relations = relationMat2foreignKey(data, names, relation_matrix)
-        # print (relations) # to see if the relations are correct
+        if self._verbose > 0: print (relations) # to see if the relations are correct
 
         # step 3: featurization
         aggregator = Aggregator(relations, data, names)
