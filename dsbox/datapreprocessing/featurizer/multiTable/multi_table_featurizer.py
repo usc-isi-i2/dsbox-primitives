@@ -18,11 +18,7 @@ Outputs = DataFrame
 
 
 class Hyperparams(hyperparams.Hyperparams):
-    """
-    No hyper-parameters for this primitive.
-    """
-
-    pass
+    verbose = UniformInt(lower=0, upper=1, default=0)
 
 
 class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
@@ -102,7 +98,8 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
 
         # step 1: get relation matrix 
         relation_matrix = get_relation_matrix(data, names)
-
+        if self.verbose > 0:
+            relation_matrix.to_csv("./relation_matrix.csv", index=False)
         # step 2: get prime key - foreign key relationship
         relations = relationMat2foreignKey(data, names, relation_matrix)
         # print (relations) # to see if the relations are correct
