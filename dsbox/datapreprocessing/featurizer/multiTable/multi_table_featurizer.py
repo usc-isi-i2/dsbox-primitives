@@ -11,7 +11,7 @@ from .relation_matrix_all import get_relation_matrix
 from .helper import Aggregator
 from .relationMatrix2foreignKey import relationMat2foreignKey
 from . import config
-
+from d3m_metadata.hyperparams import UniformInt
 
 Inputs = typing.Union[List[DataFrame], List[str]]   # tables, their names, master table name and column
 Outputs = DataFrame
