@@ -20,7 +20,8 @@ Outputs = container.ndarray
 
 class Params(params.Params):
     y_dim: int
-    projection_param: dict
+    projection_param: typing.Dict
+    components_: typing.Optional[np.ndarray]
 
 class Hyperparams(hyperparams.Hyperparams):
     eps = hyperparams.Uniform(lower=0.1, upper=0.5, default=0.2)
@@ -56,7 +57,7 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         #"hyperparms_to_tune": []
         })
 
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0, 
+    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0,
                  docker_containers: typing.Dict[str, str] = None) -> None:
         self.hyperparams = hyperparams
         self.random_seed = random_seed
@@ -65,11 +66,13 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         self._training_data = None
         self._x_dim = 0
         self._y_dim = 0
+        self._fitted = False
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-        if self._training_data is None or self._y_dim==0:
+        # if self._training_data is None or self._y_dim==0:
+        if not self._fitted:
             return CallResult(None, True, 0)
-        if isinstance(inputs, np.ndarray): 
+        if isinstance(inputs, np.ndarray):
             X = np.zeros((inputs.shape[0], self._y_dim))
         else:
             X = np.zeros((len(inputs), self._y_dim))
@@ -96,20 +99,23 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         self._training_data = np.zeros((self._x_dim, self._y_dim))
         for i, series in enumerate(inputs):
             self._training_data[i, :] = series.iloc[:self._y_dim, 0]
-            
+
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         eps = self.hyperparams['eps']
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
-        if n_components > self._x_dim: 
-            self._model = GaussianRandomProjection(n_components=self._x_dim)
+        if n_components > self._x_dim:
+            # Default n_components == 'auto' fails. Need to explicitly assign n_components
+            self._model = GaussianRandomProjection(n_components=self._x_dim, random_state=self.random_seed)
         else:
-            self._model = GaussianRandomProjection(eps=eps)
+            self._model = GaussianRandomProjection(eps=eps, random_state=self.random_seed)
         self._model.fit(self._training_data)
+        self._fitted = True
 
     def get_params(self) -> Params:
         if self._model:
-            return Params({'y_dim': self._y_dim,
-                           'projection_param': self._model.get_params()})
+            return Params(y_dim = self._y_dim,
+                          projection_param =  self._model.get_params(),
+                          components_ = getattr(self._model, 'components_', None))
         else:
             return Params({'y_dim': 0, 'projection_param': {}})
 
@@ -119,4 +125,7 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         if params['projection_param']:
             self._model = GaussianRandomProjection()
             self._model.set_params(**params['projection_param'])
-        
+            self._model.components_ = params['components_']
+            self._fitted = True
+        else:
+            self._fitted = False
