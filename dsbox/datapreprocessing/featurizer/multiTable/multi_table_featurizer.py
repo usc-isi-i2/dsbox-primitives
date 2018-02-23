@@ -16,9 +16,9 @@ from d3m_metadata.hyperparams import UniformInt
 Inputs = typing.Union[List[DataFrame], List[str]]   # tables, their names, master table name and column
 Outputs = DataFrame
 
+from d3m_metadata.hyperparams import Hyperparams
 
-class Hyperparams(hyperparams.Hyperparams):
-    verbose = UniformInt(lower=0, upper=1, default=0)
+VERBOSE = 0
 
 
 class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
@@ -26,7 +26,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
     __author__ = 'USC ISI'
     metadata = metadata.PrimitiveMetadata({
         'id': 'dsbox-multi-table-featurization-aggregation',
-        'version': config.VERSION,       
+        'version': config.VERSION,
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation',
         'python_path': 'd3m.primitives.dsbox.MultiTableFeaturization',
@@ -47,7 +47,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0, 
+    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0,
                  docker_containers: typing.Union[typing.Dict[str, str], None] = None) -> None:
 
         # All primitives must define these attributes
@@ -55,13 +55,13 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         self.random_seed = random_seed
         self.docker_containers = docker_containers
 
-        # All other attributes must be private with leading underscore    
+        # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-        self._verbose = hyperparams['verbose'] if hyperparams else 0
+        self._verbose = VERBOSE
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-        
+
         if (timeout is None):
             big_table = self._core(inputs)
             self._has_finished = True
@@ -96,13 +96,13 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         # TODO: format names, make sure it has to be like xx.csv
         # for example, if original names is like [0,1,2], make it to be [0.csv, 1.csv, 2.csv]
 
-        # step 1: get relation matrix 
+        # step 1: get relation matrix
         relation_matrix = get_relation_matrix(data, names)
         if self._verbose > 0:
             relation_matrix.to_csv("./relation_matrix.csv", index=False)
         # step 2: get prime key - foreign key relationship
         relations = relationMat2foreignKey(data, names, relation_matrix)
-        if self._verbose > 0: 
+        if self._verbose > 0:
             print ("==========relations:=============")
             print (relations) # to see if the relations make sense
             print ("=================================")
