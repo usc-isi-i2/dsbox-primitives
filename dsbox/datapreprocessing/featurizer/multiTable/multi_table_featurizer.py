@@ -9,7 +9,7 @@ import stopit #  type: ignore
 
 from .relation_matrix_all import get_relation_matrix
 from .helper import Aggregator
-from .relationMatrix2foreignKey import relationMat2foreignKey
+from .relationMatrix2foreignKey import relationMat2foreignKey, relations_correction
 from . import config
 from d3m_metadata.hyperparams import UniformInt
 
@@ -106,6 +106,9 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             print ("==========relations:=============")
             print (relations) # to see if the relations make sense
             print ("=================================")
+
+        # step 2.5: a fix (based on the problem occurred in `uu3_world_development_indicators` dataset)
+        relations = relations_correction(relations)
 
         # step 3: featurization
         aggregator = Aggregator(relations, data, names)
