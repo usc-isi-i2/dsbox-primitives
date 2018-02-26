@@ -82,12 +82,12 @@ def relations_correction(relations):
         1. if more than one relation found btw. two tables, only pick one of them
     """
     # using easist way to fix: a set that avoid duplicates
-    table_tuple_set = {} # store the set of tuples of tables: {(table1, table2), (table1, table3), ...}
-    relations_corrected = {}
+    table_tuple_set = set() # store the set of tuples of tables: {(table1, table2), (table1, table3), ...}
+    relations_corrected = set()
 
     for foreign_key, primary_key in relations:
-        foreign_table = re.split('.csv_', foreign_key)
-        primary_table = re.split('.csv_', primary_key)
+        foreign_table = re.split('.csv_', foreign_key)[0]
+        primary_table = re.split('.csv_', primary_key)[0]
         table_tuple = (foreign_table, primary_table)
         if (table_tuple in table_tuple_set):
             continue
