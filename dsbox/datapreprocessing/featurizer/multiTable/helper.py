@@ -64,7 +64,7 @@ class Aggregator(object):
             if self.verbose > 0: print ("backward finished")
             table = table.rename(columns = lambda x : foreign_table_name+"_"+x)
             ## DEBUG code: check the intermediate tables 
-            table.to_csv("./validation_output/backwarded_table_"+foreign_table_name, index=False)
+            if self.verbose > 0: table.to_csv("./backwarded_table_"+foreign_table_name, index=False)
 
             # join back to central table, need to find the corresponding column name
             central_table_key = self.get_corresponding_column_name(table_name, table_key)
