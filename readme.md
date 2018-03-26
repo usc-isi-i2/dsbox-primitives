@@ -27,6 +27,8 @@ tested datasets:
 ## Results
 example results, on `uu3_world_development_indicators` dataset; compared with un-featurized data (only use master table)
 
+5-fold cross validation results are listed; using "mean_squared_error" as metric
+
 first version:
 
 ```
@@ -43,6 +45,8 @@ using LinearRegression:
 ```
 
 
+as can be found, using our featurized data (aggregate with other tables) leads to much better result.
+
 
 on `dev` branch: using multiple aggregation functions to numeric attributes:
 
@@ -58,3 +62,5 @@ using LinearRegression:
 ====> for original data:     
 [-133.30071736 -110.3284196   -93.93481927  -98.30471911  -81.73845532] 
 ```
+
+using more numeric aggregation functions does not lead to better performance  for this dataset.
