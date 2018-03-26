@@ -29,7 +29,7 @@ example results, on `uu3_world_development_indicators` dataset; compared with un
 
 5-fold cross validation results are listed; using "mean_squared_error" as metric
 
-first version:
+### on `master` branch:
 
 ```
 using ExtraTreeRegressor:
@@ -44,11 +44,25 @@ using LinearRegression:
 [-133.30071736 -110.3284196   -93.93481927  -98.30471911  -81.73845532]
 ```
 
+as can be found, using our featurized data (aggregate with other tables) leads to much better result. 
 
-as can be found, using our featurized data (aggregate with other tables) leads to much better result.
+#### Analysis
+obviously some aggregated information helps, what are they? We could see them using the coefficients of LienarRegression model. Belowing are the attributes that with largest coefficients (absolute value) of our featurized data:
+
+```
+[('Country.csv_NationalAccountsReferenceYear_2013/14', 1.7499951007985628), ('Country.csv_Region_North America', 1.8704838587929624), ('Country.csv_IncomeGroup_Upper middle income', 1.9431183647373362), ('Country.csv_VitalRegistrationComplete_Yes', 1.9613746051136511), ('Country.csv_SystemOfTrade_other_', 2.027561008601204), ('Country.csv_PppSurveyYear_2011 (household consumption only).', 2.205419322428428), ('Country.csv_IncomeGroup_High income: OECD', 2.6628945666285846), ('Country.csv_Region_Latin America & Caribbean', 3.9492457890565063), ('Country.csv_NationalAccountsReferenceYear_2013', 4.037421825654523), ('Country.csv_LendingCategory_other_', 5.3837670803742705)]
+```
+
+```
+[('Country.csv_Region_Sub-Saharan Africa', -5.228651309518281), ('Country.csv_IncomeGroup_Low income', -4.824404961612842), ('Country.csv_VitalRegistrationComplete_other_', -2.5529468758340257), ('Country.csv_LendingCategory_IDA', -2.511902747661453), ('Country.csv_LendingCategory_Blend', -2.3045186056059523), ('Country.csv_NationalAccountsReferenceYear_other_', -2.143242562394621), ('Country.csv_SnaPriceValuation_other_', -1.9487197441571942), ('Country.csv_Region_South Asia', -1.8686526473981844), ('Country.csv_ImfDataDisseminationStandard_other_', -1.819878860294755), ('Country.csv_NationalAccountsReferenceYear_1997', -1.7757587997036153)]
+```
+
+as can be seed from the listed attributes above, the result make sense, for example: 'Country.csv_IncomeGroup_Low income' gives negative contribution to the expected life, while 'Country.csv_IncomeGroup_Upper middle income' is in the opposite.
 
 
-on `dev` branch: using multiple aggregation functions to numeric attributes:
+### on `dev` branch: 
+
+using multiple aggregation functions to numeric attributes:
 
 ```
 using ExtraTreeRegressor:    
@@ -63,4 +77,4 @@ using LinearRegression:
 [-133.30071736 -110.3284196   -93.93481927  -98.30471911  -81.73845532] 
 ```
 
-using more numeric aggregation functions does not lead to better performance  for this dataset.
+using more numeric aggregation functions does not lead to better performance for this dataset.
