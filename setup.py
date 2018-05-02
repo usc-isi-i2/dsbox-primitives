@@ -37,7 +37,7 @@ setup(name='dsbox-featurizer',
           'scipy>=0.19.0', 'numpy>=1.11.1', 'pandas>=0.20.1',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit',
           'scikit-learn>=0.18.0',
-          'scipy', 'keras==2.1.5', 'Pillow', 'tensorflow==1.4.*', 'h5py'
+          'scipy', 'keras', 'Pillow', 'tensorflow', 'h5py'
       ],
       keywords='d3m_primitive',
       entry_points = {
