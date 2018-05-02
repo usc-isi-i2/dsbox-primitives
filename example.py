@@ -1,6 +1,6 @@
 from dsbox.datapreprocessing.featurizer.multiTable import MultiTableFeaturization
-from d3m_metadata.container import DataFrame, List
-from d3m_metadata import hyperparams, metadata
+from d3m.container import List
+from d3m.metadata import hyperparams
 from typing import Union
 
 class Hyperparams(hyperparams.Hyperparams):

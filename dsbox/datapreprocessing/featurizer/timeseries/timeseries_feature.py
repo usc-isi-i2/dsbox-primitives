@@ -7,11 +7,13 @@ Created on Jan 23, 2018
 import numpy as np
 import typing
 
-from d3m_metadata import container, hyperparams, params
-from d3m_metadata.metadata import PrimitiveMetadata
+from d3m.metadata import hyperparams, params
+from d3m.container import ndarray
+from d3m import container
 
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
-from primitive_interfaces.featurization import FeaturizationPrimitiveBase, CallResult
+from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
 
 from . import config
 
@@ -26,12 +28,12 @@ class Params(params.Params):
 class Hyperparams(hyperparams.Hyperparams):
     eps = hyperparams.Uniform(lower=0.1, upper=0.5, default=0.2)
 
-class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
+class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
     classdocs
     '''
 
-    metadata = PrimitiveMetadata({
+    metadata = hyperparams.base.PrimitiveMetadata({
         "id": "dsbox.timeseries_featurization.random_projection",
         "version": config.VERSION,
         "name": "DSBox random projection timeseries featurization ",
@@ -57,11 +59,10 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationPrimitiveBase[Inputs,
         #"hyperparms_to_tune": []
         })
 
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0,
-                 docker_containers: typing.Dict[str, str] = None) -> None:
+    def __init__(self, *, hyperparams: Hyperparams) -> None:
+        super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.random_seed = random_seed
-        self.docker_containers = docker_containers
+
         self._model = None
         self._training_data = None
         self._x_dim = 0

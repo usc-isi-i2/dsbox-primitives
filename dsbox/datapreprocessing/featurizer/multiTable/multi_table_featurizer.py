@@ -1,8 +1,9 @@
-from primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
-from primitive_interfaces.base import CallResult
+from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
 
-from d3m_metadata import container, hyperparams, metadata
-from d3m_metadata.container import DataFrame, List, ndarray
+from d3m import metadata
+from d3m.metadata import hyperparams, params
+from d3m.container import DataFrame, List, ndarray
 import typing
 import math
 import stopit #  type: ignore
@@ -11,12 +12,12 @@ from .relation_matrix_all import get_relation_matrix
 from .helper import Aggregator
 from .relationMatrix2foreignKey import relationMat2foreignKey
 from . import config
-from d3m_metadata.hyperparams import UniformInt
+
+from d3m.metadata.hyperparams import UniformInt
+from d3m.metadata.hyperparams import Hyperparams
 
 Inputs = typing.Union[List[DataFrame], List[str]]   # tables, their names, master table name and column
 Outputs = DataFrame
-
-from d3m_metadata.hyperparams import Hyperparams
 
 VERBOSE = 0
 
@@ -24,14 +25,14 @@ VERBOSE = 0
 class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 
     __author__ = 'USC ISI'
-    metadata = metadata.PrimitiveMetadata({
+    metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-multi-table-featurization-aggregation',
         'version': config.VERSION,
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation',
         'python_path': 'd3m.primitives.dsbox.MultiTableFeaturization',
-        'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION,
-        'algorithm_types': [metadata.PrimitiveAlgorithmType.RELATIONAL_DATA_MINING, ],
+        'primitive_family': "FEATURE_EXTRACTION",
+        'algorithm_types': ["RELATIONAL_DATA_MINING"],
         'keywords': ['multiple table'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
@@ -47,13 +48,10 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0,
-                 docker_containers: typing.Union[typing.Dict[str, str], None] = None) -> None:
+    def __init__(self, *, hyperparams: Hyperparams) -> None:
 
-        # All primitives must define these attributes
+        super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.random_seed = random_seed
-        self.docker_containers = docker_containers
 
         # All other attributes must be private with leading underscore
         self._has_finished = False

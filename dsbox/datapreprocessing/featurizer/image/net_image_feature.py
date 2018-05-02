@@ -2,11 +2,11 @@
     wrapped into d3m format
     TODO: update primitive info
 """
-from primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
-from primitive_interfaces.base import CallResult
+from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
 
-from d3m_metadata import container, hyperparams, metadata
-from d3m_metadata.container import ndarray
+from d3m.metadata import hyperparams, params
+from d3m.container import ndarray
 
 
 from scipy.misc import imresize
@@ -48,14 +48,14 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
     """
 
     __author__ = 'USC ISI'
-    metadata = metadata.PrimitiveMetadata({
+    metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-resnet50',
         'version': config.VERSION,       
         'name': "DSBox Image Featurizer RestNet50",
         'description': 'Generate image features using RestNet50',
         'python_path': 'd3m.primitives.dsbox.ResNet50ImageFeature',
-        'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION,
-        'algorithm_types': [metadata.PrimitiveAlgorithmType.FEEDFORWARD_NEURAL_NETWORK, ],
+        'primitive_family': "FEATURE_EXTRACTION",
+        'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'resnet50'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
@@ -71,14 +71,10 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'hyperparms_to_tune': []
     })
 
-    
-
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0, 
-             docker_containers: typing.Union[typing.Dict[str, str], None] = None) -> None:
-        # All primitives must define these attributes
+    def __init__(self, *, hyperparams: Hyperparams) -> None:
+        
+        super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.random_seed = random_seed
-        self.docker_containers = docker_containers
 
         # All other attributes must be private with leading underscore    
         self._has_finished = False
@@ -175,14 +171,14 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
         If True resize images to 224 by 224.
     """
     __author__ = 'USC ISI'
-    metadata = metadata.PrimitiveMetadata({
+    metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-vgg16',
         'version': config.VERSION,       
         'name': "DSBox Image Featurizer VGG16",
         'description': 'Generate image features using VGG16',
         'python_path': 'd3m.primitives.dsbox.Vgg16ImageFeature',
-        'primitive_family': metadata.PrimitiveFamily.FEATURE_EXTRACTION,
-        'algorithm_types': [metadata.PrimitiveAlgorithmType.FEEDFORWARD_NEURAL_NETWORK, ],
+        'primitive_family': "FEATURE_EXTRACTION",
+        'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'vgg16'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
@@ -199,12 +195,9 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
     })
 
 
-    def __init__(self, *, hyperparams: Hyperparams, random_seed: int = 0, 
-             docker_containers: typing.Union[typing.Dict[str, str], None] = None) -> None:
-        # All primitives must define these attributes
+    def __init__(self, *, hyperparams: Hyperparams) -> None:
+        super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.random_seed = random_seed
-        self.docker_containers = docker_containers
 
         # All other attributes must be private with leading underscore    
         self._has_finished = False
