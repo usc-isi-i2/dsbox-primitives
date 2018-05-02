@@ -29,11 +29,11 @@ Outputs = ndarray # extracted features
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(lower=0, upper=11, default=0)
-    # corresponding layer_size = [25088, 100352, 200704, 401408]
+    # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
 class Vgg16Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(lower=0, upper=4, default=0)
-    # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
+    # corresponding layer_size = [25088, 100352, 200704, 401408]
 
 class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams]):
     """
