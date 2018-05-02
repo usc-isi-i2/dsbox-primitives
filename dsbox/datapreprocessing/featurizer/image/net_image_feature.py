@@ -8,7 +8,6 @@ from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params
 from d3m.container import ndarray
 
-
 from scipy.misc import imresize
 
 from keras.models import Model
@@ -22,18 +21,21 @@ import typing
 import numpy as np
 import sys
 
-Inputs = ndarray  # image tensor, has 4 dimensions
+# Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
+Inputs = ndarray
+
+# Output feature has 2 dimensions: (num_images, layer_size[layer_index])
 Outputs = ndarray # extracted features
 
+class ResNet50Hyperparams(hyperparams.Hyperparams):
+    layer_index = hyperparams.UniformInt(lower=0, upper=11, default=0)
+    # corresponding layer_size = [25088, 100352, 200704, 401408]
 
-class Hyperparams(hyperparams.Hyperparams):
-    """
-    No hyper-parameters for this primitive.
-    """
+class Vgg16Hyperparams(hyperparams.Hyperparams):
+    layer_index = hyperparams.UniformInt(lower=0, upper=4, default=0)
+    # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
-    pass
-
-class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
+class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams]):
     """
     Image Feature Generation using pretrained deep neural network RestNet50.
 
@@ -50,7 +52,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-resnet50',
-        'version': config.VERSION,       
+        'version': config.VERSION,
         'name': "DSBox Image Featurizer RestNet50",
         'description': 'Generate image features using RestNet50',
         'python_path': 'd3m.primitives.dsbox.ResNet50ImageFeature',
@@ -71,19 +73,19 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: Hyperparams) -> None:
-        
+    def __init__(self, *, hyperparams: ResNet50Hyperparams) -> None:
+
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
 
-        # All other attributes must be private with leading underscore    
+        # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
 
         #============TODO: these three could be hyperparams=========
-        self._layer_index = 0
-        self._preprocess_data=True
-        self._resize_data=False
+        self._layer_index = hyperparams['layer_index']
+        self._preprocess_data = True
+        self._resize_data = True
         self._RESNET50_MODEL = None
         #===========================================================
 
@@ -104,7 +106,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
 
-        
+
         self._annotation = None
 
 
@@ -157,7 +159,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         return self._annotation
 '''
 
-class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
+class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Vgg16Hyperparams]):
     """
     Image Feature Generation using pretrained deep neural network VGG16.
 
@@ -173,7 +175,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-vgg16',
-        'version': config.VERSION,       
+        'version': config.VERSION,
         'name': "DSBox Image Featurizer VGG16",
         'description': 'Generate image features using VGG16',
         'python_path': 'd3m.primitives.dsbox.Vgg16ImageFeature',
@@ -195,18 +197,18 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, H
     })
 
 
-    def __init__(self, *, hyperparams: Hyperparams) -> None:
+    def __init__(self, *, hyperparams: Vgg16Hyperparams) -> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
 
-        # All other attributes must be private with leading underscore    
+        # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
 
         #============TODO: these three could be hyperparams=========
-        self._layer_index = 0
+        self._layer_index = self.hyperparams['layer_index']
         self._preprocess_data= True
-        self._resize_data = False
+        self._resize_data = True
         self._VGG16_MODEL = None
         #===========================================================
 
