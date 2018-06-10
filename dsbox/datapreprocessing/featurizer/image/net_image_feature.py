@@ -5,7 +5,7 @@
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 
-from d3m.metadata import hyperparams, params
+from d3m.metadata import hyperparams
 from d3m.container import ndarray
 
 from scipy.misc import imresize
@@ -15,7 +15,6 @@ import keras.applications.resnet50 as resnet50
 import keras.applications.vgg16 as vgg16
 
 from . import config
-import typing
 #from dsbox.planner.levelone import Primitive
 
 import numpy as np
@@ -28,11 +27,24 @@ Inputs = ndarray
 Outputs = ndarray # extracted features
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
-    layer_index = hyperparams.UniformInt(lower=0, upper=11, default=0)
+    layer_index = hyperparams.UniformInt(
+        lower=0,
+        upper=11,
+        default=0,
+        description="Specify the layer of the neural network to use for features. Lower numbered layers correspond to higher-level abstract features. The number of features by layer index are [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704].",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
     # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
+
 class Vgg16Hyperparams(hyperparams.Hyperparams):
-    layer_index = hyperparams.UniformInt(lower=0, upper=4, default=0)
+    layer_index = hyperparams.UniformInt(
+        lower=0,
+        upper=4,
+        default=0,
+        description="Specify the layer of the neural network to use for features. Lower numbered layers correspond to higher-level abstract features. The number of features by layer index are [25088, 100352, 200704, 401408]",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
     # corresponding layer_size = [25088, 100352, 200704, 401408]
 
 class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams]):
