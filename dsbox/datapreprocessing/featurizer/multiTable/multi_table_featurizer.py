@@ -1,11 +1,8 @@
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 
-from d3m import metadata
-from d3m.metadata import hyperparams, params
-from d3m.container import DataFrame, List, ndarray
-import typing
-import math
+from d3m.metadata import hyperparams
+from d3m.container import DataFrame, List
 import stopit #  type: ignore
 
 from .relation_matrix_all import get_relation_matrix
@@ -13,14 +10,12 @@ from .helper import Aggregator
 from .relationMatrix2foreignKey import relationMat2foreignKey
 from . import config
 
-from d3m.metadata.hyperparams import UniformInt
 from d3m.metadata.hyperparams import Hyperparams
 
-Inputs = typing.Union[List[DataFrame], List[str]]   # tables, their names, master table name and column
+Inputs = List # list[0] is a list of tables in DataFrame format, list[1] is a list of the names of the tables
 Outputs = DataFrame
 
 VERBOSE = 0
-
 
 class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 
