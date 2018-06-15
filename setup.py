@@ -21,7 +21,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(name='dsbox-featurizer',
-      version='0.1.3',
+      version='0.1.4',
       url='https://github.com/usc-isi-i2/dsbox-featurizer',
       maintainer_email='fanghaol@usc.edu',
       maintainer='Fanghao Luo',
@@ -35,13 +35,14 @@ setup(name='dsbox-featurizer',
       python_requires='>=3.6',
       install_requires=[
           'scipy>=0.19.0,<1.2', 'numpy>=1.11.1', 'pandas>=0.20.1',
-          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit',
+          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
           'scikit-learn>=0.18.0',
-          'keras', 'Pillow', 'tensorflow', 'h5py'
+          'Keras==2.2.0', 'Pillow==5.1.0', 'tensorflow==1.8.0', 'h5py==2.8.0'
       ],
       keywords='d3m_primitive',
       entry_points = {
           'd3m.primitives': [
+              'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
               'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
               'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
