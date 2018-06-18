@@ -17,6 +17,7 @@ PRIMITIVES = [
     ('Vgg16ImageFeature', featurizer_config),
     ('MultiTableFeaturization', featurizer_config),
     ('DataFrameToTensor', featurizer_config),
+    ('RandomProjectionTimeSeriesFeaturization', featurizer_config),
 ]
 
 for p, config in PRIMITIVES:

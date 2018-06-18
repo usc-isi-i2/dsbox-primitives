@@ -17,7 +17,7 @@ from d3m.primitive_interfaces.base import CallResult
 
 from . import config
 
-Inputs = container.List[container.DataFrame]
+Inputs = container.List#[container.DataFrame]
 Outputs = container.ndarray
 
 class Params(params.Params):
@@ -51,7 +51,7 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         "algorithm_types": [ "RANDOM_PROJECTION" ],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
-            "uris": [ 'git+https://github.com/usc-isi-i2/dsbox-featurizer' ]
+            "uris": [ config.REPOSITORY ]
             },
         ### Automatically generated
         # "primitive_code"
