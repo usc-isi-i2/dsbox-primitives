@@ -26,7 +26,15 @@ class Params(params.Params):
     components_: typing.Optional[np.ndarray]
 
 class Hyperparams(hyperparams.Hyperparams):
-    eps = hyperparams.Uniform(lower=0.1, upper=0.5, default=0.2)
+    '''
+    eps : Maximum distortion rate as defined by the Johnson-Lindenstrauss lemma.
+    '''
+    eps = hyperparams.Uniform(
+        lower=0.1, 
+        upper=0.5, 
+        default=0.2,
+        semantic_types=["http://schema.org/Float", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+        )
 
 class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
