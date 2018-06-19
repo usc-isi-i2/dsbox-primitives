@@ -18,7 +18,7 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-do-nothing',
         'version':config.VERSION,
-        'name': 'DSBox Image Featurizer do-nothing primitive'
+        'name': 'DSBox Image Featurizer do-nothing primitive',
         'description': 'Just pass the input to the output',
         'python_path': 'd3m.primitives.dsbox.DoNothing',
         'primitive_family': 'DATA_PREPROCESSING',
@@ -36,7 +36,7 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         'precondition': [],
         'hyperparms_to_tune': []
     })
-    def __init__(self, *, hyperparams: DataFrameToTensorHyperparams) -> None:
+    def __init__(self, *, hyperparams: DoNothingHyperparams) -> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
         # All other attributes must be private with leading underscore
