@@ -30,6 +30,7 @@ setup(name='dsbox-featurizer',
       packages=['dsbox', 'dsbox.datapreprocessing', 'dsbox.datapreprocessing.featurizer'
       , 'dsbox.datapreprocessing.featurizer.multiTable'
       , 'dsbox.datapreprocessing.featurizer.image'
+      , 'dsbox.datapreprocessing.featurizer.pass'
       , 'dsbox.datapreprocessing.featurizer.timeseries'],
       zip_safe=False,
       python_requires='>=3.6',
@@ -42,6 +43,7 @@ setup(name='dsbox-featurizer',
       keywords='d3m_primitive',
       entry_points = {
           'd3m.primitives': [
+              'dsbox.DoNothing = dsbox.datapreprocessing.featurizer.pass:DoNothing',
               'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
               'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
