@@ -17,8 +17,8 @@ from d3m.primitive_interfaces.base import CallResult
 
 from . import config
 
-Inputs = container.List#[container.DataFrame]
-Outputs = container.ndarray
+Inputs = container.List[container.DataFrame] # this format is for old version of d3m
+Outputs = container.DataFrame
 
 class Params(params.Params):
     y_dim: int
@@ -73,8 +73,9 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
 
         self._model = None
         self._training_data = None
-        self._x_dim = 0
-        self._y_dim = 0
+        self._x_dim = 0  # x_dim : the amount of timeseries dataset
+        self._y_dim = 0  # y_dim : the length of each timeseries dataset
+        self._value_dimension = 0 # value_dimension : used to determine which dimension data is the values we want
         self._fitted = False
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -85,16 +86,18 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             X = np.zeros((inputs.shape[0], self._y_dim))
         else:
             X = np.zeros((len(inputs), self._y_dim))
+
+
         for i, series in enumerate(inputs):
             if (series.shape[0] < self._y_dim):
                 # pad with zeros
-                X[i,:series.shape[0]] = series.iloc[:series.shape[0], 0]
+                X[i,:series.shape[0]] = series.iloc[:series.shape[0], self._value_dimension]
             else:
                 # Truncate or just fit in
-                X[i,:] = series.iloc[:self._y_dim, 0]
+                X[i,:] = series.iloc[:self._y_dim, self._value_dimension]
         return CallResult(self._model.transform(X), True, 1)
 
-    def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
+    def set_training_data(self, *, inputs: Inputs) -> None:
         if len(inputs) == 0:
             return
         lengths = [x.shape[0] for x in inputs]
@@ -106,12 +109,33 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             self._y_dim = min(lengths)
         self._x_dim = len(inputs)
         self._training_data = np.zeros((self._x_dim, self._y_dim))
+        '''
+        New things, the previous version only trying to load the fixed columns
+        It will cause problems that may load the wrong data
+        e.g.: at dataset 66, it will read the "time" data instead of "value"
+        So here I added a function to check the name of each column to ensure that we read the correct data
+        '''
+        # here just take first timeseries dataset
+
+        column_name = list(inputs[0].columns.values)
+        for i in range(len(column_name)):
+            if 'value' in column_name[i]:
+                self._value_dimension = i
+
         for i, series in enumerate(inputs):
-            self._training_data[i, :] = series.iloc[:self._y_dim, 0]
+            '''
+            # For testing purpose of the input data
+            print("~~~~~",i,"~~~~~~")
+            print(series.iloc[:self._y_dim, 1])
+            '''
+            self._training_data[i, :] = series.iloc[:self._y_dim, self._value_dimension]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         eps = self.hyperparams['eps']
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
+
+        print("n_components is", n_components)
+       
         if n_components > self._x_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._x_dim, random_state=self.random_seed)

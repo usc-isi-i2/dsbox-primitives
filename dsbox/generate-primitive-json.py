@@ -18,6 +18,7 @@ PRIMITIVES = [
     ('MultiTableFeaturization', featurizer_config),
     ('DataFrameToTensor', featurizer_config),
     ('RandomProjectionTimeSeriesFeaturization', featurizer_config),
+    ('TimeseriesToList', featurizer_config),
     ('DoNothing', featurizer_config),
 ]
 

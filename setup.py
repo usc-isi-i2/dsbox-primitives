@@ -44,10 +44,12 @@ setup(name='dsbox-featurizer',
       entry_points = {
           'd3m.primitives': [
               'dsbox.DoNothing = dsbox.datapreprocessing.featurizer.pass:DoNothing',
-              'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
+              'dsbox.Standardizer = dsbox.datapreprocessing.featurizer.multiTable:Standardizer',
+              'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
               'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
+              'dsbox.TimeseriesToList = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
               'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization'
           ],
       },
