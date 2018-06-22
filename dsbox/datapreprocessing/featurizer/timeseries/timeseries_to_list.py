@@ -12,7 +12,7 @@ from . import config
 
 
 Inputs = container.DataFrame
-Outputs = container.List[container.DataFrame]
+Outputs = container.List#[container.DataFrame]
 
 class TimeseriesToListHyperparams(hyperparams.Hyperparams):
     # No parameters required for this primitive

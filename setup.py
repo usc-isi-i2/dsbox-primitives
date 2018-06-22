@@ -45,7 +45,6 @@ setup(name='dsbox-featurizer',
           'd3m.primitives': [
               'dsbox.DoNothing = dsbox.datapreprocessing.featurizer.pass:DoNothing',
               'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
-              'dsbox.Standardizer = dsbox.datapreprocessing.featurizer.multiTable:Standardizer',
               'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
               'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',

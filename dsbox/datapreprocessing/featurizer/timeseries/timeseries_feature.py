@@ -17,7 +17,7 @@ from d3m.primitive_interfaces.base import CallResult
 
 from . import config
 
-Inputs = container.List[container.DataFrame] # this format is for old version of d3m
+Inputs = container.List#[container.DataFrame] # this format is for old version of d3m
 Outputs = container.DataFrame
 
 class Params(params.Params):
