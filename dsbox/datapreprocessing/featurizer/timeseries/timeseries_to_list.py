@@ -66,25 +66,34 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
         elements_amount = inputs.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
+        #import pdb
+        #pdb.set_trace()
         # traverse each selector to check where is the image file
         timeseries_index = -1
         for selector_index in range(elements_amount):
             each_selector = inputs.metadata.query((mbase.ALL_ELEMENTS,selector_index))
-            try:
-                # here we assume only one column shows the location of the timeseries files
+            mime_types_found = False
+            # here we assume only one column shows the location of the timeseries files
+            #print(each_selector)
+            if 'mime_types' in each_selector:
                 mime_types = (each_selector['mime_types'])
+                mime_types_found = True
+            elif 'media_types' in each_selector:
+                mime_types = (each_selector['media_types'])
+                mime_types_found = True
+            # do following step only when mime type attriubte found
+            if mime_types_found:
                 for each_type in mime_types:
                     if ('csv' in each_type):
                         timeseries_index = selector_index
                         location_base_uris = each_selector['location_base_uris'][0]
                         #column_name = each_selector['name']
                         break
-            except:
-                pass
 
         timeseries_output = list()
         # if no 'csv' related mime_types found, return a empty list
         if (timeseries_index == -1):
+            print("Warning: Can't find timeseries index!")
             #raise exceptions.InvalidArgumentValueError("no image related metadata found!")
             return CallResult(timeseries_output, self._has_finished, self._iterations_done)
 
@@ -93,14 +102,10 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         # create the 4 dimension ndarray for return
         
         for input_file_number in range(input_file_amount):
-            #print("location_base_uris",location_base_uris)
-            #print("file name",input_file_name_list[input_file_number][0])
-            try:
-                file_path = location_base_uris + input_file_name_list[input_file_number][0]
-                file_path = file_path[7:]
-                timeseries_output.append(pandas.read_csv(file_path))
-            except:
-                pass
+            file_path = location_base_uris + input_file_name_list[input_file_number][0]
+            file_path = file_path[7:]
+            timeseries_output.append(pandas.read_csv(file_path))
+
 
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True

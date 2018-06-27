@@ -10,6 +10,7 @@ import typing
 from d3m.metadata import hyperparams, params
 from d3m.container import ndarray
 from d3m import container
+import d3m.metadata.base as mbase
 
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
 from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
@@ -95,10 +96,23 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             else:
                 # Truncate or just fit in
                 X[i,:] = series.iloc[:self._y_dim, self._value_dimension]
-        return CallResult(self._model.transform(X), True, 1)
+
+        # save the result to DataFrame format
+        #import pdb
+        #pdb.set_trace()
+        output_ndarray = self._model.transform(X)
+        output_dataFrame = container.DataFrame(output_ndarray)
+        # update the metadata
+
+        for each_column in range(len(X)):
+            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+        return CallResult(output_dataFrame, True, 1)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
         if len(inputs) == 0:
+            print("Warning: Inputs length is 0 which should not be.")
             return
         lengths = [x.shape[0] for x in inputs]
         is_same_length = len(set(lengths)) == 1
