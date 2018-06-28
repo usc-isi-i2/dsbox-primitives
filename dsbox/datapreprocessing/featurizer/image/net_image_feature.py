@@ -154,8 +154,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         else:
             data = image_tensor
         output_ndarray = self._model.predict(data)
-        output_ndarray.reshape(output_ndarray.shape[0], -1)
-        output_dataFrame = container.DataFrame(output_ndarray)
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
+        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
         # update the metadata
 
         for each_column in range(len(output_ndarray)):
@@ -280,11 +280,19 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
             self._preprocess(data)
         else:
             data = image_tensor
-        result = self._model.predict(data)
-
+        output_ndarray = self._model.predict(data)
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
+        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
+        # update the metadata
+        #import pdb
+        #pdb.set_trace()
+        for each_column in range(len(output_ndarray)):
+            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(result.reshape(result.shape[0], -1), self._has_finished, self._iterations_done)
+        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
 '''
     def annotation(self):
