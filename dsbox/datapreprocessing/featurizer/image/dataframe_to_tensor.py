@@ -59,26 +59,32 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         dataframe_input = inputs
         elements_amount = dataframe_input.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
         # traverse each selector to check where is the image file
-        image_index = -1
+        target_index = -1
         for selector_index in range(elements_amount):
-            each_selector = dataframe_input.metadata.query((mbase.ALL_ELEMENTS,selector_index))
-            try:
-                # here we assume only one column shows the location of the image files
+            each_selector = inputs.metadata.query((mbase.ALL_ELEMENTS,selector_index))
+            mime_types_found = False
+            # here we assume only one column shows the location of the target attribute
+            #print(each_selector)
+            if 'mime_types' in each_selector:
                 mime_types = (each_selector['mime_types'])
+                mime_types_found = True
+            elif 'media_types' in each_selector:
+                mime_types = (each_selector['media_types'])
+                mime_types_found = True
+            # do following step only when mime type attriubte found
+            if mime_types_found:
                 for each_type in mime_types:
                     if ('image' in each_type):
-                        image_index = selector_index
+                        target_index = selector_index
                         location_base_uris = each_selector['location_base_uris'][0]
                         #column_name = each_selector['name']
                         break
-            except:
-                pass
         # if no 'image' related mime_types found, return a ndarray with each dimension's length equal to 0
-        if (image_index == -1):
+        if (target_index == -1):
             #raise exceptions.InvalidArgumentValueError("no image related metadata found!")
             return CallResult(np.empty(shape=(0,0,0,0)), self._has_finished, self._iterations_done)
 
-        input_file_name_list = inputs.iloc[:,[image_index]].values.tolist()
+        input_file_name_list = inputs.iloc[:,[target_index]].values.tolist()
         input_file_amount = len(input_file_name_list)
         # create the 4 dimension ndarray for return
         tensor_output = np.full((input_file_amount, image_size_x, image_size_y, image_layer), 0)

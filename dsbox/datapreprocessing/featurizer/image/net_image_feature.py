@@ -6,7 +6,7 @@ from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimi
 from d3m.primitive_interfaces.base import CallResult
 
 from d3m.metadata import hyperparams
-from d3m.container import ndarray
+from d3m import container
 
 from scipy.misc import imresize
 
@@ -19,12 +19,12 @@ from . import config
 
 import numpy as np
 import sys
-
+import d3m.metadata.base as mbase
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
-Inputs = ndarray
+Inputs = container.ndarray
 
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
-Outputs = ndarray # extracted features
+Outputs = container.DataFrame # extracted features
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
@@ -153,11 +153,18 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
             self._preprocess(data)
         else:
             data = image_tensor
-        result = self._model.predict(data)
+        output_ndarray = self._model.predict(data)
+        output_ndarray.reshape(output_ndarray.shape[0], -1)
+        output_dataFrame = container.DataFrame(output_ndarray)
+        # update the metadata
 
+        for each_column in range(len(output_ndarray)):
+            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(result.reshape(result.shape[0], -1), self._has_finished, self._iterations_done)
+        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 '''
     def annotation(self):
         if self._annotation is not None:
