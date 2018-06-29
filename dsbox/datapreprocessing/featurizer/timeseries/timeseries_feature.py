@@ -13,6 +13,7 @@ from d3m import container
 import d3m.metadata.base as mbase
 
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
+from sklearn.externals import joblib
 from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 
@@ -22,7 +23,9 @@ Inputs = container.List#[container.DataFrame] # this format is for old version o
 Outputs = container.DataFrame
 
 class Params(params.Params):
+    x_dim: int
     y_dim: int
+    value_dimension: int
     projection_param: typing.Dict
     components_: typing.Optional[np.ndarray]
 
@@ -88,7 +91,6 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         else:
             X = np.zeros((len(inputs), self._y_dim))
 
-
         for i, series in enumerate(inputs):
             if (series.shape[0] < self._y_dim):
                 # pad with zeros
@@ -98,13 +100,11 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
                 X[i,:] = series.iloc[:self._y_dim, self._value_dimension]
 
         # save the result to DataFrame format
-        #import pdb
-        #pdb.set_trace()
         output_ndarray = self._model.transform(X)
-        output_dataFrame = container.DataFrame(output_ndarray)
-        # update the metadata
+        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
 
-        for each_column in range(len(X)):
+        # update the metadata
+        for each_column in range(output_ndarray.shape[1]):
             metadata_selector = (mbase.ALL_ELEMENTS,each_column)
             metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
             output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
@@ -129,19 +129,13 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         e.g.: at dataset 66, it will read the "time" data instead of "value"
         So here I added a function to check the name of each column to ensure that we read the correct data
         '''
-        # here just take first timeseries dataset
-
+        # here just take first timeseries dataset to search
         column_name = list(inputs[0].columns.values)
         for i in range(len(column_name)):
             if 'value' in column_name[i]:
                 self._value_dimension = i
 
         for i, series in enumerate(inputs):
-            '''
-            # For testing purpose of the input data
-            print("~~~~~",i,"~~~~~~")
-            print(series.iloc[:self._y_dim, 1])
-            '''
             self._training_data[i, :] = series.iloc[:self._y_dim, self._value_dimension]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
@@ -161,6 +155,8 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
     def get_params(self) -> Params:
         if self._model:
             return Params(y_dim = self._y_dim,
+                          x_dim = self._x_dim,
+                          value_dimension = self._value_dimension,
                           projection_param =  self._model.get_params(),
                           components_ = getattr(self._model, 'components_', None))
         else:
@@ -168,6 +164,8 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
 
     def set_params(self, *, params: Params) -> None:
         self._y_dim = params['y_dim']
+        self._x_dim = params['x_dim']
+        self._value_dimension = params['value_dimension']
         self._model = None
         if params['projection_param']:
             self._model = GaussianRandomProjection()
