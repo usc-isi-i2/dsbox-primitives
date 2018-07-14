@@ -1,23 +1,31 @@
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
-
 from d3m.metadata import hyperparams
-from d3m.container import DataFrame, List
-import stopit #  type: ignore
-
-from .relation_matrix_all import get_relation_matrix
-from .helper import Aggregator
-from .relationMatrix2foreignKey import relationMat2foreignKey
-from . import config
-
+from d3m import container
 from d3m.metadata.hyperparams import Hyperparams
+from d3m.metadata import base as metadata_base
+from common_primitives import utils
+from .helper import Aggregator
+from . import config
+import stopit #  type: ignore
+import pandas as pd
+#from os import listdir
+import time
+import typing
+import re
 
-Inputs = List # list[0] is a list of tables in DataFrame format, list[1] is a list of the names of the tables
-Outputs = DataFrame
+Inputs = container.Dataset
+Outputs = container.DataFrame
 
-VERBOSE = 0
+class MultiTableFeaturizationHyperparams(hyperparams.Hyperparams):
+    VERBOSE = hyperparams.Hyperparameter[bool](
+        default=False,
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        description="Display the track of detail processing steps or not",
+    )
 
-class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
+
+class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, MultiTableFeaturizationHyperparams]):
 
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -43,7 +51,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: Hyperparams) -> None:
+    def __init__(self, *, hyperparams: MultiTableFeaturizationHyperparams) -> None:
 
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
@@ -51,7 +59,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-        self._verbose = VERBOSE
+        self._verbose = self.hyperparams['VERBOSE']
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
@@ -78,33 +86,90 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 return CallResult(None, self._has_finished, self._iterations_done)
 
 
-
-    def _core(self, inputs) -> Outputs:
+    def _core(self, inputs: Inputs) -> Outputs:
         """
         core calculations
         """
-        data = inputs[0]
-        names = inputs[1][:-1]
-        master_table_name = inputs[1][-1]
-        # TODO: format names, make sure it has to be like xx.csv
-        # for example, if original names is like [0,1,2], make it to be [0.csv, 1.csv, 2.csv]
+        data = inputs.copy()
+        relations = []
+        # step 1: Generate the relation sets
+        # search in each dataset and find the foreign key relationship
+        all_metadata = {}
+        for resource_id in data.keys():
+            # get relationship of foreign keys
+            columns_length = inputs.metadata.query((resource_id, metadata_base.ALL_ELEMENTS))['dimension']['length']
+            for column_index in range(columns_length):
+                column_metadata = inputs.metadata.query((resource_id, metadata_base.ALL_ELEMENTS, column_index))
+                # save each column's metadata for further adding back
+                resource_column_name = resource_id + "_" + data[resource_id].columns[column_index]
+                all_metadata[resource_column_name] = column_metadata
+                # find the main resource id
+                if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in column_metadata['semantic_types']:
+                    main_resource_id = resource_id
+                    if self._verbose:
+                        print("Main table ID is:",main_resource_id)
+                # find the foreign key relationship
+                if 'foreign_key' in column_metadata:
+                    target_column_name = column_metadata['foreign_key']['resource_id'] + "_" + column_metadata['foreign_key']['column_name']
+                    column_metadata['foreign_key']
+                    # generate a set with format (target_id+target_column_index, resource_id+resource_column_index)
+                    each_relation = (target_column_name, resource_column_name)
+                    relations.append(each_relation)
 
-        # step 1: get relation matrix
-        relation_matrix = get_relation_matrix(data, names)
-        if self._verbose > 0:
-            relation_matrix.to_csv("./relation_matrix.csv", index=False)
-        # step 2: get prime key - foreign key relationship
-        relations = relationMat2foreignKey(data, names, relation_matrix)
+        # if no foreign key relationships found, return inputs directly
+        if len(relations) == 0:
+            print("[INFO] No foreign_key relationship found in the dataset, will return the original dataset.")
+            return inputs
 
         # step 2.5: a fix (based on the problem occurred in `uu3_world_development_indicators` dataset)
-        # relations = relations_correction(relations)
-        if self._verbose > 0:
+        relations = self._relations_correction(relations = relations)
+        if self._verbose:
             print ("==========relations:=============")
             print (relations) # to see if the relations make sense
             print ("=================================")
-
+        
         # step 3: featurization
-        aggregator = Aggregator(relations, data, names, self._verbose)
-        big_table = aggregator.forward(master_table_name)
+        start=time.clock()
+        print("[INFO] Multi-table join start.")
+        aggregator = Aggregator(relations, data, self._verbose)
+        for each_relation in relations:
+            # if the target table found in second placfe of the set
+            if main_resource_id in each_relation[1]:
+                big_table = aggregator.backward_new(each_relation[1])
+                break
+            # if the target table found in first placfe of the set  
+            if main_resource_id in each_relation[0]:
+                big_table = aggregator.forward(each_relation[0])
+                break
+        finish=time.clock()
+        print("[INFO] Multi-table join finished, totally take ",finish - start,'seconds.')
+        big_table = container.DataFrame(pd.DataFrame(big_table),generate_metadata=True)
+        # add back metadata
+        for index in range(len(big_table.columns)):
+            old_metadata = all_metadata[big_table.columns[index]]
+            big_table.metadata = big_table.metadata.update((metadata_base.ALL_ELEMENTS, index), old_metadata)
 
+        # import pdb
+        # pdb.set_trace()
         return big_table
+
+    def _relations_correction(self, relations):
+        """
+        to correct the obtained relations:
+            1. if more than one relation found btw. two tables, only pick one of them
+        """
+        # using easist way to fix: a set that avoid duplicates
+        table_tuple_set = set() # store the set of tuples of tables: {(table1, table2), (table1, table3), ...}
+        relations_corrected = set()
+
+        for foreign_key, primary_key in relations:
+            foreign_table = re.split('_', foreign_key)[0]
+            primary_table = re.split('_', primary_key)[0]
+            table_tuple = (foreign_table, primary_table)
+            if (table_tuple in table_tuple_set):
+                continue
+            else:
+                table_tuple_set.add(table_tuple)
+                relations_corrected.add((foreign_key, primary_key))
+
+        return relations_corrected

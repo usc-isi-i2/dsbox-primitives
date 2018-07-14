@@ -148,7 +148,13 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._x_dim, random_state=self.random_seed)
         else:
-            self._model = GaussianRandomProjection(eps=eps, random_state=self.random_seed)
+            try:
+                self._model = GaussianRandomProjection(eps=eps, random_state=self.random_seed)
+            except:
+                print("[Warning] Using given eps value failed, will use default conditions.")
+                self._model = GaussianRandomProjection()
+        #import pdb
+        #pdb.set_trace()
         self._model.fit(self._training_data)
         self._fitted = True
 
