@@ -142,20 +142,23 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         eps = self.hyperparams['eps']
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
 
-        print("n_components is", n_components)
-       
-        if n_components > self._x_dim:
+        print("[INFO] n_components is", n_components)
+        
+        if n_components > self._y_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
-            self._model = GaussianRandomProjection(n_components=self._x_dim, random_state=self.random_seed)
+            self._model = GaussianRandomProjection(n_components=self._y_dim, random_state=self.random_seed)
         else:
             try:
                 self._model = GaussianRandomProjection(eps=eps, random_state=self.random_seed)
+                self._model.fit(self._training_data)
             except:
                 print("[Warning] Using given eps value failed, will use default conditions.")
                 self._model = GaussianRandomProjection()
+        
+        self._model.fit(self._training_data)
         #import pdb
         #pdb.set_trace()
-        self._model.fit(self._training_data)
+        
         self._fitted = True
 
     def get_params(self) -> Params:
