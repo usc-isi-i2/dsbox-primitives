@@ -44,7 +44,7 @@ class Aggregator(object):
         k_tables = self.get_forward_tables(table_name)
         if self.verbose: print ("current forward tables: {}".format(k_tables))
         result = self.tables[table_name]
-        
+
         table_name_set = {}  # prevent: same table (name) happen; key is table name; value if the number of occurence
         for table_key in k_tables:
             if self.verbose: print ("current forward table: {}".format(table_key))
@@ -62,12 +62,12 @@ class Aggregator(object):
             if (table_size > maximum_allow_table_size):
                 if self.verbose: print ("backward finished")
                 table = table.rename(columns = lambda x : foreign_table_name+"_"+x)
-                ## DEBUG code: check the intermediate tables 
+                ## DEBUG code: check the intermediate tables
                 if self.verbose: table.to_csv("./backwarded_table_"+foreign_table_name, index=False)
 
                 # join back to central table, need to find the corresponding column name
                 central_table_key = self.get_corresponding_column_name(table_name, table_key)
-                if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key 
+                if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
                 if self.verbose: print("foreign_table_key is: {}".format(foreign_table_key))
                 table_reindex = table.set_index(foreign_table_name+"_"+foreign_table_key)
                 result_reindex = result.set_index(central_table_key)
@@ -86,9 +86,9 @@ class Aggregator(object):
         central_table_name, column_name = self.get_names(curt_table)
         k_tables = self.get_backward_tables(central_table_name)
         result = self.tables[central_table_name]
-        if self.verbose: 
+        if self.verbose:
             print ("backward tables: {}".format(k_tables))
-        
+
         for table_key in k_tables:
             # aggregated result of : groupby + count()
             if self.verbose: print ("current backward table: {}".format(table_key))
@@ -99,9 +99,9 @@ class Aggregator(object):
             #result = result.rename(columns = lambda x : table_name+"_"+x)
             # join back to central table, need to find the corresponding column name
             central_table_key = self.get_corresponding_column_name(central_table_name, table_key)
-            if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key 
+            if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
             result = result.join(other=rr, on=central_table_key) # no need to set_index for r, because its index is alreayd column_name
-            
+
         return result
 
     def backward_new(self, curt_table):
@@ -115,23 +115,27 @@ class Aggregator(object):
         k_tables = self.get_backward_tables(central_table_name)
         result = self.tables[central_table_name]
         result = result.rename(columns = lambda x : central_table_name + "_" + x)
-        
-        if self.verbose: 
+
+        if self.verbose:
             print ("backward tables: {}".format(k_tables))
-        
+
         for table_key in k_tables:
             # aggregated result of : groupby + count()
             if self.verbose: print ("current backward table: {}".format(table_key))
             table_name, column_name = self.get_names(table_key)
             table = self.tables[table_name]
             primary_key_column_name = central_table_name + "_" + central_column_name
-            foreign_key_column_name = table_name + "_" + central_column_name
+
+            # The backward table may use a different name
+            # foreign_key_column_name = table_name + "_" + central_column_name
+            foreign_key_column_name = table_name + "_" + column_name
+
             table = table.rename(columns = lambda x : table_name + "_" + x)
             table = table.rename(columns = {foreign_key_column_name : primary_key_column_name})
             table = table.set_index(primary_key_column_name)
             # join back to central table, need to find the corresponding column name
             #central_table_key = self.get_corresponding_column_name(central_table_name, table_key)
-            if self.verbose: print("central_table_key is: {}".format(central_column_name)) # name of primary-foreign key 
+            if self.verbose: print("central_table_key is: {}".format(central_column_name)) # name of primary-foreign key
             result = result.join(other=table,on = primary_key_column_name, rsuffix="_COPY", how = "left")
             result = result.rename(columns = {primary_key_column_name+"_COPY" : primary_key_column_name})
         return result
@@ -163,9 +167,9 @@ class Aggregator(object):
 
         raise ValueError("there is no relations between {} and {}".format(table2_col, table1))
 
-        
 
-            
+
+
     def get_forward_tables(self, table_name):
         """
         Input:
@@ -178,7 +182,7 @@ class Aggregator(object):
         result = list()
         for relation in self.relations:
             # assumption: the name like "loan.csv", always represent a table
-            if (table_name in relation[0]): 
+            if (table_name in relation[0]):
                 result.append(relation[1])
                 self.visited.add(relation[0])
         return result

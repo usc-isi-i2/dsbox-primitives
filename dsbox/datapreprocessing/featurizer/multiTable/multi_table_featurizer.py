@@ -1,21 +1,23 @@
+import logging
+import re
+import time
+
+import stopit #  type: ignore
+import pandas as pd
+
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams
 from d3m import container
-from d3m.metadata.hyperparams import Hyperparams
 from d3m.metadata import base as metadata_base
-from common_primitives import utils
+
 from .helper import Aggregator
 from . import config
-import stopit #  type: ignore
-import pandas as pd
-#from os import listdir
-import time
-import typing
-import re
 
 Inputs = container.Dataset
 Outputs = container.DataFrame
+
+_logger = logging.getLogger(__name__)
 
 class MultiTableFeaturizationHyperparams(hyperparams.Hyperparams):
     VERBOSE = hyperparams.Hyperparameter[bool](
@@ -106,11 +108,25 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 # find the main resource id
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in column_metadata['semantic_types']:
                     main_resource_id = resource_id
+                    _logger.debug("Main table ID is: %s", main_resource_id)
                     if self._verbose:
-                        print("Main table ID is:",main_resource_id)
+                        print("Main table ID is:", main_resource_id)
                 # find the foreign key relationship
                 if 'foreign_key' in column_metadata:
-                    target_column_name = column_metadata['foreign_key']['resource_id'] + "_" + column_metadata['foreign_key']['column_name']
+                    ref_resource_id = column_metadata['foreign_key']['resource_id']
+                    if "https://metadata.datadrivendiscovery.org/types/FilesCollection" in inputs.metadata.query((ref_resource_id,))['semantic_types']:
+                        _logger.debug('Skipping file collection resource id=%s', ref_resource_id)
+                        continue
+                    # Can reference by name or by column
+                    if 'column_name' in column_metadata['foreign_key']:
+                        foreign_column_name = column_metadata['foreign_key']['column_name']
+                    else:
+                        foreign_column_index = column_metadata['foreign_key']['column_index']
+                        foreign_column_name = inputs.metadata.query(
+                            (column_metadata['foreign_key']['resource_id'],
+                             metadata_base.ALL_ELEMENTS,
+                             foreign_column_index))['name']
+                    target_column_name = column_metadata['foreign_key']['resource_id'] + "_" + foreign_column_name
                     column_metadata['foreign_key']
                     # generate a set with format (target_id+target_column_index, resource_id+resource_column_index)
                     each_relation = (target_column_name, resource_column_name)
@@ -118,16 +134,25 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
 
         # if no foreign key relationships found, return inputs directly
         if len(relations) == 0:
-            print("[INFO] No foreign_key relationship found in the dataset, will return the original dataset.")
+            _logger.info("No table-based foreign_key relationship found in the dataset, will return the original dataset.")
+            print("[INFO] No table-based foreign_key relationship found in the dataset, will return the original dataset.")
             return inputs
 
         # step 2.5: a fix (based on the problem occurred in `uu3_world_development_indicators` dataset)
+        if _logger.getEffectiveLevel() <= 10:
+            _logger.debug('Relations')
+            for target_column_name, resource_column_name in relations:
+                _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
         relations = self._relations_correction(relations = relations)
         if self._verbose:
             print ("==========relations:=============")
             print (relations) # to see if the relations make sense
             print ("=================================")
-        
+        if _logger.getEffectiveLevel() <= 10:
+            _logger.debug('Corrected Relations')
+            for target_column_name, resource_column_name in relations:
+                _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
+
         # step 3: featurization
         start=time.clock()
         print("[INFO] Multi-table join start.")
@@ -137,7 +162,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             if main_resource_id in each_relation[1]:
                 big_table = aggregator.backward_new(each_relation[1])
                 break
-            # if the target table found in first placfe of the set  
+            # if the target table found in first placfe of the set
             if main_resource_id in each_relation[0]:
                 big_table = aggregator.forward(each_relation[0])
                 break
