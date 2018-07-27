@@ -42,7 +42,7 @@ setup(name='dsbox-featurizer',
           'dsbox-datacleaning==1.3.0'
       ],
       dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning@c1c284123ba12a07b5f24a3e9f809e75d1b8be42#egg=dsbox-datacleaning-1.3.0'
+        'git+https://github.com/usc-isi-i2/dsbox-cleaning@436e25b0ea52cf95b46cb9be27934c1ede8c76cf#egg=dsbox-datacleaning-1.3.0'
       ],
       keywords='d3m_primitive',
       entry_points = {
