@@ -16,7 +16,7 @@ from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRan
 from sklearn.externals import joblib
 from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
-
+import pandas as pd
 from . import config
 
 Inputs = container.List#[container.DataFrame] # this format is for old version of d3m
@@ -28,6 +28,7 @@ class Params(params.Params):
     value_dimension: int
     projection_param: typing.Dict
     components_: typing.Optional[np.ndarray]
+    value_found: bool
 
 class Hyperparams(hyperparams.Hyperparams):
     '''
@@ -77,12 +78,14 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
 
         self._model = None
         self._training_data = None
+        self._value_found = False
         self._x_dim = 0  # x_dim : the amount of timeseries dataset
         self._y_dim = 0  # y_dim : the length of each timeseries dataset
         self._value_dimension = 0 # value_dimension : used to determine which dimension data is the values we want
         self._fitted = False
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+
         # if self._training_data is None or self._y_dim==0:
         if not self._fitted:
             return CallResult(None, True, 0)
@@ -92,51 +95,76 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             X = np.zeros((len(inputs), self._y_dim))
 
         for i, series in enumerate(inputs):
-            if (series.shape[0] < self._y_dim):
+            if series.shape[1] > 1 and not self._value_found:
+                series_output = pd.DataFrame()
+                for j in range(series.shape[1]):
+                    series_output = pd.concat([series_output,series.iloc[:, j]])
+            else:
+                series_output = series
+            if (series_output.shape[0] < self._y_dim):
                 # pad with zeros
-                X[i,:series.shape[0]] = series.iloc[:series.shape[0], self._value_dimension]
+                X[i,:series_output.shape[0]] = series_output.iloc[:series_output.shape[0], self._value_dimension]
             else:
                 # Truncate or just fit in
-                X[i,:] = series.iloc[:self._y_dim, self._value_dimension]
+                X[i,:] = series_output.iloc[:self._y_dim, self._value_dimension]
 
         # save the result to DataFrame format
         output_ndarray = self._model.transform(X)
         output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
-
         # update the metadata
-        for each_column in range(output_ndarray.shape[1]):
-            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
-            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+        # for each_column in range(output_ndarray.shape[1]):
+        #     metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+        #     metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+        #     output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
         return CallResult(output_dataFrame, True, 1)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
         if len(inputs) == 0:
             print("Warning: Inputs length is 0 which should not be.")
             return
+        # update: now we need to get the whole shape of inputs to process
         lengths = [x.shape[0] for x in inputs]
-        is_same_length = len(set(lengths)) == 1
-        if is_same_length:
-            self._y_dim = lengths[0]
-        else:
-            # Truncate all time series to the shortest time series
-            self._y_dim = min(lengths)
-        self._x_dim = len(inputs)
-        self._training_data = np.zeros((self._x_dim, self._y_dim))
+        widths = [x.shape[1] for x in inputs]
+        # here just take first timeseries dataset to search
+        column_name = list(inputs[0].columns.values)
         '''
         New things, the previous version only trying to load the fixed columns
         It will cause problems that may load the wrong data
         e.g.: at dataset 66, it will read the "time" data instead of "value"
         So here I added a function to check the name of each column to ensure that we read the correct data
         '''
-        # here just take first timeseries dataset to search
-        column_name = list(inputs[0].columns.values)
         for i in range(len(column_name)):
             if 'value' in column_name[i]:
+                self._value_found  = True
                 self._value_dimension = i
 
+        is_same_length = len(set(lengths)) == 1
+        is_same_width = len(set(widths)) == 1
+        if not is_same_width:
+            print("Warning: some csv file have different dimensions!")
+        if self._value_found :
+            if is_same_length:
+                self._y_dim = lengths[0]
+            else:
+                # Truncate all time series to the shortest time series
+                self._y_dim = min(lengths)
+        else:
+            if is_same_length:
+                self._y_dim = lengths[0] * widths[0]
+            else:
+                # Truncate all time series to the shortest time series
+                self._y_dim = min(lengths) * min(widths)
+        self._x_dim = len(inputs)
+        self._training_data = np.zeros((self._x_dim, self._y_dim))
+
         for i, series in enumerate(inputs):
-            self._training_data[i, :] = series.iloc[:self._y_dim, self._value_dimension]
+            if series.shape[1] > 1 and not self._value_found :
+                series_output = pd.DataFrame()
+                for each_dimension in range(series.shape[1]):
+                    series_output = pd.concat([series_output,series.iloc[:, each_dimension]])
+            else:
+                series_output = series
+            self._training_data[i, :] = series_output.iloc[:self._y_dim, self._value_dimension]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         eps = self.hyperparams['eps']
@@ -156,8 +184,6 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
                 self._model = GaussianRandomProjection()
         
         self._model.fit(self._training_data)
-        #import pdb
-        #pdb.set_trace()
         
         self._fitted = True
 
@@ -165,15 +191,18 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         if self._model:
             return Params(y_dim = self._y_dim,
                           x_dim = self._x_dim,
+                          value_found = self._value_found,
                           value_dimension = self._value_dimension,
                           projection_param =  self._model.get_params(),
-                          components_ = getattr(self._model, 'components_', None))
+                          components_ = getattr(self._model, 'components_', None)
+                          )
         else:
             return Params({'y_dim': 0, 'projection_param': {}})
 
     def set_params(self, *, params: Params) -> None:
         self._y_dim = params['y_dim']
         self._x_dim = params['x_dim']
+        self._value_found = params['value_found']
         self._value_dimension = params['value_dimension']
         self._model = None
         if params['projection_param']:
