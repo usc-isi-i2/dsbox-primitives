@@ -41,6 +41,11 @@ class Hyperparams(hyperparams.Hyperparams):
         semantic_types=["http://schema.org/Float", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
         )
 
+    generate_metadata = hyperparams.UniformBool(
+        default = False,
+        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
 class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
     classdocs
@@ -87,14 +92,16 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
         # if self._training_data is None or self._y_dim==0:
+        inputs_timeseries = inputs[1]
+        inputs_d3mIndex = inputs[0]
         if not self._fitted:
             return CallResult(None, True, 0)
-        if isinstance(inputs, np.ndarray):
-            X = np.zeros((inputs.shape[0], self._y_dim))
+        if isinstance(inputs_timeseries, np.ndarray):
+            X = np.zeros((inputs_timeseries.shape[0], self._y_dim))
         else:
-            X = np.zeros((len(inputs), self._y_dim))
+            X = np.zeros((len(inputs_timeseries), self._y_dim))
 
-        for i, series in enumerate(inputs):
+        for i, series in enumerate(inputs_timeseries):
             if series.shape[1] > 1 and not self._value_found:
                 series_output = pd.DataFrame()
                 for j in range(series.shape[1]):
@@ -111,22 +118,29 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
         # save the result to DataFrame format
         output_ndarray = self._model.transform(X)
         output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
-        # update the metadata
-        # for each_column in range(output_ndarray.shape[1]):
-        #     metadata_selector = (mbase.ALL_ELEMENTS,each_column)
-        #     metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-        #     output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+
+        if self.hyperparams["generate_metadata"]:
+        # add metadata if required
+            for each_column in range(output_ndarray.shape[1]):
+                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+
+        # update the original index to be d3mIndex
+        output_dataFrame = output_dataFrame.set_index(inputs_d3mIndex)
         return CallResult(output_dataFrame, True, 1)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
-        if len(inputs) == 0:
-            print("Warning: Inputs length is 0 which should not be.")
+        inputs_timeseries = inputs[1]
+        inputs_d3mIndex = inputs[0]
+        if len(inputs_timeseries) == 0:
+            print("Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
         # update: now we need to get the whole shape of inputs to process
-        lengths = [x.shape[0] for x in inputs]
-        widths = [x.shape[1] for x in inputs]
+        lengths = [x.shape[0] for x in inputs_timeseries]
+        widths = [x.shape[1] for x in inputs_timeseries]
         # here just take first timeseries dataset to search
-        column_name = list(inputs[0].columns.values)
+        column_name = list(inputs_timeseries[0].columns.values)
         '''
         New things, the previous version only trying to load the fixed columns
         It will cause problems that may load the wrong data
@@ -154,10 +168,10 @@ class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[
             else:
                 # Truncate all time series to the shortest time series
                 self._y_dim = min(lengths) * min(widths)
-        self._x_dim = len(inputs)
+        self._x_dim = len(inputs_timeseries)
         self._training_data = np.zeros((self._x_dim, self._y_dim))
 
-        for i, series in enumerate(inputs):
+        for i, series in enumerate(inputs_timeseries):
             if series.shape[1] > 1 and not self._value_found :
                 series_output = pd.DataFrame()
                 for each_dimension in range(series.shape[1]):

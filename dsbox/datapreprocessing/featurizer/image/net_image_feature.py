@@ -21,7 +21,7 @@ import numpy as np
 import sys
 import d3m.metadata.base as mbase
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
-Inputs = container.ndarray
+Inputs = container.List
 
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
 Outputs = container.DataFrame # extracted features
@@ -36,6 +36,11 @@ class ResNet50Hyperparams(hyperparams.Hyperparams):
     )
     # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
+    generate_metadata = hyperparams.UniformBool(
+        default = False,
+        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
 
 class Vgg16Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
@@ -45,6 +50,12 @@ class Vgg16Hyperparams(hyperparams.Hyperparams):
         description="Specify the layer of the neural network to use for features. Lower numbered layers correspond to higher-level abstract features. The number of features by layer index are [25088, 100352, 200704, 401408]",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
     )
+
+    generate_metadata = hyperparams.UniformBool(
+        default = False,
+        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
     # corresponding layer_size = [25088, 100352, 200704, 401408]
 
 class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams]):
@@ -128,8 +139,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         """Apply neural network-based feature extraction to image_tensor"""
-        image_tensor = inputs
-
+        image_tensor = inputs[1]
+        image_d3mIndex = inputs[0]
         # preprocess() modifies the data. For now just copy the data.
         if not len(image_tensor.shape) == 4:
             raise ValueError('Expect shape to have 4 dimension')
@@ -155,15 +166,18 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
             data = image_tensor
         output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
-        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
-        # update the metadata
-
-        for each_column in range(len(output_ndarray)):
-            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
-            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+        output_dataFrame = container.DataFrame(output_ndarray)
+        
+        # if generate_metadata is true, update the metadata
+        if self.hyperparams["generate_metadata"]:
+            for each_column in range(output_ndarray.shape[1]):
+                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
         self._has_finished = True
         self._iterations_done = True
+        # update the original index to be d3mIndex
+        output_dataFrame = output_dataFrame.set_index(image_d3mIndex)
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 '''
     def annotation(self):
@@ -256,7 +270,8 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         """Apply neural network-based feature extraction to image_tensor"""
-        image_tensor = inputs
+        image_tensor = inputs[1]
+        image_d3mIndex = inputs[0]
 
         if not len(image_tensor.shape) == 4:
             raise ValueError('Expect shape to have 4 dimension')
@@ -283,13 +298,16 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
         output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
-        # update the metadata
-        #import pdb
-        #pdb.set_trace()
-        for each_column in range(len(output_ndarray)):
-            metadata_selector = (mbase.ALL_ELEMENTS,each_column)
-            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Table', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+
+        
+        # if generate_metadata is true, update the metadata
+        if self.hyperparams["generate_metadata"]:
+            for each_column in range(output_ndarray.shape[1]):
+                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+        # update the original index to be d3mIndex
+        output_dataFrame = output_dataFrame.set_index(image_d3mIndex)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)

@@ -1,5 +1,6 @@
 import pandas
 import typing
+import numpy as np
 import d3m.metadata.base as mbase
 from d3m.metadata import hyperparams, params
 from d3m import container
@@ -26,12 +27,15 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
     (Here we would not process the label data and it will be processed separately with other primitives)
     The output may look like:
     -------------------------------------------------------------------------------------
-    List:
-    Index     'timeseries_data'
-    0        'DataFrame' tpye data 
-    1        'DataFrame' tpye data  
-    2        'DataFrame'. tpye data 
+    output_List[0]: The d3mIndex (may not continuous if the dataset was splited previously)
+    [12, 20, 40, 6, 22...]
+    output_List[1]:
+    index     'timeseries_data'
+    0       'DataFrame' tpye data 
+    1       'DataFrame' tpye data  
+    2       'DataFrame' tpye data 
     ...
+    
     -------------------------------------------------------------------------------------
     '''
     __author__ = 'USC ISI'
@@ -66,8 +70,8 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
         elements_amount = inputs.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
-        #import pdb
-        #pdb.set_trace()
+        d3mIndex_output = np.asarray(inputs.index.tolist())
+
         # traverse each selector to check where is the image file
         timeseries_index = -1
         for selector_index in range(elements_amount):
@@ -106,10 +110,10 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
             file_path = file_path[7:]
             timeseries_output.append(pandas.read_csv(file_path))
 
-
+        final_output = [d3mIndex_output, timeseries_output]
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(timeseries_output, self._has_finished, self._iterations_done)
+        return CallResult(final_output, self._has_finished, self._iterations_done)
 
 
