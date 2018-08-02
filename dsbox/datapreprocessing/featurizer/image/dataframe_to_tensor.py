@@ -23,6 +23,20 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
     Tranform the input Dataframe format data(after DatasetToDataFramePrimitive step)
     into ndarray format data (finding the image type data and read them)
     so that it could be processed by other image process primitives
+
+    The output may look like:
+    -------------------------------------------------------------------------------------
+    output_List[0]: The d3mIndex (may not continuous if the dataset was splited previously)
+    [12, 20, 40, 6, 22...]
+    output_List[1]:
+    a 4 dimension numpy nd array:
+    dimension 1: The index of each image
+    dimension 2: The index of each layer inside the image (R/G/B)
+    dimension 3&4: The pixel location of each image of each layer
+    each value: each pixel value
+    ...
+    
+    -------------------------------------------------------------------------------------
     '''
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
