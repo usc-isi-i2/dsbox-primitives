@@ -11,6 +11,7 @@ from d3m import container
 from scipy.misc import imresize
 
 from keras.models import Model
+from keras.backend import clear_session
 import keras.applications.resnet50 as resnet50
 import keras.applications.vgg16 as vgg16
 
@@ -20,6 +21,7 @@ from . import config
 import numpy as np
 import sys
 import d3m.metadata.base as mbase
+import tensorflow as tf
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
 Inputs = container.List
 
@@ -104,7 +106,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-
+        # clear_session()
         #============TODO: these three could be hyperparams=========
         self._layer_index = hyperparams['layer_index']
         self._preprocess_data = True
@@ -129,6 +131,10 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
 
+        global model
+        model = self._model
+        global graph
+        graph = tf.get_default_graph()
 
         self._annotation = None
 
@@ -164,7 +170,9 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
             self._preprocess(data)
         else:
             data = image_tensor
-        output_ndarray = self._model.predict(data)
+        # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
+        with graph.as_default():
+            output_ndarray = model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
         output_dataFrame = container.DataFrame(output_ndarray)
         
@@ -237,7 +245,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-
+        clear_session()
         #============TODO: these three could be hyperparams=========
         self._layer_index = self.hyperparams['layer_index']
         self._preprocess_data= True
@@ -261,6 +269,12 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._org_model = self._VGG16_MODEL
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
+
+        global model
+        model = self._model
+        global graph
+        graph = tf.get_default_graph()
+
         self._annotation = None
 
 
@@ -295,7 +309,9 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
             self._preprocess(data)
         else:
             data = image_tensor
-        output_ndarray = self._model.predict(data)
+        # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
+        with graph.as_default():
+            output_ndarray = model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
         output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
 
