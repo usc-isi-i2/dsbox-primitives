@@ -106,7 +106,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-        # clear_session()
+        clear_session()
         #============TODO: these three could be hyperparams=========
         self._layer_index = hyperparams['layer_index']
         self._preprocess_data = True
@@ -130,11 +130,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._org_model = self._RESNET50_MODEL
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
-
-        global model
-        model = self._model
-        global graph
-        graph = tf.get_default_graph()
+        self._graph = tf.get_default_graph()
 
         self._annotation = None
 
@@ -171,11 +167,11 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         else:
             data = image_tensor
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
-        with graph.as_default():
-            output_ndarray = model.predict(data)
+        with self._graph.as_default():
+            output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
         output_dataFrame = container.DataFrame(output_ndarray)
-        
+
         # if generate_metadata is true, update the metadata
         if self.hyperparams["generate_metadata"]:
             for each_column in range(output_ndarray.shape[1]):
@@ -270,10 +266,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
 
-        global model
-        model = self._model
-        global graph
-        graph = tf.get_default_graph()
+        self._graph = tf.get_default_graph()
 
         self._annotation = None
 
@@ -310,12 +303,12 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         else:
             data = image_tensor
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
-        with graph.as_default():
-            output_ndarray = model.predict(data)
+        with self._graph.as_default():
+            output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
         output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
 
-        
+
         # if generate_metadata is true, update the metadata
         if self.hyperparams["generate_metadata"]:
             for each_column in range(output_ndarray.shape[1]):
