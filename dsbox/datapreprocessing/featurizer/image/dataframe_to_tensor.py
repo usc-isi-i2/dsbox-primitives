@@ -3,9 +3,12 @@ from d3m.container.pandas import DataFrame
 from d3m.primitive_interfaces.base import CallResult
 from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 from d3m.metadata import hyperparams
+from multiprocessing import Pool
 import d3m.metadata.base as mbase
 import importlib
 import numpy as np
+import sys
+import os
 from . import config  # this import not work properly for now
 
 Inputs = DataFrame
@@ -15,7 +18,38 @@ image_size_y = 224
 image_layer = 3
 
 class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
-    pass
+    process_amount = hyperparams.UniformInt(
+        lower=1,
+        upper=sys.maxsize,
+        default=os.cpu_count(),
+        description="Specify number of processes that generated in same time when reading images, default value will be all cores in the system",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
+    
+    resize_X = hyperparams.UniformInt(
+        lower=0,
+        upper=sys.maxsize,
+        default=224,
+        description="Specify the resized shape[0] of the resized image",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
+
+    resize_Y = hyperparams.UniformInt(
+        lower=0,
+        upper=sys.maxsize,
+        default=224,
+        description="Specify the resized shape[1] of the resized image",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
+
+    image_layer = hyperparams.UniformInt(
+        lower=1,
+        upper=3,
+        upper_inclusive = True,
+        default=3,
+        description="Specify the output image layer, default value is 3 which corresponds to color images",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+    )
 
 class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTensorHyperparams]):
     '''
@@ -26,8 +60,10 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
 
     The output may look like:
     -------------------------------------------------------------------------------------
-    output_List[0]: The d3mIndex (may not continuous if the dataset was splited previously)
+    output_List[0]: 
+    The d3mIndex (may not continuous if the dataset was splited previously)
     [12, 20, 40, 6, 22...]
+
     output_List[1]:
     a 4 dimension numpy nd array:
     dimension 1: The index of each image
@@ -64,9 +100,20 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         super().__init__(hyperparams=hyperparams)
         self._keras_image = importlib.import_module('keras.preprocessing.image')
         self.hyperparams = hyperparams
+        self._resize_X = hyperparams['resize_X']
+        self._resize_Y = hyperparams['resize_Y']
+        self._image_layer = hyperparams['image_layer']
+        self._process_amount = hyperparams['process_amount']
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
+
+    def _read_one_image(self, file_path: str):
+        '''
+            Sub sequence that used to read one image
+        '''
+        im = np.array(self._keras_image.load_img(file_path, target_size=(self._resize_X, self._resize_Y)))
+        return im
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
@@ -74,6 +121,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         elements_amount = dataframe_input.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
         # traverse each selector to check where is the image file
         target_index = []
+        location_base_uris = []
         for selector_index in range(elements_amount):
             each_selector = inputs.metadata.query((mbase.ALL_ELEMENTS,selector_index))
             mime_types_found = False
@@ -90,7 +138,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
                 for each_type in mime_types:
                     if ('image' in each_type):
                         target_index.append(selector_index)
-                        location_base_uris = each_selector['location_base_uris'][0]
+                        location_base_uris.append(each_selector['location_base_uris'][0])
                         #column_name = each_selector['name']
                         break
         # if no 'image' related mime_types found, return a ndarray with each dimension's length equal to 0
@@ -98,18 +146,32 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
             #raise exceptions.InvalidArgumentValueError("no image related metadata found!")
             print("[ERROR] No image related column found!")
             return CallResult(np.empty(shape=(0,0,0,0)), self._has_finished, self._iterations_done)
+        elif len(target_index) > 1:
+            print("[INFO] Multiple image columns found in the input, this primitive can only handle one column.")
 
         input_file_name_list = inputs.iloc[:,target_index].values.tolist()
-        input_file_amount = len(input_file_name_list)
-        # create the 4 dimension ndarray for return
-        tensor_output = np.full((input_file_amount, image_size_x, image_size_y, image_layer), 0)
         d3mIndex_output = np.asarray(inputs.index.tolist())
-        for i in range(input_file_amount):
-            file_path = location_base_uris + input_file_name_list[i][0]
-            file_path = file_path[7:]
-            im = np.array(self._keras_image.load_img(file_path, target_size=(image_size_x, image_size_y)))
-            tensor_output[i,:,:,:] = im
 
+        file_path_all = []
+
+        # generate the list of the file_paths
+        location_base_uris = location_base_uris[0]
+        if location_base_uris[0:7] == 'file://':
+            location_base_uris = location_base_uris[7:]
+        for each in input_file_name_list:
+            file_path = location_base_uris + each[0]
+            file_path_all.append(file_path)
+
+        # multi-process part
+        try:
+            with Pool(self._process_amount) as p:
+                tensor_output = np.array(p.map(self._read_one_image, file_path_all))
+        # sometimes it may failed with ERROR like "OSError: [Errno 24] Too many open files"
+        except OSError as e:
+            if e.errno == 24:
+                print("Too many open files. Increase limit to 2 * n_trees + 2" \
+                    + "(unix / mac: ulimit -n [limit], windows: http://bit.ly/2fAKnz0)", file=sys.stderr)
+            raise e
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
         self._iterations_done = True
