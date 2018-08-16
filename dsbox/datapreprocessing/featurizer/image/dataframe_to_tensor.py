@@ -122,6 +122,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         # traverse each selector to check where is the image file
         target_index = []
         location_base_uris = []
+
         for selector_index in range(elements_amount):
             each_selector = inputs.metadata.query((mbase.ALL_ELEMENTS,selector_index))
             mime_types_found = False
@@ -151,21 +152,19 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
 
         input_file_name_list = inputs.iloc[:,target_index].values.tolist()
         d3mIndex_output = np.asarray(inputs.index.tolist())
-
-        file_path_all = []
-
+        
         # generate the list of the file_paths
         location_base_uris = location_base_uris[0]
         if location_base_uris[0:7] == 'file://':
             location_base_uris = location_base_uris[7:]
-        for each in input_file_name_list:
-            file_path = location_base_uris + each[0]
-            file_path_all.append(file_path)
+        # make the file name to be the absolute address
+        for i in range(len(input_file_name_list)):
+            input_file_name_list[i] = location_base_uris + input_file_name_list[i][0]
 
         # multi-process part
         try:
             with Pool(self._process_amount) as p:
-                tensor_output = np.array(p.map(self._read_one_image, file_path_all))
+                tensor_output = np.array(p.map(self._read_one_image, input_file_name_list))
         # sometimes it may failed with ERROR like "OSError: [Errno 24] Too many open files"
         except OSError as e:
             if e.errno == 24:
