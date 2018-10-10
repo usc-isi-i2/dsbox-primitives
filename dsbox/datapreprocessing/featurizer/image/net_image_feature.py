@@ -21,7 +21,6 @@ from . import config
 import numpy as np
 import sys
 import d3m.metadata.base as mbase
-import tensorflow as tf
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
 Inputs = container.List
 
@@ -130,7 +129,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._org_model = self._RESNET50_MODEL
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
-        self._graph = tf.get_default_graph()
+        self._graph = None
+        self._tf = None
 
         self._annotation = None
 
@@ -167,6 +167,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         else:
             data = image_tensor
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
+        if not self._graph:
+            self._graph = self._prep_tensor().get_default_graph()
         with self._graph.as_default():
             output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
@@ -183,6 +185,12 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # update the original index to be d3mIndex
         output_dataFrame = output_dataFrame.set_index(image_d3mIndex)
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+
+    def _prep_tensor(self):
+        if not self._tf:
+            import tensorflow as tf
+            self._tf = tf
+        return self._tf
 '''
     def annotation(self):
         if self._annotation is not None:
@@ -266,7 +274,8 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._model = Model(self._org_model.input,
                            self._org_model.layers[self._layer_number].output)
 
-        self._graph = tf.get_default_graph()
+        self._graph = None
+        self._tf = None
 
         self._annotation = None
 
@@ -303,6 +312,8 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         else:
             data = image_tensor
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
+        if not self._graph:
+            self._graph = self._prep_tensor().get_default_graph()
         with self._graph.as_default():
             output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
@@ -320,6 +331,12 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+
+    def _prep_tensor(self):
+        if not self._tf:
+            import tensorflow as tf
+            self._tf = tf
+        return self._tf
 
 '''
     def annotation(self):
