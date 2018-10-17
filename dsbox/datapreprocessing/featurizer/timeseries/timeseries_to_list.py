@@ -1,4 +1,5 @@
 import pandas
+import logging
 import typing
 import numpy as np
 import d3m.metadata.base as mbase
@@ -9,8 +10,7 @@ from d3m.primitive_interfaces.featurization import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from . import config
 
-
-
+_logger = logging.getLogger(__name__)
 
 Inputs = container.DataFrame
 Outputs = container.List#[container.DataFrame]
@@ -97,6 +97,9 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         # if no 'csv' related mime_types found, return a empty list
         if (timeseries_index == -1):
             print("Warning: Can't find timeseries index!")
+            _logger.info("No timeseries dataset detected!")
+            self._has_finished = True
+            self._iterations_done = True
             #raise exceptions.InvalidArgumentValueError("no image related metadata found!")
             return CallResult(timeseries_output, self._has_finished, self._iterations_done)
 
@@ -108,7 +111,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
             file_path = location_base_uris + input_file_name_list[input_file_number][0]
             file_path = file_path[7:]
             timeseries_output.append(pandas.read_csv(file_path))
-
+            _logger.info("Timeseries data ", file_path,"loaded.")
         final_output = [d3mIndex_output, timeseries_output]
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
