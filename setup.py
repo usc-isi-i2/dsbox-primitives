@@ -53,7 +53,9 @@ setup(name='dsbox-featurizer',
               'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
               'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
               'dsbox.TimeseriesToList = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
-              'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization'
+              'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
+              'dsbox.GroupUpByTimeSeries = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries', 
+              'dsbox.AutoArima = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
           ],
       },
       cmdclass={
