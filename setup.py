@@ -56,6 +56,7 @@ setup(name='dsbox-featurizer',
               'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
               'dsbox.GroupUpByTimeSeries = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries', 
               'dsbox.AutoArima = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
+              'dsbox.RNNTimeSeries = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
           ],
       },
       cmdclass={
