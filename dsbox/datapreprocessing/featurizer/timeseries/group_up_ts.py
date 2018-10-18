@@ -9,6 +9,7 @@ from d3m.primitive_interfaces.base import CallResult
 import stopit
 import math
 import typing
+import logging
 
 from d3m import container
 from d3m.metadata import hyperparams, params
