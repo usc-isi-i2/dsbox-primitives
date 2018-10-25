@@ -6,6 +6,7 @@ import math
 import typing
 import logging
 import importlib
+import shutil
 from typing import Any, Callable, List, Dict, Union, Optional
 
 
@@ -57,7 +58,7 @@ class RNNHelper:
         return total_loss 
 
 class RNNParams(params.Params):
-    pass
+    params: str
 
 class RNNHyperparams(hyperparams.Hyperparams):
     n_batch = hyperparams.Hyperparameter[int](
@@ -168,16 +169,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             return
         global tf
         tf = importlib.import_module("tensorflow")
-
-    def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
-        self._lazy_init()
-        if self._fitted:
-            return CallResult(None)
-        if not self._get_set:
-            print("Please set Training Data")
-            return CallResult(None)
         self.batchX_placeholder = tf.placeholder(tf.float32, [self.n_total, self._hyp["n_input_dim"]])
-
         W1 = tf.get_variable('W1', shape=(self._hyp["n_neurons"], self._hyp["n_dense_dim"]), initializer=tf.glorot_uniform_initializer())
         b1 = tf.get_variable('b1', shape=(1, self._hyp["n_dense_dim"]), initializer=tf.zeros_initializer())
         W2 = tf.get_variable('W2', shape=(self._hyp["n_dense_dim"], self._hyp["n_output_dim"]), initializer=tf.glorot_uniform_initializer())
@@ -194,6 +186,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                                                          parallel_iterations=1)
 
         prediction = tf.matmul(tf.tanh(tf.matmul(tf.squeeze(states_series), W1) + b1), W2) + b2
+        self.prediction_method = prediction
 
         pred_point_train = tf.slice(prediction, (0, 0), (self.n_train - self.n_predict_step, 1))
         pred_lower_train = tf.slice(prediction, (0, 1), (self.n_train - self.n_predict_step, 1))
@@ -221,74 +214,36 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         self.total_loss_train = RNNHelper.get_total_loss(pred_point_train, pred_lower_train, pred_upper_train, labels_series_train)
         self.total_loss_valid = RNNHelper.get_total_loss(pred_point_valid, pred_lower_valid, pred_upper_valid, labels_series_valid)
         self.total_loss_total = RNNHelper.get_total_loss(pred_point_total, pred_lower_total, pred_upper_total, labels_series_total)
-
         self.learning_rate = tf.Variable(self._hyp["lr"], trainable=False)
         self.learning_rate_decay_op = self.learning_rate.assign(self.learning_rate * self._hyp["lr_decay"])
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
-
         gradients, variables = zip(*self.optimizer.compute_gradients(self.total_loss_train))
         gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
         self.train_step = self.optimizer.apply_gradients(zip(gradients, variables))
-
         gradients_total, variables_total = zip(*self.optimizer.compute_gradients(self.total_loss_total))
         gradients_total, _ = tf.clip_by_global_norm(gradients_total, 5.0)
         self.train_step_total = self.optimizer.apply_gradients(zip(gradients_total, variables_total))
-
         self.tf_config = tf.ConfigProto()
         self.tf_config.intra_op_parallelism_threads = 1
         self.tf_config.inter_op_parallelism_threads = 1
+        # self.session = tf.Session(config=self.tf_config)
+        self.saving_path = False
+        self._initialized = True
 
-        self._fitted = True
-        return CallResult(None)
-
-    def get_params(self) -> RNNParams:
-        pass
-
-    def set_params(self) -> None:
-        pass
-
-    def set_training_data(self, *, inputs:Inputs, predict_step:int)->None:
+    def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
+        if self._fitted:
+            return CallResult(None)
+        if not self._get_set:
+            print("Please set Training Data")
+            return CallResult(None)
         self._lazy_init()
-        data = inputs
-        self.n_predict_step = predict_step
-        self.scaler = sklearn.preprocessing.StandardScaler()
-        data_scaled = self.scaler.fit_transform(np.asarray(data).reshape(-1, 1))
-
-        self.x = data_scaled.reshape(-1, 1)
-        self.n_valid = min(self.n_predict_step, self._hyp["max_valid"])
-        self.n_train = len(self.x) - self.n_valid
-        self.n_total = len(self.x)
-
-        logging.info('Predict step: {}'.format(self.n_predict_step))
-        logging.info('self.n_total: {}, self.n_train: {}, self.n_valid: {}'.format(self.n_total, self.n_train, self.n_valid))
-        self._get_set = True
-
-    def produce(self, *,  inputs: Inputs) -> None:
-        # build network
-        self._lazy_init()
-        if not self._fitted:
-            print("Plz fit!")
-            return
-
         with tf.Session(config=self.tf_config) as sess:
             sess.run(tf.global_variables_initializer())
 
             smallest_loss = float('inf')
-            smallest_train_loss = float('inf')
+            self.smallest_train_loss = float('inf')
             wait = 0
-
-            def _save_weight():
-                tf_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-                self.smallest_weight = sess.run(tf_vars)
-
-            def _load_weights():
-                tf_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-                ops = []
-                for i_tf in range(len(tf_vars)):
-                    ops.append(tf.assign(tf_vars[i_tf], self.smallest_weight[i_tf]))
-                sess.run(ops)
-
-            _current_cell_state = np.zeros((self._hyp["n_batch"], self._hyp["n_neurons"]), dtype=np.float32)
+            self._current_cell_state = np.zeros((self._hyp["n_batch"], self._hyp["n_neurons"]), dtype=np.float32)
             for i in range(self._hyp["n_max_epoch"]):
                 logging.info('Epoch: {}/{}'.format(i, self._hyp["n_max_epoch"]))
                 # train
@@ -296,7 +251,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                     [self.total_loss_train, self.total_loss_valid, self.train_step],
                     feed_dict={
                         self.batchX_placeholder: self.x,
-                        self.cell_state: _current_cell_state,
+                        self.cell_state: self._current_cell_state,
                     }
                 )
 
@@ -305,8 +260,8 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 if wait <= self._hyp["n_patience"]:
                     if sum_loss < smallest_loss:
                         smallest_loss = sum_loss
-                        smallest_train_loss = train_loss
-                        _save_weight()
+                        self.smallest_train_loss = train_loss
+                        self._save_weight(sess)
                         wait = 0
                         logging.info('New smallest')
                     else:
@@ -317,43 +272,120 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                             logging.info('Apply lr decay, new lr: %f' % self.learning_rate.eval())
                 else:
                     break
-
-            _load_weights()
-            logging.info('Training loss {}'.format(smallest_train_loss))
-
+            self._current_cell_state = np.zeros((self._hyp["n_batch"], self._hyp["n_neurons"]), dtype=np.float32)
+            self._load_weights(sess)
+            # if model_saved, loadsaved else  do previously
             _total_loss = sess.run(
                 [self.total_loss_total],
                 feed_dict={
                     self.batchX_placeholder: self.x,
-                    self.cell_state: _current_cell_state,
+                    self.cell_state: self._current_cell_state,
                 }
             )
 
             for i in range(self._hyp["n_max_epoch_total"]):
-                if _total_loss < smallest_train_loss:
+                if _total_loss < self.smallest_train_loss:
                     break
-
-                logging.info('Epoch_total: {}/{}'.format(i, self._hyp["n_max_epoch_total"]))
                 _total_loss, _train_step = sess.run(
                     [self.total_loss_total, self.train_step_total],
                     feed_dict={
                         self.batchX_placeholder: self.x,
-                        self.cell_state: _current_cell_state,
+                        self.cell_state: self._current_cell_state,
                     }
                 )
-                logging.info("Epoch_total {}, Total Loss {}".format(i, _total_loss))
+            self._save_weight(sess)
+        self._fitted = True
+        return CallResult(None)
 
-            # test
-            logging.info('In test')
-            logging.info('Min loss {}'.format(_total_loss))
-
-            pred_test, pred_test_lower, pred_test_upper = sess.run(
-                [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
-                feed_dict={
-                    self.batchX_placeholder: self.x,
-                    self.cell_state: _current_cell_state,
-                }
+    def get_params(self) -> RNNParams:
+        if not self._fitted:
+            print("plz fit!")
+            return
+        with tf.Session(config=self.tf_config) as sess:
+            sess.run(tf.global_variables_initializer())
+            cwd = os.getcwd()
+            self.saving_path = os.path.join(cwd, "tmp_saving")
+            shutil.rmtree(self.saving_path, ignore_errors=True)
+            inputs_dict = {}
+            for i, v in enumerate(self.smallest_weight):
+                inputs_dict[str(i)] = tf.convert_to_tensor(v)
+            inputs_dict["batchX_placeholder"] = self.batchX_placeholder
+            inputs_dict["cell_state"] = self.cell_state
+            outputs_dict = {
+                "prediction": self.prediction_method
+            }
+            tf.saved_model.simple_save(
+                sess, self.saving_path, inputs_dict, outputs_dict
             )
+            return RNNParams(params=self.saving_path)
+
+            # return RNNParams("./rnn_model.ckpt")
+
+    def set_params(self, *, params: RNNParams) -> None:
+        from tensorflow.python.saved_model import tag_constants
+        return
+
+        
+
+        # open this file for loading
+
+    def set_training_data(self, *, inputs: Inputs, predict_step: int)->None:
+        # self._lazy_init()
+        data = inputs
+        self.n_predict_step = predict_step
+        self.scaler = sklearn.preprocessing.StandardScaler()
+        data_scaled = self.scaler.fit_transform(np.asarray(data).reshape(-1, 1))
+
+        self.x = data_scaled.reshape(-1, 1)
+        self.n_valid = min(self.n_predict_step, self._hyp["max_valid"])
+        self.n_train = len(self.x) - self.n_valid
+        self.n_total = len(self.x)
+        self._get_set = True
+
+
+    def _save_weight(self, sess):
+        tf_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        self.smallest_weight = sess.run(tf_vars)
+
+    def _load_weights(self, sess):
+        tf_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        ops = []
+        for i_tf in range(len(tf_vars)):
+            ops.append(tf.assign(tf_vars[i_tf], self.smallest_weight[i_tf]))
+        sess.run(ops)
+
+    def produce(self, *,  inputs: Inputs) -> None:
+        if not self._fitted:
+            print("Plz fit!")
+            return
+        # graph = tf.Graph()
+        # with graph.as_default():
+        with tf.Session(config=self.tf_config) as sess:
+            # if not set_params()
+            if not self.saving_path:
+                sess.run(tf.global_variables_initializer())
+                self._load_weights(sess)
+                pred_test, pred_test_lower, pred_test_upper = sess.run(
+                    [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
+                    feed_dict={
+                        self.batchX_placeholder: self.x,
+                        self.cell_state: self._current_cell_state,
+                    }
+                )
+            else:
+                from tensorflow.python.saved_model import tag_constants
+                tf.saved_model.loader.load(
+                    sess,
+                    [tag_constants.SERVING],
+                    self.saving_path
+                )
+                pred_test, pred_test_lower, pred_test_upper = sess.run(
+                    [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
+                    feed_dict={
+                        self.batchX_placeholder: self.x,
+                        self.cell_state: self._current_cell_state,
+                    }
+                )
 
             pred_test = self.scaler.inverse_transform(pred_test)
             pred_test_lower = self.scaler.inverse_transform(pred_test_lower)
