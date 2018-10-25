@@ -58,7 +58,7 @@ class RNNHelper:
         return total_loss 
 
 class RNNParams(params.Params):
-    params: str
+    params: typing.List[np.ndarray]
 
 class RNNHyperparams(hyperparams.Hyperparams):
     n_batch = hyperparams.Hyperparameter[int](
@@ -237,9 +237,11 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             print("Please set Training Data")
             return CallResult(None)
         self._lazy_init()
+        
         with tf.Session(config=self.tf_config) as sess:
             sess.run(tf.global_variables_initializer())
 
+            
             smallest_loss = float('inf')
             self.smallest_train_loss = float('inf')
             wait = 0
@@ -294,6 +296,11 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                     }
                 )
             self._save_weight(sess)
+            import pickle
+            self.new_path = "./tmp.pkl"
+            with open(self.new_path, "wb") as f:
+                pickle.dump(self.smallest_weight, f)
+            
         self._fitted = True
         return CallResult(None)
 
@@ -301,28 +308,32 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         if not self._fitted:
             print("plz fit!")
             return
-        with tf.Session(config=self.tf_config) as sess:
-            sess.run(tf.global_variables_initializer())
-            cwd = os.getcwd()
-            self.saving_path = os.path.join(cwd, "tmp_saving")
-            shutil.rmtree(self.saving_path, ignore_errors=True)
-            inputs_dict = {}
-            for i, v in enumerate(self.smallest_weight):
-                inputs_dict[str(i)] = tf.convert_to_tensor(v)
-            inputs_dict["batchX_placeholder"] = self.batchX_placeholder
-            inputs_dict["cell_state"] = self.cell_state
-            outputs_dict = {
-                "prediction": self.prediction_method
-            }
-            tf.saved_model.simple_save(
-                sess, self.saving_path, inputs_dict, outputs_dict
-            )
-            return RNNParams(params=self.saving_path)
+        # saving by model, comment right now
+        # with tf.Session(config=self.tf_config) as sess:
+        #     sess.run(tf.global_variables_initializer())
+        #     cwd = os.getcwd()
+        #     self.saving_path = os.path.join(cwd, "tmp_saving")
+        #     shutil.rmtree(self.saving_path, ignore_errors=True)
+        #     inputs_dict = {}
+        #     for i, v in enumerate(self.smallest_weight):
+        #         inputs_dict[str(i)] = tf.convert_to_tensor(v)
+        #     inputs_dict["batchX_placeholder"] = self.batchX_placeholder
+        #     inputs_dict["cell_state"] = self.cell_state
+        #     outputs_dict = {
+        #         "prediction": self.prediction_method
+        #     }
+        #     tf.saved_model.simple_save(
+        #         sess, self.saving_path, inputs_dict, outputs_dict
+        #     )
+        #     return RNNParams(params=self.saving_path)
+        return RNNParams(params=self.smallest_weight)
 
             # return RNNParams("./rnn_model.ckpt")
 
     def set_params(self, *, params: RNNParams) -> None:
-        from tensorflow.python.saved_model import tag_constants
+        # from tensorflow.python.saved_model import tag_constants
+        self.smallest_weight = params["params"]
+        # self._from_set_param = True
         return
 
         
@@ -362,31 +373,43 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         # with graph.as_default():
         with tf.Session(config=self.tf_config) as sess:
             # if not set_params()
-            if not self.saving_path:
-                sess.run(tf.global_variables_initializer())
-                self._load_weights(sess)
-                pred_test, pred_test_lower, pred_test_upper = sess.run(
-                    [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
-                    feed_dict={
-                        self.batchX_placeholder: self.x,
-                        self.cell_state: self._current_cell_state,
-                    }
-                )
-            else:
-                from tensorflow.python.saved_model import tag_constants
-                tf.saved_model.loader.load(
-                    sess,
-                    [tag_constants.SERVING],
-                    self.saving_path
-                )
-                pred_test, pred_test_lower, pred_test_upper = sess.run(
-                    [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
-                    feed_dict={
-                        self.batchX_placeholder: self.x,
-                        self.cell_state: self._current_cell_state,
-                    }
-                )
-
+            # if not self.saving_path:
+            #     sess.run(tf.global_variables_initializer())
+            #     self._load_weights(sess)
+            #     pred_test, pred_test_lower, pred_test_upper = sess.run(
+            #         [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
+            #         feed_dict={
+            #             self.batchX_placeholder: self.x,
+            #             self.cell_state: self._current_cell_state,
+            #         }
+            #     )
+            # else:
+            #     from tensorflow.python.saved_model import tag_constants
+            #     tf.saved_model.loader.load(
+            #         sess,
+            #         [tag_constants.SERVING],
+            #         self.saving_path
+            #     )
+            #     pred_test, pred_test_lower, pred_test_upper = sess.run(
+            #         [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
+            #         feed_dict={
+            #             self.batchX_placeholder: self.x,
+            #             self.cell_state: self._current_cell_state,
+            #         }
+            #     )
+            # import pickle
+            sess.run(tf.global_variables_initializer())
+            # with open("./tmp.pkl", "rb") as f:
+            #     self.smallest_weight = pickle.load(f)
+            self._load_weights(sess)
+            self._current_cell_state = np.zeros((self._hyp["n_batch"], self._hyp["n_neurons"]), dtype=np.float32)
+            pred_test, pred_test_lower, pred_test_upper = sess.run(
+                [self.pred_point_test, self.pred_lower_test, self.pred_upper_test],
+                feed_dict={
+                    self.batchX_placeholder: self.x,
+                    self.cell_state: self._current_cell_state,
+                }
+            )
             pred_test = self.scaler.inverse_transform(pred_test)
             pred_test_lower = self.scaler.inverse_transform(pred_test_lower)
             pred_test_upper = self.scaler.inverse_transform(pred_test_upper)
