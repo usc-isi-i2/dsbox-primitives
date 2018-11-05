@@ -39,10 +39,10 @@ setup(name='dsbox-featurizer',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
           'scikit-learn>=0.18.0',
           'Keras<=2.1.6,>=2.0.2', 'Pillow==5.1.0', 'tensorflow==1.8.0', 'h5py<=2.7.1',
-          'dsbox-datacleaning==1.3.0'
+          'dsbox-datacleaning==1.3.0', "pyramid==1.10", "pyramid-arima==0.8.1"
       ],
       dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@9981451e2c1e956212a9ab335c98f7dd6c8f1dde#egg=dsbox-datacleaning-1.3.0'
+        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@9be180319f982549c72e2483d3ac57832807d05f#egg=dsbox-datacleaning-1.3.0'
       ],
       keywords='d3m_primitive',
       entry_points = {
