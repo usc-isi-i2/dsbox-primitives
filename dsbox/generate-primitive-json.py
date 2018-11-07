@@ -20,6 +20,9 @@ PRIMITIVES = [
     ('RandomProjectionTimeSeriesFeaturization', featurizer_config),
     ('TimeseriesToList', featurizer_config),
     ('DoNothing', featurizer_config),
+    ('RNNTimeSeries', featurizer_config),
+    ('AutoArima', featurizer_config),
+    ('GroupUpByTimeSeries', featurizer_config)
 ]
 
 for p, config in PRIMITIVES:
