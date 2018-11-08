@@ -3,7 +3,7 @@ import os
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 # from . import missing_value_pred as mvp
-
+from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import stopit
@@ -30,8 +30,6 @@ Output = container.List
 #output : a list, [dataframe, a dictionary for data]
 
 
-class GUTSParams(params.Params):
-    pass
 
 
 class GroupUpHyperparameter(hyperparams.Hyperparams):
@@ -67,7 +65,7 @@ class GroupUpHyperparameter(hyperparams.Hyperparams):
         description="Also include primary index columns if input data has them. Applicable only if \"return_result\" is set to \"new\".",
     )
 
-class GroupUpByTimeSeries(SupervisedLearnerPrimitiveBase[Input, Output, GUTSParams, GroupUpHyperparameter]):
+class GroupUpByTimeSeries(TransformerPrimitiveBase[Input, Output,GroupUpHyperparameter]):
     """
     Impute the missing value by greedy search of the combinations of standalone simple imputation method.
 
@@ -111,80 +109,17 @@ class GroupUpByTimeSeries(SupervisedLearnerPrimitiveBase[Input, Output, GUTSPara
         # Optional
         "keywords": ["Transform", "Timeseries", "Aggregate"],
         "installation": [config.INSTALLATION],
+        "precondition":["NO_CATEGORICAL_VALUES"]
     })
 
     def __init__(self, *, hyperparams: GroupUpHyperparameter) -> None:
         super().__init__(hyperparams=hyperparams)
         # All primitives must define these attributes
         self.hyperparams = hyperparams
-        self._train_x: Input = None
-        self._train_y: Input = None
-        self._is_fitted = True
-        self._has_finished = True
-        self._iterations_done = True
-        self._verbose = False
+        self._has_finished = False
+        self._iterations_done = False
         # self._verbose = hyperparams['verbose'] if hyperparams else False
 
-    def set_training_data(self, *, inputs: Input, outputs: Output) -> None:
-        """
-        Sets training data of this primitive.
-
-        Parameters
-        ----------
-        inputs : Input
-            The inputs.
-        outputs : Output
-            The outputs.
-        """
-        self._train_x = inputs
-        self._train_y = outputs
-        self._is_fitted = False
-
-    def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
-        """
-        train imputation parameters. Now support:
-        -> greedySearch
-
-        for the method that not trainable, do nothing:
-        -> interatively regression
-        -> other
-
-        Parameters:
-        ----------
-        data: pandas dataframe
-        label: pandas series, used for the trainable methods
-        """
-        # if already fitted on current dataset, do nothing
-            # if already fitted on current dataset, do nothing
-        
-        if self._is_fitted:
-            return CallResult(None, self._has_finished, self._iterations_done)
-
-        if (timeout is None):
-            timeout = 2**31-1
-
-        if (iterations is None):
-            self._iterations_done = True
-
-        # setup the timeout
-        with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
-            assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
-
-            # start fitting
-            if self._verbose : print("=========> mean imputation method:")
-            self.__get_fitted()
-
-        if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
-            self._is_fitted = True
-            self._iterations_done = True
-            self._has_finished = True
-        else:
-            self._is_fitted = False
-            self._iterations_done = False
-            self._has_finished = False
-
-        _logger.debug('Fit is_fitted %s', str(self._is_fitted))
-        return CallResult(None, self._has_finished, self._iterations_done)
 
     def produce(self, *, inputs: Input, timeout: float = None, iterations: int = None) -> CallResult[Output]:
         """
@@ -195,10 +130,6 @@ class GroupUpByTimeSeries(SupervisedLearnerPrimitiveBase[Input, Output, GUTSPara
         data: pandas dataframe
         """
 
-        if (not self._is_fitted):
-            # todo: specify a NotFittedError, like in sklearn
-            raise ValueError("Calling produce before fitting.")
-
         if (timeout is None):
             timeout = 2**31-1
 
@@ -206,14 +137,11 @@ class GroupUpByTimeSeries(SupervisedLearnerPrimitiveBase[Input, Output, GUTSPara
             data = inputs.copy()
         else:
             data = inputs[0].copy()
-
+        import pdb
+        pdb.set_trace()
         # setup the timeout
         with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
-
-            # start completing data...
-            if self._verbose: print("Stared with grouping dataframe by timeseries files")
-
             # query for timeseries data
             elements_amount = inputs.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
             d3mIndex_output = np.asarray(inputs.index.tolist())
