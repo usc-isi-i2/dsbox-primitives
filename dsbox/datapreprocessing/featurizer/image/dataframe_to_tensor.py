@@ -21,7 +21,7 @@ class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
     process_amount = hyperparams.UniformInt(
         lower=1,
         upper=sys.maxsize,
-        default=os.cpu_count(),
+        default=1,
         description="Specify number of processes that generated in same time when reading images, default value will be all cores in the system",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
     )
