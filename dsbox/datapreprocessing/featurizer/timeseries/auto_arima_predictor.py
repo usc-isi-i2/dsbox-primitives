@@ -32,18 +32,27 @@ class ArimaParams(params.Params):
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
-    order = hyperparams.Set(
-        elements=hyperparams.Hyperparameter[int](-1),
-        default=(0,1,2),
-        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="The (p,d,q) order of the model for the number of AR parameters, differences, and MA parameters to use. ",
+    P = hyperparams.Hyperparameter[int](
+        default=0,
+        description="the order (number of time lags) of the auto-regressive model",
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
-    # seasonal_order = hyperparams.Set(
-    #     elements=hyperparams.Hyperparameter[int](-1),
-    #     default= (0, 1, 2, 12),
-    #     semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-    #     description="seasonal component of AR parameters"
-    # )
+    D = hyperparams.Hyperparameter[int](
+        default=0,
+        description="the degree of differencing (the number of times the data have had past values subtracted)",
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter']
+    )
+    Q = hyperparams.Hyperparameter[int](
+        default=1,
+        description="the order of the moving-average model",
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter']
+    )
+    seasonal_order = hyperparams.Set(
+        elements=hyperparams.Hyperparameter[int](-1),
+        default= (0, 1, 2, 12),
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        description="seasonal component of AR parameters"
+    )
     # start_params = hyperparams.Set(
     #     elements=hyperparams.Hyperparameter[int](-1),
     #     default=(),
@@ -130,12 +139,12 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         # Required
         "id": 'b2e4e8ea-76dc-439e-8e46-b377bf616a35',
         "version": config.VERSION,
-        "name": "DSBox Auto Arima Primitive",
-        "description": "Auto Arima for timeseries data regression/forcasting problem",
+        "name": "DSBox Arima Primitive",
+        "description": "Arima for timeseries data regression/forcasting problem",
 
         "python_path": "d3m.primitives.dsbox.AutoArima",
         "primitive_family": "TIME_SERIES_FORECASTING",
-        "algorithm_types": ["AUTO_ARIMA"],
+        "algorithm_types": ["AUTOREGRESSIVE_INTEGRATED_MOVING_AVERAGE"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
             "uris": [config.REPOSITORY]
@@ -154,7 +163,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         super().__init__(hyperparams=hyperparams, random_seed=random_seed, docker_containers=docker_containers)
 
         self._clf = ARIMA(
-            order=self.hyperparams["order"],
+            order=(self.hyperparams["P"], self.hyperparams["D"], self.hyperparams["Q"]),
             # seasonal_order=self.hyperparams["seasonal_order"],
             # seasonal_order=(0,1,1,12),
             # start_params=self.hyperparams["start_params"],
