@@ -137,8 +137,6 @@ class GroupUpByTimeSeries(TransformerPrimitiveBase[Input, Output,GroupUpHyperpar
             data = inputs.copy()
         else:
             data = inputs[0].copy()
-        import pdb
-        pdb.set_trace()
         # setup the timeout
         with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING

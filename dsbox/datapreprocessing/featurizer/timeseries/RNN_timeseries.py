@@ -141,7 +141,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         "description": "timeseries forcasting primitive using RNN",
         "python_path": "d3m.primitives.dsbox.RNNTimeSeries",
         "primitive_family": "TIME_SERIES_FORECASTING",
-        "algorithm_types": [ "RANDOM_PROJECTION" ],# should revise
+        "algorithm_types": [ "RECURRENT_NEURAL_NETWORK" ],# should revise
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
             "uris": [ config.REPOSITORY ]

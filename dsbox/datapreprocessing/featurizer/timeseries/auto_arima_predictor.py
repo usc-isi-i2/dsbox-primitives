@@ -47,6 +47,11 @@ class ArimaHyperparams(hyperparams.Hyperparams):
         description="the order of the moving-average model",
         semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
+    is_seasonal = hyperparams.UniformBool(
+        default=True,
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        description="Whether it is seasonal",
+    )
     seasonal_order = hyperparams.Set(
         elements=hyperparams.Hyperparameter[int](-1),
         default= (0, 1, 2, 12),
@@ -161,9 +166,13 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                  _verbose: int = 0) -> None:
 
         super().__init__(hyperparams=hyperparams, random_seed=random_seed, docker_containers=docker_containers)
-
+        if self.hyperparams["is_seasonal"]:
+            seasonal_order = self.hyperparams["seasonal_order"]
+        else:
+            seasonal_order = None
         self._clf = ARIMA(
             order=(self.hyperparams["P"], self.hyperparams["D"], self.hyperparams["Q"]),
+            seasonal_order=seasonal_order,
             # seasonal_order=self.hyperparams["seasonal_order"],
             # seasonal_order=(0,1,1,12),
             # start_params=self.hyperparams["start_params"],
