@@ -14,7 +14,9 @@ import d3m.metadata.base as mbase
 
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
 from sklearn.externals import joblib
-from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
+# from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
+# changed primitive class to fit in devel branch of d3m (2019-1-17)
+from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import pandas as pd
 from . import config
@@ -46,7 +48,7 @@ class Hyperparams(hyperparams.Hyperparams):
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
-class RandomProjectionTimeSeriesFeaturization(FeaturizationLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
+class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
     classdocs
     '''
