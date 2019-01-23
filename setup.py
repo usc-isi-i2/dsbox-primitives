@@ -38,7 +38,7 @@ setup(name='dsbox-featurizer',
           'scipy>=0.19.0,<1.2', 'numpy>=1.11.1', 'pandas>=0.20.1',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
           'scikit-learn>=0.18.0',
-          'Keras<=2.1.6,>=2.0.2', 'Pillow==5.1.0', 'tensorflow==1.8.0', 'h5py<=2.7.1',
+          'Keras==2.2.4', 'Pillow==5.1.0', 'tensorflow==1.12', 'h5py<=2.7.1',
           'dsbox-datacleaning==1.3.0', "pyramid-arima==0.8.1"
       ],
       dependency_links=[
