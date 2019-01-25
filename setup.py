@@ -42,7 +42,7 @@ setup(name='dsbox-featurizer',
           'dsbox-datacleaning==1.3.0', "pyramid-arima==0.8.1"
       ],
       dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@ce662d07a626e94e52643ffbde0025efb41dc44d#egg=dsbox-datacleaning-1.3.0'
+        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@6ebc1aac37f45dd102a6a3009a4aa77b315b5b35#egg=dsbox-datacleaning-1.3.0'
       ],
       keywords='d3m_primitive',
       entry_points = {
