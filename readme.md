@@ -20,19 +20,19 @@ Reads in image files and generates a tensor that suitable as input to `d3m.primi
 
 ### d3m.primitives.dsbox.RNNTimeSeries
 
-Performs forecasting on one timeseries using recursive neural network.
+Performs forecasting of one timeseries using recursive neural network.
 
 ### d3m.primitives.dsbox.AutoArima
 
-Performs forecasting on one timeseries using AutoArima.
+Performs forecasting of one timeseries using AutoArima.
 
 ### d3m.primitives.dsbox.GroupUpByTimeSeries
 
-Performs forecasting on one timeseries using Group Up.
+Performs forecasting of one timeseries using Group Up.
 
 ### d3m.primitives.dsbox.RandomProjectionTimeSeriesFeaturization
 
-Generate features of multiple timeseries by random projects of the timeseries onto lower dimendions.
+Generate features of multiple timeseries by random projecting the timeseries matrix into lower dimendions.
 
 ### d3m.primitives.dsbox.TimeseriesToList
 
@@ -48,4 +48,4 @@ Automatically detect foriegn key relationships among multiple tables, and join t
 
 ### d3m.primitives.dsbox.DoNothing
 
-This an identify function primitive that returns input dataframe as output. This use for bypassing step in a pipeline without having to modify the pipeline structure.
+This an identify function primitive that returns the input dataframe as output. This useful for bypassing a step in a pipeline without having to modify the pipeline structure.
