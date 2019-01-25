@@ -48,4 +48,4 @@ Automatically detect foriegn key relationships among multiple tables, and join t
 
 ### d3m.primitives.dsbox.DoNothing
 
-This an identify function primitive that returns the input dataframe as output. This useful for bypassing a step in a pipeline without having to modify the pipeline structure.
+This an identity function primitive that returns the input dataframe as output. This useful for bypassing a step in a pipeline without having to modify the pipeline structure.
