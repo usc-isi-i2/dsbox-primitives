@@ -167,6 +167,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'keywords': ['image', 'featurization', 'resnet50'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [ config.REPOSITORY ]
             },
             # The same path the primitive is registered with entry points in setup.py.

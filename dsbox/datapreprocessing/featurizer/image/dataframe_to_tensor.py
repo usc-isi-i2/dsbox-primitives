@@ -86,6 +86,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         'keywords': ['image', 'transformer'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [ config.REPOSITORY ]
             },
         'installation': [ config.INSTALLATION ],

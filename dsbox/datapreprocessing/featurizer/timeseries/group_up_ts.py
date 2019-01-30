@@ -99,6 +99,7 @@ class GroupUpByTimeSeries(TransformerPrimitiveBase[Input, Output,GroupUpHyperpar
         "algorithm_types": ["NUMERICAL_METHOD"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             "uris": [config.REPOSITORY]
         },
         # Automatically generated

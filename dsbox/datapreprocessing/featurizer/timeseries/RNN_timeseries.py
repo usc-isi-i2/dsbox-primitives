@@ -165,6 +165,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         "algorithm_types": ["RECURRENT_NEURAL_NETWORK"],  # should revise
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             "uris": [config.REPOSITORY]
         },
         "keywords": ["feature_extraction",  "timeseries"],

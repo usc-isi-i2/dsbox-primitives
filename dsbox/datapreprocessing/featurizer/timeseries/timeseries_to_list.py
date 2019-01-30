@@ -50,6 +50,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         'keywords': ['timeseries', 'reader'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [ config.REPOSITORY ]
             },
         'installation': [ config.INSTALLATION ],

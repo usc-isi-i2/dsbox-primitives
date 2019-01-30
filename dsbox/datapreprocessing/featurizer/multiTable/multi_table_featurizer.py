@@ -41,6 +41,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'keywords': ['multiple table'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [ config.REPOSITORY ]
             },
             # The same path the primitive is registered with entry points in setup.py.

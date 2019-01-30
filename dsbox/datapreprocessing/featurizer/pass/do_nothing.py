@@ -26,6 +26,7 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         'keywords': ['pass'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [ config.REPOSITORY ]
             },
         'installation': [ config.INSTALLATION ],

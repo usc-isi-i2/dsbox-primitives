@@ -170,6 +170,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         "algorithm_types": ["AUTOREGRESSIVE_INTEGRATED_MOVING_AVERAGE"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             "uris": [config.REPOSITORY]
         },
         "keywords": ["Transform", "Timeseries", "Aggregate"],
