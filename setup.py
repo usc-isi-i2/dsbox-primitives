@@ -42,21 +42,21 @@ setup(name='dsbox-featurizer',
           'dsbox-datacleaning==1.3.0', "pyramid-arima==0.8.1"
       ],
       dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@4cc5d7d70ac56685a5c90657afc282940caa657f#egg=dsbox-datacleaning-1.3.0'
+        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@1bd8d4b24ee1640f0d3686bd04c63499e2c0d99e#egg=dsbox-datacleaning-1.3.0'
       ],
       keywords='d3m_primitive',
       entry_points = {
           'd3m.primitives': [
-              'dsbox.DoNothing = dsbox.datapreprocessing.featurizer.pass:DoNothing',
-              'dsbox.MultiTableFeaturization = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
-              'dsbox.DataFrameToTensor = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
-              'dsbox.Vgg16ImageFeature = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
-              'dsbox.ResNet50ImageFeature = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
-              'dsbox.TimeseriesToList = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
-              'dsbox.RandomProjectionTimeSeriesFeaturization = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
-              'dsbox.GroupUpByTimeSeries = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries', 
-              'dsbox.AutoArima = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
-              'dsbox.RNNTimeSeries = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
+              'data_preprocessing.DoNothing.DSBOX = dsbox.datapreprocessing.featurizer.pass:DoNothing',
+              'feature_extraction.MultiTableFeaturization.DSBOX = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
+              'data_preprocessing.DataFrameToTensor.DSBOX = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
+              'feature_extraction.Vgg16ImageFeature.DSBOX = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
+              'feature_extraction.ResNet50ImageFeature.DSBOX = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
+              'data_preprocessing.TimeseriesToList.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
+              'feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
+              'data_transformation.GroupUpByTimeSeries.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries',
+              'time_series_forecasting.Arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
+              'time_series_forecasting.RNNTimeSeries.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
           ],
       },
       cmdclass={

@@ -80,7 +80,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         'version':config.VERSION,
         'name': "DSBox Image Featurizer dataframe to tensor transformer",
         'description': 'Generate 4-d ndarray format output from dataframe with images',
-        'python_path': 'd3m.primitives.dsbox.DataFrameToTensor',
+        'python_path': 'd3m.primitives.data_preprocessing.DataFrameToTensor.DSBOX',
         'primitive_family': 'DATA_PREPROCESSING',
         'algorithm_types': ["NUMERICAL_METHOD"],
         'keywords': ['image', 'transformer'],

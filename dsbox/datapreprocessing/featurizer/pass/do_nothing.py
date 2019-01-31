@@ -20,7 +20,7 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         'version':config.VERSION,
         'name': 'DSBox Image Featurizer do-nothing primitive',
         'description': 'Just pass the input to the output',
-        'python_path': 'd3m.primitives.dsbox.DoNothing',
+        'python_path': 'd3m.primitives.data_preprocessing.DoNothing.DSBOX',
         'primitive_family': 'DATA_PREPROCESSING',
         'algorithm_types': ["NUMERICAL_METHOD"],
         'keywords': ['pass'],

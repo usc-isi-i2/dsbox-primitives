@@ -58,7 +58,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         "version": config.VERSION,
         "name": "DSBox random projection timeseries featurization ",
         "description": "A simple timeseries featurization using random projection",
-        "python_path": "d3m.primitives.dsbox.RandomProjectionTimeSeriesFeaturization",
+        "python_path": "d3m.primitives.feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX",
         "primitive_family": "FEATURE_EXTRACTION",
         "algorithm_types": [ "RANDOM_PROJECTION" ],
         "source": {
