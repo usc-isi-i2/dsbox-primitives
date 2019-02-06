@@ -21,7 +21,7 @@ class PostInstallCommand(install):
         install.run(self)
 
 setup(name='dsbox-featurizer',
-      version='0.1.4',
+      version='0.1.5',
       url='https://github.com/usc-isi-i2/dsbox-featurizer',
       maintainer_email='fanghaol@usc.edu',
       maintainer='Fanghao Luo',
@@ -42,7 +42,7 @@ setup(name='dsbox-featurizer',
           'dsbox-datacleaning==1.3.0', "pyramid-arima==0.8.1"
       ],
       dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@1bd8d4b24ee1640f0d3686bd04c63499e2c0d99e#egg=dsbox-datacleaning-1.3.0'
+        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@6c4b072c63654dcb972694a32d5ea02a8bbc3d6c#egg=dsbox-datacleaning-1.3.1'
       ],
       keywords='d3m_primitive',
       entry_points = {

@@ -10,20 +10,21 @@ parser.add_argument(
     'dirname', action='store', help='Top-level directory to store the json descriptions, i.e. primitives_repo directory')
 arguments = parser.parse_args()
 
-
-PREFIX = 'd3m.primitives.dsbox.'
+PREFIX = 'd3m.primitives.'
 PRIMITIVES = [
-    ('ResNet50ImageFeature', featurizer_config),
-    ('Vgg16ImageFeature', featurizer_config),
-    ('MultiTableFeaturization', featurizer_config),
-    ('DataFrameToTensor', featurizer_config),
-    ('RandomProjectionTimeSeriesFeaturization', featurizer_config),
-    ('TimeseriesToList', featurizer_config),
-    ('DoNothing', featurizer_config),
-    ('RNNTimeSeries', featurizer_config),
-    ('AutoArima', featurizer_config),
-    ('GroupUpByTimeSeries', featurizer_config)
+    ('feature_extraction.ResNet50ImageFeature.DSBOX', featurizer_config),
+    ('feature_extraction.Vgg16ImageFeature.DSBOX', featurizer_config),
+    ('feature_extraction.MultiTableFeaturization.DSBOX', featurizer_config),
+    ('data_preprocessing.DataFrameToTensor.DSBOX', featurizer_config),
+    ('feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX', featurizer_config),
+    ('data_preprocessing.TimeseriesToList.DSBOX', featurizer_config),
+    ('data_preprocessing.DoNothing.DSBOX', featurizer_config),
+    ('time_series_forecasting.RNNTimeSeries.DSBOX', featurizer_config),
+    ('time_series_forecasting.Arima.DSBOX', featurizer_config),
+    ('data_transformation.GroupUpByTimeSeries.DSBOX', featurizer_config)
 ]
+
+
 
 for p, config in PRIMITIVES:
     print('Generating json for primitive ' + p)
