@@ -39,7 +39,7 @@ setup(name='dsbox-featurizer',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
           'scikit-learn>=0.18.0',
           'Keras==2.2.4', 'Pillow==5.1.0', 'tensorflow==1.12', 'h5py<=2.7.1',
-          'dsbox-datacleaning==1.3.0', "pyramid-arima==0.8.1"
+          'dsbox-datacleaning==1.3.1', "pyramid-arima==0.8.1"
       ],
       dependency_links=[
         'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@6c4b072c63654dcb972694a32d5ea02a8bbc3d6c#egg=dsbox-datacleaning-1.3.1'
