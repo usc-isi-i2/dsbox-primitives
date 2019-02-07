@@ -41,9 +41,9 @@ setup(name='dsbox-featurizer',
           'Keras==2.2.4', 'Pillow==5.1.0', 'tensorflow==1.12', 'h5py<=2.7.1',
           'dsbox-datacleaning==1.3.1', "pyramid-arima==0.8.1"
       ],
-      dependency_links=[
-        'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@7106cf48d56eaa45460792edf7416dfd57548370#egg=dsbox-datacleaning-1.3.1'
-      ],
+      # dependency_links=[
+      #   'git+https://github.com/usc-isi-i2/dsbox-cleaning.git@7106cf48d56eaa45460792edf7416dfd57548370#egg=dsbox-datacleaning-1.3.1'
+      # ],
       keywords='d3m_primitive',
       entry_points = {
           'd3m.primitives': [
