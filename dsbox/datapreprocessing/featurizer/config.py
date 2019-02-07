@@ -2,14 +2,14 @@ import os
 from d3m import utils
 
 D3M_API_VERSION = '2019.1.21'
-VERSION = "0.1.5"
+VERSION = "1.0.0"
 TAG_NAME = "{git_commit}".format(git_commit=utils.current_git_commit(os.path.dirname(__file__)), )
 
 REPOSITORY = "https://github.com/usc-isi-i2/dsbox-featurizer"
 PACAKGE_NAME = "dsbox-featurizer"
 
 D3M_PERFORMER_TEAM = 'ISI'
-D3M_CONTACT = "kyao:kyao@isi.edu"
+D3M_CONTACT = "mailto:kyao@isi.edu"
 
 if TAG_NAME:
     PACKAGE_URI = "git+" + REPOSITORY + "@" + TAG_NAME
