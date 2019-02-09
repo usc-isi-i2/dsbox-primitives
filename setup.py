@@ -24,7 +24,7 @@ class PostInstallCommand(install):
 
 
 setup(name='dsbox-featurizer',
-      version='1.0.0',
+      version='1.0.1',
       url='https://github.com/usc-isi-i2/dsbox-featurizer',
       maintainer_email='Ke-Thia Yao',
       maintainer='kyao@isi.edu',
