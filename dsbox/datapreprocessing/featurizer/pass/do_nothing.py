@@ -7,8 +7,10 @@ from . import config
 Inputs = DataFrame
 Outputs = DataFrame
 
+
 class DoNothingHyperparams(hyperparams.Hyperparams):
     pass
+
 
 class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams]):
     '''
@@ -17,8 +19,8 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-do-nothing',
-        'version':config.VERSION,
-        'name': 'DSBox Image Featurizer do-nothing primitive',
+        'version': config.VERSION,
+        'name': 'DSBox do-nothing primitive',
         'description': 'Just pass the input to the output',
         'python_path': 'd3m.primitives.data_preprocessing.DoNothing.DSBOX',
         'primitive_family': 'DATA_PREPROCESSING',
@@ -27,9 +29,9 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
-            'uris': [ config.REPOSITORY ]
+            'uris': [config.REPOSITORY]
             },
-        'installation': [ config.INSTALLATION ],
+        'installation': [config.INSTALLATION],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -37,6 +39,7 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         'precondition': [],
         'hyperparms_to_tune': []
     })
+
     def __init__(self, *, hyperparams: DoNothingHyperparams) -> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
@@ -49,5 +52,3 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
         self._has_finished = True
         self._iterations_done = True
         return CallResult(inputs, self._has_finished, self._iterations_done)
-
-

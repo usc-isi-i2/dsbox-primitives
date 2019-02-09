@@ -8,12 +8,12 @@ import numpy as np
 import typing
 
 from d3m.metadata import hyperparams, params
-from d3m.container import ndarray
 from d3m import container
+from d3m.exceptions import InvalidArgumentValueError
 import d3m.metadata.base as mbase
 
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
-from sklearn.externals import joblib
+
 # from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
 # changed primitive class to fit in devel branch of d3m (2019-1-17)
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
@@ -21,8 +21,9 @@ from d3m.primitive_interfaces.base import CallResult
 import pandas as pd
 from . import config
 
-Inputs = container.List#[container.DataFrame] # this format is for old version of d3m
+Inputs = container.List#[container.DataFrame]  # this format is for old version of d3m
 Outputs = container.DataFrame
+
 
 class Params(params.Params):
     x_dim: int
@@ -32,13 +33,14 @@ class Params(params.Params):
     components_: typing.Optional[np.ndarray]
     value_found: bool
 
+
 class Hyperparams(hyperparams.Hyperparams):
     '''
     eps : Maximum distortion rate as defined by the Johnson-Lindenstrauss lemma.
     '''
     eps = hyperparams.Uniform(
-        lower=0.1, 
-        upper=0.5, 
+        lower=0.1,
+        upper=0.5,
         default=0.2,
         semantic_types=["http://schema.org/Float", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
         )
@@ -48,6 +50,8 @@ class Hyperparams(hyperparams.Hyperparams):
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
+
+
 class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
     classdocs
@@ -134,6 +138,9 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         return CallResult(output_dataFrame, True, 1)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
+        if len(inputs) != 2:
+            raise InvalidArgumentValueError('Expecting two inputs')
+
         inputs_timeseries = inputs[1]
         inputs_d3mIndex = inputs[0]
         if len(inputs_timeseries) == 0:
@@ -188,7 +195,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
 
         print("[INFO] n_components is", n_components)
-        
+
         if n_components > self._y_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._y_dim, random_state=self.random_seed)
@@ -199,9 +206,9 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
             except:
                 print("[Warning] Using given eps value failed, will use default conditions.")
                 self._model = GaussianRandomProjection()
-        
+
         self._model.fit(self._training_data)
-        
+
         self._fitted = True
 
     def get_params(self) -> Params:
