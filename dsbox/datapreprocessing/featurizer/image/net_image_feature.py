@@ -6,6 +6,7 @@
 import importlib
 import logging
 import numpy as np
+import pandas as pd
 import os
 import shutil
 import sys
@@ -266,19 +267,23 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
         with self._graph.as_default():
             output_ndarray = self._model.predict(data)
-        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
         output_dataFrame = container.DataFrame(output_ndarray)
 
-        # if generate_metadata is true, update the metadata
+        # update the original index to be d3mIndex
+        output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(image_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
+        # add d3mIndex metadata
+        index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
+        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
+        # add other metadata
         if self.hyperparams["generate_metadata"]:
-            for each_column in range(output_ndarray.shape[1]):
+            for each_column in range(1, output_dataFrame.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS,each_column)
                 metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
-        # update the original index to be d3mIndex
-        output_dataFrame = output_dataFrame.set_index(image_d3mIndex)
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 '''
     def annotation(self):
@@ -437,18 +442,21 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
         with self._graph.as_default():
             output_ndarray = self._model.predict(data)
-        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1)
-        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
+        output_dataFrame = container.DataFrame(output_ndarray)
 
-
-        # if generate_metadata is true, update the metadata
+        # update the original index to be d3mIndex
+        output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(image_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
+        # add d3mIndex metadata
+        index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
+        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
+        # add other metadata
         if self.hyperparams["generate_metadata"]:
-            for each_column in range(output_ndarray.shape[1]):
+            for each_column in range(1, output_dataFrame.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS,each_column)
                 metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
-        # update the original index to be d3mIndex
-        output_dataFrame = output_dataFrame.set_index(image_d3mIndex)
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
