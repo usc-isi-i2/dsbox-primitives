@@ -1,11 +1,9 @@
 import pandas
 import logging
-import typing
 import numpy as np
 import d3m.metadata.base as mbase
-from d3m.metadata import hyperparams, params
+from d3m.metadata import hyperparams
 from d3m import container
-from d3m.container.list import List
 from d3m.primitive_interfaces.featurization import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from . import config
@@ -13,11 +11,13 @@ from . import config
 _logger = logging.getLogger(__name__)
 
 Inputs = container.DataFrame
-Outputs = container.List#[container.DataFrame]
+Outputs = container.List  # [container.DataFrame]
+
 
 class TimeseriesToListHyperparams(hyperparams.Hyperparams):
     # No parameters required for this primitive
     pass
+
 
 class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToListHyperparams]):
     '''
@@ -31,11 +31,11 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
     [12, 20, 40, 6, 22...]
     output_List[1]:
     index     'timeseries_data'
-    0       'DataFrame' tpye data 
-    1       'DataFrame' tpye data  
-    2       'DataFrame' tpye data 
+    0       'DataFrame' tpye data
+    1       'DataFrame' tpye data
+    2       'DataFrame' tpye data
     ...
-    
+
     -------------------------------------------------------------------------------------
     '''
     __author__ = 'USC ISI'
@@ -51,9 +51,9 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
-            'uris': [ config.REPOSITORY ]
+            'uris': [config.REPOSITORY]
             },
-        'installation': [ config.INSTALLATION ],
+        'installation': [config.INSTALLATION],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -61,6 +61,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         'precondition': [],
         'hyperparms_to_tune': []
     })
+
     def __init__(self, *, hyperparams: TimeseriesToListHyperparams) -> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
@@ -107,16 +108,14 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         input_file_name_list = inputs.iloc[:,[timeseries_index]].values.tolist()
         input_file_amount = len(input_file_name_list)
         # create the 4 dimension ndarray for return
-        
+
         for input_file_number in range(input_file_amount):
             file_path = location_base_uris + input_file_name_list[input_file_number][0]
             file_path = file_path[7:]
             timeseries_output.append(pandas.read_csv(file_path))
-            _logger.info("Timeseries data ", file_path,"loaded.")
+            _logger.info(f"Timeseries data: {file_path} loaded.")
         final_output = [d3mIndex_output, timeseries_output]
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(final_output, self._has_finished, self._iterations_done)
-
-
