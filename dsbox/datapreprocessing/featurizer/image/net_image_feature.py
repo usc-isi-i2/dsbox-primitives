@@ -12,17 +12,15 @@ import shutil
 import sys
 import typing
 
-from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
-from d3m.primitive_interfaces.base import CallResult
-
-from d3m.metadata import hyperparams
-import d3m.metadata.base as mbase
-from d3m import container
-
 from scipy.misc import imresize
 
-from . import config
+import d3m.metadata.base as mbase
+from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
+from d3m.metadata import hyperparams
+from d3m import container
 
+from . import config
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,8 @@ logger = logging.getLogger(__name__)
 Inputs = container.List
 
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
-Outputs = container.DataFrame # extracted features
+Outputs = container.DataFrame  # extracted features
+
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
@@ -43,10 +42,11 @@ class ResNet50Hyperparams(hyperparams.Hyperparams):
     # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
     generate_metadata = hyperparams.UniformBool(
-        default = False,
+        default=False,
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
+
 
 class Vgg16Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
@@ -58,11 +58,12 @@ class Vgg16Hyperparams(hyperparams.Hyperparams):
     )
 
     generate_metadata = hyperparams.UniformBool(
-        default = False,
+        default=False,
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
     # corresponding layer_size = [25088, 100352, 200704, 401408]
+
 
 class KerasPrimitive:
     _weight_files = []
@@ -80,11 +81,10 @@ class KerasPrimitive:
         keras_backend = importlib.import_module('keras.backend')
         tf = importlib.import_module('tensorflow')
 
-
         self._initialized = True
 
     @staticmethod
-    def _get_keras_data_dir(cache_subdir = 'models'):
+    def _get_keras_data_dir(cache_subdir='models'):
         """
         Return Keras cache directory. See keras/utils/data_utils.py:get_file()
         """
@@ -98,16 +98,16 @@ class KerasPrimitive:
         return datadir
 
     @staticmethod
-    def _get_weight_installation(weight_files):
+    def _get_weight_installation(weight_files: typing.List['WeightFile']):
         """
         Return D3M file installation entries
         """
         return [
             {'type': 'FILE',
-             'key': file.name,
-             'file_uri': file.uri,
-             'file_digest': file.digest}
-            for file in weight_files]
+             'key': weight_file.name,
+             'file_uri': weight_file.uri,
+             'file_digest': weight_file.digest}
+            for weight_file in weight_files]
 
     def _setup_weight_files(self):
         """
@@ -120,6 +120,7 @@ class KerasPrimitive:
                     shutil.copy2(self.volumes[file_info.name], dest)
             else:
                 logger.warning('Keras weight file not in volume: {}'.format(file_info.name))
+
 
 class WeightFile(typing.NamedTuple):
     name: str
@@ -169,10 +170,10 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
-            'uris': [ config.REPOSITORY ]
+            'uris': [config.REPOSITORY]
             },
-            # The same path the primitive is registered with entry points in setup.py.
-        'installation': [ config.INSTALLATION ] + KerasPrimitive._get_weight_installation(_weight_files),
+        # The same path the primitive is registered with entry points in setup.py.
+        'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -189,12 +190,12 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-        #============TODO: these three could be hyperparams=========
+        # ============TODO: these three could be hyperparams=========
         self._layer_index = hyperparams['layer_index']
         self._preprocess_data = True
         self._resize_data = True
         self._RESNET50_MODEL = None
-        #===========================================================
+        # ===========================================================
 
     def _lazy_init(self):
         if self._initialized:
@@ -225,7 +226,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
 
         self._org_model = self._RESNET50_MODEL
         self._model = keras_models.Model(self._org_model.input,
-                           self._org_model.layers[self._layer_number].output)
+                                         self._org_model.layers[self._layer_number].output)
         self._graph = tf.get_default_graph()
 
         self._annotation = None
@@ -279,24 +280,13 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         # add other metadata
         if self.hyperparams["generate_metadata"]:
             for each_column in range(1, output_dataFrame.shape[1]):
-                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+                metadata_selector = (mbase.ALL_ELEMENTS, each_column)
                 metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
                 output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
-'''
-    def annotation(self):
-        if self._annotation is not None:
-            return self._annotation
-        self._annotation = Primitive()
-        self._annotation.name = 'ResNet50ImageFeature'
-        self._annotation.task = 'FeatureExtraction'
-        self._annotation.learning_type = ''
-        self._annotation.ml_algorithm = ['Deep Learning']
-        self._annotation.tags = ['feature_extraction' , 'image']
-        return self._annotation
-'''
+
 
 class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Vgg16Hyperparams], KerasPrimitive):
     """
@@ -341,10 +331,10 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         'keywords': ['image', 'featurization', 'vgg16'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
-            'uris': [ config.REPOSITORY ]
+            'uris': [config.REPOSITORY]
             },
-            # The same path the primitive is registered with entry points in setup.py.
-        'installation': [ config.INSTALLATION ] + KerasPrimitive._get_weight_installation(_weight_files),
+        # The same path the primitive is registered with entry points in setup.py.
+        'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -353,8 +343,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         'hyperparms_to_tune': []
     })
 
-
-    def __init__(self, *, hyperparams: Vgg16Hyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
+    def __init__(self, *, hyperparams: Vgg16Hyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         KerasPrimitive.__init__(self)
         self.hyperparams = hyperparams
@@ -362,12 +351,12 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
-        #============TODO: these three could be hyperparams=========
+        # ============TODO: these three could be hyperparams=========
         self._layer_index = self.hyperparams['layer_index']
-        self._preprocess_data= True
+        self._preprocess_data = True
         self._resize_data = True
         self._VGG16_MODEL = None
-        #===========================================================
+        # ===========================================================
 
     def _lazy_init(self):
         if self._initialized:
@@ -398,12 +387,11 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
 
         self._org_model = self._VGG16_MODEL
         self._model = keras_models.Model(self._org_model.input,
-                           self._org_model.layers[self._layer_number].output)
+                                         self._org_model.layers[self._layer_number].output)
 
         self._graph = tf.get_default_graph()
 
         self._annotation = None
-
 
     def _preprocess(self, image_tensor):
         """Preprocess image data by modifying it directly"""
@@ -454,22 +442,9 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         # add other metadata
         if self.hyperparams["generate_metadata"]:
             for each_column in range(1, output_dataFrame.shape[1]):
-                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
+                metadata_selector = (mbase.ALL_ELEMENTS, each_column)
                 metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
                 output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
-
-'''
-    def annotation(self):
-        if self._annotation is not None:
-            return self._annotation
-        self._annotation = Primitive()
-        self._annotation.name = 'Vgg16ImageFeature'
-        self._annotation.task = 'FeatureExtraction'
-        self._annotation.learning_type = ''
-        self._annotation.ml_algorithm = ['Deep Learning']
-        self._annotation.tags = ['feature_extraction' , 'image']
-        return self._annotation
-'''
