@@ -46,7 +46,7 @@ class Hyperparams(hyperparams.Hyperparams):
         )
 
     generate_metadata = hyperparams.UniformBool(
-        default = False,
+        default = True,
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
@@ -124,18 +124,21 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
 
         # save the result to DataFrame format
         output_ndarray = self._model.transform(X)
-        output_dataFrame = container.DataFrame(container.ndarray(output_ndarray))
-
-        if self.hyperparams["generate_metadata"]:
-        # add metadata if required
-            for each_column in range(output_ndarray.shape[1]):
-                metadata_selector = (mbase.ALL_ELEMENTS,each_column)
-                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
-                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata = metadata_each_column, selector = metadata_selector)
+        output_dataFrame = container.DataFrame(output_ndarray)
 
         # update the original index to be d3mIndex
-        output_dataFrame = output_dataFrame.set_index(inputs_d3mIndex)
-        return CallResult(output_dataFrame, True, 1)
+        output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(inputs_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
+        # add d3mIndex metadata
+        index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
+        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
+        # add other metadata
+        if self.hyperparams["generate_metadata"]:
+            for each_column in range(1, output_dataFrame.shape[1]):
+                metadata_selector = (mbase.ALL_ELEMENTS, each_column)
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
+        return CallResult(output_dataFrame, True, None)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
         if len(inputs) != 2:
@@ -195,7 +198,6 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
 
         print("[INFO] n_components is", n_components)
-
         if n_components > self._y_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._y_dim, random_state=self.random_seed)
@@ -210,6 +212,9 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         self._model.fit(self._training_data)
 
         self._fitted = True
+        return CallResult(None, has_finished=True)
+
+
 
     def get_params(self) -> Params:
         if self._model:
