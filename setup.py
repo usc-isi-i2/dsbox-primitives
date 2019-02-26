@@ -53,6 +53,7 @@ setup(name='dsbox-featurizer',
       entry_points={
           'd3m.primitives': [
               'data_preprocessing.DoNothing.DSBOX = dsbox.datapreprocessing.featurizer.pass:DoNothing',
+              'data_preprocessing.DoNothingForDataset.DSBOX = dsbox.datapreprocessing.featurizer.pass:DoNothingForDataset',
               'feature_extraction.MultiTableFeaturization.DSBOX = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
               'data_preprocessing.DataFrameToTensor.DSBOX = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
               'feature_extraction.Vgg16ImageFeature.DSBOX = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
