@@ -159,7 +159,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
             print("[INFO] Multiple image columns found in the input, this primitive can only handle one column.")
 
         input_file_name_list = inputs.iloc[:,target_index].values.tolist()
-        d3mIndex_output = np.asarray(inputs.index.tolist())
+        d3mIndex_output = np.asarray(inputs['d3mIndex'].tolist())
 
         # generate the list of the file_paths
         location_base_uris = location_base_uris[0]
