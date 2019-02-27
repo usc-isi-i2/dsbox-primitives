@@ -70,57 +70,57 @@ class RNNParams(params.Params):
 class RNNHyperparams(hyperparams.Hyperparams):
     n_batch = hyperparams.Hyperparameter[int](
         default=1,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Maximum number of batch size',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_max_epoch = hyperparams.Hyperparameter[int](
         default=1000,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Maximum number of Epochs. Default is 300 ',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_max_epoch_total = hyperparams.Hyperparameter[int](
         default=100,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Maximum number of total Epoches. Default is 300 ',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_neurons = hyperparams.Hyperparameter[int](
         default=256,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Neurons in hidden layers',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
 
     n_input_dim = hyperparams.Hyperparameter[int](
         default=1,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Number of input dimension',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_dense_dim = hyperparams.Hyperparameter[int](
         default=128,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Size of fully-connected layers',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_output_dim = hyperparams.Hyperparameter[int](
         default=3,
-        description='Maximum number of iterations. Default is 300 ',
+        description='output dimension',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     n_patience = hyperparams.Hyperparameter[int](
         default=100,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Number of patience',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
 
     n_lr_decay = hyperparams.Hyperparameter[int](
         default=5,
-        description='Maximum number of iterations. Default is 300 ',
+        description='number of Learning rate decay',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
@@ -128,25 +128,25 @@ class RNNHyperparams(hyperparams.Hyperparams):
         default=1e-2,
         lower=1e-05,
         upper=1,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Learning rate',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     lr_decay = hyperparams.Hyperparameter[float](
         default=0.95,
-        description='Maximum number of iterations. Default is 300 ',
+        description='learning rate decay',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     max_valid = hyperparams.Hyperparameter[int](
         default=10,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Maximum valid number of iterations. Default is 300 ',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     valid_loss_weight = hyperparams.Hyperparameter[float](
         default=0.5,
-        description='Maximum number of iterations. Default is 300 ',
+        description='Loss weight of validation set',
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
@@ -154,12 +154,12 @@ class RNNHyperparams(hyperparams.Hyperparams):
 
 class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, RNNHyperparams]):
 
-    __author__ = "nang"
+    __author__ = "USC ISI"
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "c8d9e1b8-09f0-4b6a-b917-bfbc23f9d90b",
         "version": config.VERSION,
         "name": "DSBox recurrent neural network for timeseries",
-        "description": "timeseries forcasting primitive using RNN",
+        "description": "timeseries forcasting primitive using recurrent neural network built by tensorflow, transferred from ISI's SAGE project",
         "python_path": "d3m.primitives.time_series_forecasting.RNNTimeSeries.DSBOX",
         "primitive_family": "TIME_SERIES_FORECASTING",
         "algorithm_types": ["RECURRENT_NEURAL_NETWORK"],  # should revise
