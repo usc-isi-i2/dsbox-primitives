@@ -157,13 +157,13 @@ class ArimaHyperparams(hyperparams.Hyperparams):
 
 
 class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, ArimaHyperparams]):
-    __author__ = 'Pada'
+    __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         # Required
         "id": 'b2e4e8ea-76dc-439e-8e46-b377bf616a35',
         "version": config.VERSION,
         "name": "DSBox Arima Primitive",
-        "description": "Arima for timeseries data regression/forcasting problem",
+        "description": "Arima primitive for timeseries data regression/forcasting problems, transferred form pyramid/Arima",
 
         "python_path": "d3m.primitives.time_series_forecasting.Arima.DSBOX",
         "primitive_family": "TIME_SERIES_FORECASTING",
