@@ -163,7 +163,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         "id": 'b2e4e8ea-76dc-439e-8e46-b377bf616a35',
         "version": config.VERSION,
         "name": "DSBox Arima Primitive",
-        "description": "Arima primitive for timeseries data regression/forcasting problems, transferred form pyramid/Arima",
+        "description": "Arima primitive for timeseries data regression/forcasting problems, transferred from pyramid/Arima",
 
         "python_path": "d3m.primitives.time_series_forecasting.Arima.DSBOX",
         "primitive_family": "TIME_SERIES_FORECASTING",
