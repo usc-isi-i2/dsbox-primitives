@@ -19,6 +19,7 @@ PRIMITIVES = [
     ('feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX', featurizer_config),
     ('data_preprocessing.TimeseriesToList.DSBOX', featurizer_config),
     ('data_preprocessing.DoNothing.DSBOX', featurizer_config),
+    ('data_preprocessing.DoNothingForDataset.DSBOX', featurizer_config),
     ('time_series_forecasting.RNNTimeSeries.DSBOX', featurizer_config),
     ('time_series_forecasting.Arima.DSBOX', featurizer_config),
     ('data_transformation.GroupUpByTimeSeries.DSBOX', featurizer_config)
