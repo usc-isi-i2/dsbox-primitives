@@ -72,7 +72,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
         elements_amount = inputs.metadata.query((mbase.ALL_ELEMENTS,))['dimension']['length']
-        d3mIndex_output = np.asarray(inputs.index.tolist())
+        d3mIndex_output = np.asarray(inputs['d3mIndex'].tolist())
         # traverse each selector to check where is the image file
         timeseries_index = -1
         for selector_index in range(elements_amount):
