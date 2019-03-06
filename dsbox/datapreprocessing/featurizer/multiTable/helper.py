@@ -1,4 +1,6 @@
 import re
+import logging
+_logger = logging.getLogger(__name__)
 
 class Aggregator(object):
     """
@@ -42,12 +44,12 @@ class Aggregator(object):
         maximum_allow_table_size = 3 * pow(10,7)
         table_name, key_column_name = self.get_names(curt_table)
         k_tables = self.get_forward_tables(table_name)
-        if self.verbose: print ("current forward tables: {}".format(k_tables))
+        if self.verbose: _logger.info ("current forward tables: {}".format(k_tables))
         result = self.tables[table_name]
 
         table_name_set = {}  # prevent: same table (name) happen; key is table name; value if the number of occurence
         for table_key in k_tables:
-            if self.verbose: print ("current forward table: {}".format(table_key))
+            if self.verbose: _logger.info ("current forward table: {}".format(table_key))
             foreign_table_name = re.split(self.delimiter, table_key)[0] + self.delimiter[:-1]
             if (foreign_table_name in table_name_set.keys()):
                 table_name_set[foreign_table_name] += 1
@@ -60,15 +62,15 @@ class Aggregator(object):
             table_size = table.shape[0] * table.shape[1]
             # only continue when the target join table size is less than the maximum allow table size
             if (table_size > maximum_allow_table_size):
-                if self.verbose: print ("backward finished")
+                if self.verbose: _logger.info ("backward finished")
                 table = table.rename(columns = lambda x : foreign_table_name+"_"+x)
                 ## DEBUG code: check the intermediate tables
                 if self.verbose: table.to_csv("./backwarded_table_"+foreign_table_name, index=False)
 
                 # join back to central table, need to find the corresponding column name
                 central_table_key = self.get_corresponding_column_name(table_name, table_key)
-                if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
-                if self.verbose: print("foreign_table_key is: {}".format(foreign_table_key))
+                if self.verbose: _logger.info("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
+                if self.verbose: _logger.info("foreign_table_key is: {}".format(foreign_table_key))
                 table_reindex = table.set_index(foreign_table_name+"_"+foreign_table_key)
                 result_reindex = result.set_index(central_table_key)
                 result_return = result_reindex.join(other=table_reindex, rsuffix="_COPY")
@@ -87,11 +89,11 @@ class Aggregator(object):
         k_tables = self.get_backward_tables(central_table_name)
         result = self.tables[central_table_name]
         if self.verbose:
-            print ("backward tables: {}".format(k_tables))
+            _logger.info ("backward tables: {}".format(k_tables))
 
         for table_key in k_tables:
             # aggregated result of : groupby + count()
-            if self.verbose: print ("current backward table: {}".format(table_key))
+            if self.verbose: _logger.info ("current backward table: {}".format(table_key))
             table_name, column_name = self.get_names(table_key)
             table = self.tables[table_name]
             rr = table.groupby(column_name).count()      # after groupby count(), the index of r will be `column_name` automatically
@@ -99,7 +101,7 @@ class Aggregator(object):
             #result = result.rename(columns = lambda x : table_name+"_"+x)
             # join back to central table, need to find the corresponding column name
             central_table_key = self.get_corresponding_column_name(central_table_name, table_key)
-            if self.verbose: print("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
+            if self.verbose: _logger.info("central_table_key is: {}".format(central_table_key)) # name of primary-foreign key
             result = result.join(other=rr, on=central_table_key) # no need to set_index for r, because its index is alreayd column_name
 
         return result
@@ -117,11 +119,11 @@ class Aggregator(object):
         result = result.rename(columns = lambda x : central_table_name + "_" + x)
 
         if self.verbose:
-            print ("backward tables: {}".format(k_tables))
+            _logger.info ("backward tables: {}".format(k_tables))
 
         for table_key in k_tables:
             # aggregated result of : groupby + count()
-            if self.verbose: print ("current backward table: {}".format(table_key))
+            if self.verbose: _logger.info ("current backward table: {}".format(table_key))
             table_name, column_name = self.get_names(table_key)
             table = self.tables[table_name]
             primary_key_column_name = central_table_name + "_" + central_column_name
@@ -135,7 +137,7 @@ class Aggregator(object):
             table = table.set_index(primary_key_column_name)
             # join back to central table, need to find the corresponding column name
             #central_table_key = self.get_corresponding_column_name(central_table_name, table_key)
-            if self.verbose: print("central_table_key is: {}".format(central_column_name)) # name of primary-foreign key
+            if self.verbose: _logger.info("central_table_key is: {}".format(central_column_name)) # name of primary-foreign key
             result = result.join(other=table,on = primary_key_column_name, rsuffix="_COPY", how = "left")
             result = result.rename(columns = {primary_key_column_name+"_COPY" : primary_key_column_name})
         return result
@@ -152,14 +154,14 @@ class Aggregator(object):
         column_name = None
         for relation in self.relations:
             if (table2_col==relation[0]):
-                if self.verbose: print(relation)
+                if self.verbose: _logger.info(relation)
                 table_name = re.split(self.delimiter, relation[1])[0]# + ".csv"
                 if (table_name == table1):
                     column_name = re.split(self.delimiter, relation[1])[1]
                     return column_name
 
             elif (table2_col==relation[1]):
-                if self.verbose: print(relation)
+                if self.verbose: _logger.info(relation)
                 table_name = re.split(self.delimiter, relation[0])[0]# + ".csv"
                 if (table_name == table1):
                     column_name = re.split(self.delimiter, relation[0])[1]

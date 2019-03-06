@@ -6,6 +6,7 @@ Created on Jan 23, 2018
 
 import numpy as np
 import typing
+import logging
 
 from d3m.metadata import hyperparams, params
 from d3m import container
@@ -23,7 +24,7 @@ from . import config
 
 Inputs = container.List#[container.DataFrame]  # this format is for old version of d3m
 Outputs = container.DataFrame
-
+_logger = logging.getLogger(__name__)
 
 class Params(params.Params):
     x_dim: int
@@ -147,7 +148,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         inputs_timeseries = inputs[1]
         inputs_d3mIndex = inputs[0]
         if len(inputs_timeseries) == 0:
-            print("Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
+            _logger.info("Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
         # update: now we need to get the whole shape of inputs to process
         lengths = [x.shape[0] for x in inputs_timeseries]
@@ -168,7 +169,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         is_same_length = len(set(lengths)) == 1
         is_same_width = len(set(widths)) == 1
         if not is_same_width:
-            print("Warning: some csv file have different dimensions!")
+            _logger.info("Warning: some csv file have different dimensions!")
         if self._value_found :
             if is_same_length:
                 self._y_dim = lengths[0]
@@ -197,7 +198,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         eps = self.hyperparams['eps']
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
 
-        print("[INFO] n_components is", n_components)
+        _logger.info("[INFO] n_components is", n_components)
         if n_components > self._y_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._y_dim, random_state=self.random_seed)
@@ -206,7 +207,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
                 self._model = GaussianRandomProjection(eps=eps, random_state=self.random_seed)
                 self._model.fit(self._training_data)
             except:
-                print("[Warning] Using given eps value failed, will use default conditions.")
+                _logger.info("[Warning] Using given eps value failed, will use default conditions.")
                 self._model = GaussianRandomProjection()
 
         self._model.fit(self._training_data)

@@ -34,7 +34,7 @@ from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
 Inputs = List
 Outputs = d3m_dataframe
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class RNNHelper:
@@ -285,7 +285,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         if self._fitted:
             return CallResult(None)
         if not self._get_set:
-            print("Please set Training Data")
+            _logger.info("Please set Training Data")
             return CallResult(None)
         self._lazy_init()
 
@@ -363,7 +363,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
 
     def get_params(self) -> RNNParams:
         if not self._fitted:
-            print("plz fit!")
+            _logger.info("plz fit!")
             return
         # saving by model, comment right now
         # with tf.Session(config=self.tf_config) as sess:
@@ -423,7 +423,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
 
     def produce(self, *,  inputs: Inputs) -> CallResult[Outputs]:
         if not self._fitted:
-            print("Plz fit!")
+            _logger.info("Plz fit!")
             return
         # graph = tf.Graph()
         # with graph.as_default():
@@ -475,7 +475,8 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             pred_test_upper = np.maximum(
                 pred_test, np.maximum(pred_test_upper, pred_test_lower))
 
-            print(pred_test.tolist())
+            _logger.info(pred_test.tolist())
+        return CallResult(pred_test, 1, 1)
 
 # functions to fit in devel branch of d3m (2019-1-17)
     def fit_multi_produce(self, *, produce_methods: typing.Sequence[str], inputs: Inputs, predict_step: int, timeout: float = None, iterations: int = None) -> MultiCallResult:
