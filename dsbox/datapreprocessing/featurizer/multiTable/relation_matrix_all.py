@@ -2,7 +2,9 @@ import pandas as pd
 from os import listdir
 import time
 from d3m import container
+import logging
 Inputs = container.Dataset
+_logger = logging.getLogger(__name__)
 
 def get_relation_matrix(data:Inputs, relations: tuple):
     """
@@ -24,7 +26,7 @@ def get_relation_matrix(data:Inputs, relations: tuple):
             key = x + "_" + col_name
             all_tables_colSet[key] = set(all_tables[x][col_name])
 
-    print("=====>> data readin finished: {}".format(time.time() - start_time))
+    _logger.info("=====>> data readin finished: {}".format(time.time() - start_time))
 
     # 1. define the relation_matrix: index and link
     relation_matrix_index = list(all_tables_colSet.keys())  # list of columns name (index)
@@ -50,7 +52,7 @@ def get_relation_matrix(data:Inputs, relations: tuple):
                     setj = all_tables_colSet[j]
                     
                     relation_matrix[i][j] = cal_relation_val_fromset(seti, setj)
-            print("=====>> {} vs {} finished: {}".format(table1, table2, time.time() - start_time))       
+            _logger.info("=====>> {} vs {} finished: {}".format(table1, table2, time.time() - start_time))       
     return relation_matrix
 
 def cal_relation_val_fromset(s_i, s_j):

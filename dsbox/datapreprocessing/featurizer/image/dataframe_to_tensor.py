@@ -2,6 +2,7 @@ import importlib
 import multiprocessing
 import numpy as np
 import sys
+import logging
 
 import d3m.metadata.base as mbase
 
@@ -18,7 +19,7 @@ Outputs = List
 image_size_x = 224
 image_size_y = 224
 image_layer = 3
-
+_logger = logging.getLogger(__name__)
 
 class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
     process_amount = hyperparams.UniformInt(
@@ -153,10 +154,10 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         # if no 'image' related mime_types found, return a ndarray with each dimension's length equal to 0
         if (len(target_index) == 0):
             # raise exceptions.InvalidArgumentValueError("no image related metadata found!")
-            print("[ERROR] No image related column found!")
+            _logger.error("[ERROR] No image related column found!")
             return CallResult(np.empty(shape=(0, 0, 0, 0)), self._has_finished, self._iterations_done)
         elif len(target_index) > 1:
-            print("[INFO] Multiple image columns found in the input, this primitive can only handle one column.")
+            _logger.info("[INFO] Multiple image columns found in the input, this primitive can only handle one column.")
 
         input_file_name_list = inputs.iloc[:,target_index].values.tolist()
         d3mIndex_output = np.asarray(inputs['d3mIndex'].tolist())
@@ -179,7 +180,7 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         # sometimes it may failed with ERROR like "OSError: [Errno 24] Too many open files"
         except OSError as e:
             if e.errno == 24:
-                print("Too many open files. Increase limit to 2 * n_trees + 2" +
+                _logger.error("Too many open files. Increase limit to 2 * n_trees + 2" +
                       "(unix / mac: ulimit -n [limit], windows: http://bit.ly/2fAKnz0)", file=sys.stderr)
             raise e
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)

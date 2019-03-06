@@ -162,10 +162,10 @@ class GroupUpByTimeSeries(TransformerPrimitiveBase[Input, Output,GroupUpHyperpar
             if len(timeseries_file) == 1:
                 data_grouped = data.groupby(data.columns[timeseries_file[0]])
             elif len(timeseries_file) == 0:
-                print("No timeseries_file specified")
+                _logger.info("No timeseries_file specified")
                 return CallResult(None, self._has_finished, self._iterations_done)
             else:
-                print("Cannot handle more than 1 timeseries_file")
+                _logger.info("Cannot handle more than 1 timeseries_file")
                 return CallResult(None, self._has_finished, self._iterations_done)
 
             # Start with storing the result

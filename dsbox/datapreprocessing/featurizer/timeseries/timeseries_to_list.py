@@ -98,7 +98,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         timeseries_output = list()
         # if no 'csv' related mime_types found, return a empty list
         if (timeseries_index == -1):
-            print("Warning: Can't find timeseries index!")
+            _logger.info("Warning: Can't find timeseries index!")
             _logger.info("No timeseries dataset detected!")
             self._has_finished = True
             self._iterations_done = True

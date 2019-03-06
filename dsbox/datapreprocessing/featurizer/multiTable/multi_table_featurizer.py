@@ -111,7 +111,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                     main_resource_id = resource_id
                     _logger.debug("Main table ID is: %s", main_resource_id)
                     if self._verbose:
-                        print("Main table ID is:", main_resource_id)
+                        _logger.info("Main table ID is:", main_resource_id)
                 # find the foreign key relationship
                 if 'foreign_key' in column_metadata:
                     ref_resource_id = column_metadata['foreign_key']['resource_id']
@@ -136,7 +136,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         # if no foreign key relationships found, return inputs directly
         if len(relations) == 0:
             _logger.info("No table-based foreign_key relationship found in the dataset, will return the original dataset.")
-            print("[INFO] No table-based foreign_key relationship found in the dataset, will return the original dataset.")
+            _logger.info("[INFO] No table-based foreign_key relationship found in the dataset, will return the original dataset.")
             return inputs
 
         # step 2.5: a fix (based on the problem occurred in `uu3_world_development_indicators` dataset)
@@ -146,9 +146,9 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
         relations = self._relations_correction(relations = relations)
         if self._verbose:
-            print ("==========relations:=============")
-            print (relations) # to see if the relations make sense
-            print ("=================================")
+            _logger.info ("==========relations:=============")
+            _logger.info (relations) # to see if the relations make sense
+            _logger.info ("=================================")
         if _logger.getEffectiveLevel() <= 10:
             _logger.debug('Corrected Relations')
             for target_column_name, resource_column_name in relations:
@@ -156,7 +156,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
 
         # step 3: featurization
         start=time.clock()
-        print("[INFO] Multi-table join start.")
+        _logger.info("[INFO] Multi-table join start.")
         aggregator = Aggregator(relations, data, self._verbose)
         for each_relation in relations:
             # if the target table found in second placfe of the set
@@ -168,7 +168,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 big_table = aggregator.forward(each_relation[0])
                 break
         finish=time.clock()
-        print("[INFO] Multi-table join finished, totally take ",finish - start,'seconds.')
+        _logger.info("[INFO] Multi-table join finished, totally take ",finish - start,'seconds.')
         big_table = container.DataFrame(pd.DataFrame(big_table),generate_metadata=True)
         # add back metadata
         for index in range(len(big_table.columns)):

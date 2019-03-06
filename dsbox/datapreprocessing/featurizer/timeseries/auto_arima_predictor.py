@@ -5,7 +5,7 @@ import stopit
 import math
 import typing
 from typing import Any, Callable, List, Dict, Union, Optional
-
+import logging
 
 from pyramid.arima import ARIMA, auto_arima
 
@@ -25,7 +25,7 @@ from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
 # Inputs = container.List
 Inputs = d3m_dataframe
 Outputs = d3m_dataframe
-
+_logger = logging.getLogger(__name__)
 
 class ArimaParams(params.Params):
     arima: ARIMA
@@ -222,7 +222,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         inputs_timeseries = d3m_dataframe(inputs.iloc[:, -1])
         inputs_d3mIndex = d3m_dataframe(inputs.iloc[:, 0])
         if len(inputs_timeseries) == 0:
-            print(
+            _logging.info(
                 "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
         column_name = inputs_timeseries.columns[0]
