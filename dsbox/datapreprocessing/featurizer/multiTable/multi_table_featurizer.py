@@ -35,7 +35,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'version': config.VERSION,
         'name': "DSBox Multiple Table Featurizer Aggregation",
         'description': 'Generate a featurized table from multiple-table dataset using aggregation. It will automatically detect foriegn key relationships among multiple tables, and join the tables into one table using aggregation.',
-        'python_path': 'd3m.primitives.feature_extraction.MultiTableFeaturization.DSBOX',
+        'python_path': 'd3m.primitives.feature_extraction.multitable_featurization.DSBOX',
         'primitive_family': "FEATURE_EXTRACTION",
         'algorithm_types': ["RELATIONAL_DATA_MINING"],
         'keywords': ['multiple table'],

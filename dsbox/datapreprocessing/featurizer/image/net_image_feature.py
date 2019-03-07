@@ -163,7 +163,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'version': config.VERSION,
         'name': "DSBox Image Featurizer RestNet50",
         'description': 'Generate image features using RestNet50',
-        'python_path': 'd3m.primitives.feature_extraction.ResNet50ImageFeature.DSBOX',
+        'python_path': 'd3m.primitives.feature_extraction.resnet50_image_feature.DSBOX',
         'primitive_family': "FEATURE_EXTRACTION",
         'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'resnet50'],
@@ -325,12 +325,13 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         'version': config.VERSION,
         'name': "DSBox Image Featurizer VGG16",
         'description': 'Generate image features using VGG16',
-        'python_path': 'd3m.primitives.feature_extraction.Vgg16ImageFeature.DSBOX',
+        'python_path': 'd3m.primitives.feature_extraction.vgg16_image_feature.DSBOX',
         'primitive_family': "FEATURE_EXTRACTION",
         'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'vgg16'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
             'uris': [config.REPOSITORY]
             },
         # The same path the primitive is registered with entry points in setup.py.

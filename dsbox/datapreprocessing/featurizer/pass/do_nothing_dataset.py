@@ -23,7 +23,7 @@ class DoNothingForDataset(TransformerPrimitiveBase[Inputs, Outputs, DoNothingFor
         'version': config.VERSION,
         'name': 'DSBox do-nothing primitive dataset version',
         'description': 'Just pass the input to the output',
-        'python_path': 'd3m.primitives.data_preprocessing.DoNothingForDataset.DSBOX',
+        'python_path': 'd3m.primitives.data_preprocessing.do_nothing_for_dataset.DSBOX',
         'primitive_family': 'DATA_PREPROCESSING',
         'algorithm_types': ["NUMERICAL_METHOD"],
         'keywords': ['pass'],

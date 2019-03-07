@@ -44,7 +44,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         'version':config.VERSION,
         'name': "DSBox Timeseries Featurizer dataframe to List Transformer",
         'description': 'Generate a list of DataFrame which includes the details timeseries data',
-        'python_path': 'd3m.primitives.data_preprocessing.TimeseriesToList.DSBOX',
+        'python_path': 'd3m.primitives.data_preprocessing.time_series_to_list.DSBOX',
         'primitive_family': 'DATA_PREPROCESSING',
         'algorithm_types': ['DATA_CONVERSION'],
         'keywords': ['timeseries', 'reader'],

@@ -160,7 +160,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         "version": config.VERSION,
         "name": "DSBox recurrent neural network for timeseries",
         "description": "timeseries forcasting primitive using recurrent neural network built by tensorflow, transferred from ISI's SAGE project",
-        "python_path": "d3m.primitives.time_series_forecasting.RNNTimeSeries.DSBOX",
+        "python_path": "d3m.primitives.time_series_forecasting.rnn_time_series.DSBOX",
         "primitive_family": "TIME_SERIES_FORECASTING",
         "algorithm_types": ["RECURRENT_NEURAL_NETWORK"],  # should revise
         "source": {
