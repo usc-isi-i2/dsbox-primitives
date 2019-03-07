@@ -94,7 +94,7 @@ class GroupUpByTimeSeries(TransformerPrimitiveBase[Input, Output,GroupUpHyperpar
         "name": "DSBox Group Up by Timeseries Primitive",
         "description": "Group up timeseries data by same name of timeseries files",
 
-        "python_path": "d3m.primitives.data_transformation.GroupUpByTimeSeries.DSBOX",
+        "python_path": "d3m.primitives.data_transformation.group_up_by_timeseries.DSBOX",
         "primitive_family": "DATA_TRANSFORMATION",
         "algorithm_types": ["NUMERICAL_METHOD"],
         "source": {
