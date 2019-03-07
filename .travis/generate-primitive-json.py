@@ -12,17 +12,17 @@ from dsbox.datapreprocessing.featurizer import config as featurizer_config
 
 PREFIX = 'd3m.primitives.'
 PRIMITIVES = [
-    ('feature_extraction.ResNet50ImageFeature.DSBOX', featurizer_config),
-    ('feature_extraction.Vgg16ImageFeature.DSBOX', featurizer_config),
-    ('feature_extraction.MultiTableFeaturization.DSBOX', featurizer_config),
-    ('data_preprocessing.DataFrameToTensor.DSBOX', featurizer_config),
-    ('feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX', featurizer_config),
-    ('data_preprocessing.TimeseriesToList.DSBOX', featurizer_config),
-    ('data_preprocessing.DoNothing.DSBOX', featurizer_config),
-    ('data_preprocessing.DoNothingForDataset.DSBOX', featurizer_config),
-    ('time_series_forecasting.RNNTimeSeries.DSBOX', featurizer_config),
-    ('time_series_forecasting.Arima.DSBOX', featurizer_config),
-    ('data_transformation.GroupUpByTimeSeries.DSBOX', featurizer_config)
+    ('feature_extraction.resnet50_image_feature.DSBOX', featurizer_config),
+    ('feature_extraction.vgg16_image_feature.DSBOX', featurizer_config),
+    ('feature_extraction.multitable_featurization.DSBOX', featurizer_config),
+    ('data_preprocessing.dataframe_to_tensor.DSBOX', featurizer_config),
+    ('feature_extraction.random_projection_timeseries_featurization.DSBOX', featurizer_config),
+    ('data_preprocessing.time_series_to_list.DSBOX', featurizer_config),
+    ('data_preprocessing.do_nothing.DSBOX', featurizer_config),
+    ('data_preprocessing.do_nothing_for_dataset.DSBOX', featurizer_config),
+    ('time_series_forecasting.rnn_time_series.DSBOX', featurizer_config),
+    ('time_series_forecasting.arima.DSBOX', featurizer_config),
+    ('data_transformation.group_up_by_timeseries.DSBOX', featurizer_config)
 ]
 
 
