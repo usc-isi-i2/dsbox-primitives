@@ -8,6 +8,8 @@ from library import DefaultClassificationTemplate
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
 a = DefaultClassificationTemplate()
 
+
+
 def get_meta_json(dataset_name):
     # generate the meta file for pipelines
     # if pipeline_type == "classification":
@@ -68,6 +70,8 @@ def generate_pipeline(config:dict, meta_json):
             print("!!!!!!!")
     return failed
 
+
+
 def remove_temp_files():
     tmp_files = os.listdir("tmp")
     for each_file in tmp_files:
@@ -76,6 +80,7 @@ def remove_temp_files():
 
 def test_pipeline(each_config_name, config, test_dataset_id):
     try:
+        config = a.generate_pipeline_direct().config
         pipeline = a.to_pipeline(config)
         pipeline_json = pipeline.to_json_structure()
         os.makedirs("tmp", exist_ok=True)
