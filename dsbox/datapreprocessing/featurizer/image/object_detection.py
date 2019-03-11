@@ -20,7 +20,7 @@ from . import config
 logger = logging.getLogger(__name__)
 
 # Input should from dataframe_to_tensor primitive
-Inputs = container.List
+Inputs = container.DataFrame
 Outputs = container.DataFrame  # results
 
 class YoloHyperparams(hyperparams.Hyperparams):
@@ -103,7 +103,8 @@ class YoloHyperparams(hyperparams.Hyperparams):
 
 class Params(params.Params):
     target_class_id: typing.List[int]
-    outputlayer: typing.List[int]
+    outputlayer: typing.List[str]
+    target_column_name: str
 
 class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperparams]):
     """
@@ -153,6 +154,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self._training_inputs = None
         self._training_outputs = None
         self._object_names = None
+        self._target_column_name: str = ""
         self._target_class_id: typing.List[int] = []
         self._location_base_uris = ""
         self._outputlayer: typing.List[str] = []
@@ -248,7 +250,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.error("No corresponding target object detected in training set with pre-trained model")
         elif len(self._target_class_id) > 1:
             logger.warn("More than 1 target object detected in the training set with pre-trained model")
-        logger.info("The target class id is:", self._target_class_id)
+
+        target_id_str = ",".join(self._object_names[x] for x in self._target_class_id)
+        logger.info("The target class id is: [" + target_id_str + "]")
 
         self._fitted = True
         return CallResult(None, has_finished=True, iterations_done=1)
@@ -256,13 +260,15 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     def get_params(self) -> Params:
         param = Params(
                        target_class_id = self._target_class_id,
-                       outputlayer = self._outputlayer
+                       outputlayer = self._outputlayer,
+                       target_column_name = self._target_column_name,
                       )
         return param
 
     def set_params(self, *, params: Params) -> None:
         self._target_class_id = params["target_class_id"]
         self._outputlayer = params["outputlayer"]
+        self._target_column_name = params["target_column_name"]
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         self._training_inputs = inputs
@@ -273,7 +279,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         else:
             self._target_column_name = target_column_names[0]
 
-        self._location_base_uris = self._get_image_path()
+        self._location_base_uris = self._get_image_path(inputs)
         self._fitted = False
 
 
@@ -294,9 +300,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         conf_threshold = self.hyperparams['confidences_threshold']
         nms_threshold = self.hyperparams['nms_threshold']
         self._lazy_init()
-        
-        image_d3mIndex = self._training_inputs['d3mIndex'].astype(int).tolist()
-        image_only = self._training_inputs.drop(columns=['d3mIndex'])
+        self._location_base_uris = self._get_image_path(inputs)
+        image_d3mIndex = results['d3mIndex'].astype(int).tolist()
+        image_only = results.drop(columns=['d3mIndex'])
         if len(image_only.columns) > 1:
             logger.warn("Detect multiple file columns inputs! Will try to use the first columns as the input image column")
         image_names_list = image_only[image_only.columns[0]].tolist()
@@ -305,19 +311,14 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         for each in image_names_list:
             object_count_in_each_image[each] += 1
 
-        scale = self.hyperparams['blob_scale_factor']
-        blob_x = self.hyperparams['blob_output_shape_x']
-        blob_y = self.hyperparams['blob_output_shape_y']
-        mean_R = self.hyperparams['blob_mean_R']
-        mean_G = self.hyperparams['blob_mean_G']
-        mean_B = self.hyperparams['blob_mean_B']
-        crop = self.hyperparams['blob_crop']
-        conf_threshold = self.hyperparams['confidences_threshold']
-        nms_threshold = self.hyperparams['nms_threshold']
         output_dataFrame = container.DataFrame(columns = [self._target_column_name])
 
         for i, each_image_name in enumerate(object_count_in_each_image.keys()):
-            each_image = cv2.imread(os.path.join(self._location_base_uris, each_image_name))
+            image_path = os.path.join(self._location_base_uris, each_image_name)
+            each_image = cv2.imread(image_path)
+            if each_image is None:
+                logger.error("loading image from " + image_path + " failed!")
+                continue
             logger.debug("Now detecting objects in", each_image_name)
             # Creates 4-dimensional blob from image. 
             # swapRB has to be True, otherwise the channel is not R,G,B style
@@ -358,7 +359,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
             found_object_amount = 0
             if len(indices) > object_count_in_each_image[each_image_name]:
-                logger.warn(str(len(indices)) + " objects detected "+ each_image_name + "while only "+str(object_count_in_each_image[each_image_name])+ " required.")
+                logger.warn(str(len(indices)) + " objects detected "+ each_image_name + " while only "+str(object_count_in_each_image[each_image_name])+ " required.")
 
             for each in indices:
                 i = each[0]
@@ -475,15 +476,15 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         output_loc = os.path.join(os.environ['D3MLOCALDIR'], image_name)
         cv2.imwrite(output_loc, image)
 
-    def _get_image_path(self) -> str:
+    def _get_image_path(self, dataset_input) -> str:
         """
             function used to get the abs path of input images
         """
         target_index = []
         location_base_uris = []
-        elements_amount = self._training_inputs.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
+        elements_amount = dataset_input.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
         for selector_index in range(elements_amount):
-            each_selector = self._training_inputs.metadata.query((metadata_base.ALL_ELEMENTS, selector_index))
+            each_selector = dataset_input.metadata.query((metadata_base.ALL_ELEMENTS, selector_index))
             mime_types_found = False
             # here we assume only one column shows the location of the target attribute
             #print(each_selector)
