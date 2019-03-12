@@ -22,6 +22,18 @@ image_layer = 3
 _logger = logging.getLogger(__name__)
 
 class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
+    do_resize = hyperparams.UniformBool(
+        default=True,
+        description="Whether to resize all the input images into same size or not",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+    )
+
+    output_channel_at_first = hyperparams.UniformBool(
+        default=False,
+        description="Set the output tensor format to be with channel at last dimension or second dimension. Default set to be false to fit most condition. It need to be set as true when processing with common_primitives.convolutional_neural_net.",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+    )
+
     process_amount = hyperparams.UniformInt(
         lower=1,
         upper=sys.maxsize,
@@ -34,7 +46,7 @@ class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
         lower=0,
         upper=sys.maxsize,
         default=224,
-        description="Specify the resized shape[0] of the resized image",
+        description="Specify the resized shape[0] of the resized image. Only valid when do_resize set to be true",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
     )
 
@@ -42,7 +54,7 @@ class DataFrameToTensorHyperparams(hyperparams.Hyperparams):
         lower=0,
         upper=sys.maxsize,
         default=224,
-        description="Specify the resized shape[1] of the resized image",
+        description="Specify the resized shape[1] of the resized image. Only valid when do_resize set to be true",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
     )
 
@@ -121,7 +133,10 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         '''
             Sub sequence that used to read one image
         '''
-        im = np.array(self._keras_image.load_img(file_path, target_size=(self._resize_X, self._resize_Y)))
+        if self.hyperparams['do_resize']:
+            im = np.array(self._keras_image.load_img(file_path, target_size=(self._resize_X, self._resize_Y)))
+        else:
+            im = np.array(self._keras_image.load_img(file_path))
         return im
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -187,5 +202,9 @@ class DataFrameToTensor(TransformerPrimitiveBase[Inputs, Outputs, DataFrameToTen
         self._has_finished = True
         self._iterations_done = True
         # final_output[0] is the d3mIndex and final_output[1] is the detail image data
+        if self.hyperparams['output_channel_at_first']:
+            tensor_output = np.moveaxis(tensor_output,-1,1)
+
         final_output = [d3mIndex_output, tensor_output]
+
         return CallResult(final_output, self._has_finished, self._iterations_done)
