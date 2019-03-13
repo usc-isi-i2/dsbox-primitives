@@ -6,7 +6,7 @@ import subprocess
 from dsbox.datapreprocessing.featurizer import config as featurizer_config
 
 parser = argparse.ArgumentParser(description='Generate primitive.json descriptions')
-parser.add_argument('dirname', action='store', help='Top-level directory to store the json descriptions, i.e. primitives_repo directory', default = 'output')
+parser.add_argument('--dirname', action='store', default = 'output', help='Top-level directory to store the json descriptions, i.e. primitives_repo directory')
 arguments = parser.parse_args()
 
 PREFIX = 'd3m.primitives.'
