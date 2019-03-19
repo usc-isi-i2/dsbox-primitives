@@ -666,6 +666,4 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         # run preprocess step
         processed_input = self._preprocess(processed_input)
         features = self._model.predict(processed_input)
-        import pdb
-        pdb.set_trace()
         return features
