@@ -28,6 +28,13 @@ Inputs = container.DataFrame
 Outputs = container.DataFrame  # results
 
 class LSTMHyperparams(hyperparams.Hyperparams):
+    LSTM_units = hyperparams.UniformInt(
+        default = 2048,
+        lower = 1,
+        upper = pow(2,31),
+        description = "Positive integer, dimensionality of the output space of LSTM model",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter",]
+        )
     verbose = hyperparams.UniformInt(
         default = 0,
         lower = 0,
@@ -49,6 +56,11 @@ class LSTMHyperparams(hyperparams.Hyperparams):
         description = "epochs to do on fit process",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter",]
         )
+    shuffle = hyperparams.Hyperparameter[bool](
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        default=True,
+        description='Shuffle minibatches in each epoch of training (fit).'
+    )
     loss_threshold = hyperparams.Hyperparameter[float](
             semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
             default=1e-5,
@@ -64,21 +76,33 @@ class LSTMHyperparams(hyperparams.Hyperparams):
         default=1e-5,
         description='Learning rate used during training (fit).'
     )
-    shuffle = hyperparams.Hyperparameter[bool](
+    dropout_rate = hyperparams.Hyperparameter[float](
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        default=True,
-        description='Shuffle minibatches in each epoch of training (fit).'
+        default=0.5,
+        description='Learning rate used during training (fit).'
     )
     validate_data_percent = hyperparams.Hyperparameter[float](
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
         default=0.2,
         description='The perncentage of the data used for validation purpose during train(fit).'
     )
+    optimizer_type = hyperparams.Enumeration[str](
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        values=['adam', 'sgd'],
+        default='adam',
+        description='Type of optimizer used during training (fit).'
+    )
+    momentum = hyperparams.Hyperparameter[float](
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
+        default=0.9,
+        description='Momentum used during training (fit), only for optimizer_type sgd.'
+    )
 class Params(params.Params):
     target_column_name: str
     class_name_to_number: typing.Dict[str, int]
     keras_model: Sequential
     feature_shape: typing.List[int]
+    input_feature_column_name: str
 
 class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperparams]):
     """
@@ -87,7 +111,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     Parameters
     ----------
-    target_class_id: The id of the object detection targets
     outputlayer: The list of the output layer number from YOLO's DNN
     """
 
@@ -135,13 +158,17 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._verbose_mode = self.hyperparams['verbose']
         self._learning_rate = self.hyperparams['learning_rate']
         self._weight_decay = self.hyperparams['weight_decay']
+        self._LSTM_units = self.hyperparams['LSTM_units']
+        self._dropout_rate = self.hyperparams['dropout_rate']
+        self._optimizer_type = self.hyperparams['optimizer_type']
+        self._momentum = self.hyperparams['momentum']
         self._metrics = []
         self._class_name_to_number = {}
+        self._input_feature_column_name = ""
 
     def get_params(self) -> Params:
         param = Params(
                         keras_model = self._model,
-                        # target_class_id = self._target_class_id,
                         class_name_to_number = self._class_name_to_number,
                         target_column_name = self._target_column_name,
                         feature_shape = self._feature_shape
@@ -150,7 +177,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     def set_params(self, *, params: Params) -> None:
         self._model = params["keras_model"]
-        # self._target_class_id = params["target_class_id"]
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
@@ -159,18 +185,39 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         self._training_inputs = inputs
         self._training_outputs = outputs
-        # TODO: should use a better way to find the feature input columns
-        self._features = inputs.iloc[:,-1]
+        
+        if self._training_inputs.shape[0] < self._training_outputs.shape[0]:
+            if 'd3mIndex' in self._training_inputs.columns:
+                inputs_index_with_contents = self._training_inputs['d3mIndex'].astype(int).tolist()
+            else:
+                logger.warn("No d3mIndex found in input training dataset!")
+                inputs_index_with_contents = list(range(self._training_inputs.shape[0]))
+            self._training_outputs = self._training_outputs.iloc[inputs_index_with_contents,:]
+        else:
+            raise ValueError("The length of inputs is larger than outputs which is impossible.")
+            
+        # TODO: maybe use a better way to find the feature input columns
+        input_column_names = []
+        for each_column in self._training_inputs.columns:
+            if type(self._training_inputs[each_column][0]) is np.ndarray and len(self._training_inputs[each_column][0].shape) == 2:
+                input_column_names.append(each_column)
+        if len(input_column_names) < 1:
+            raise ValueError("No extract feature attribute from input detected!")
+        if len(input_column_names) > 1:
+            logger.warn("More that 1 feature attribute detected! Will only use first one")
+
+        self._input_feature_column_name = input_column_names[0]
+        self._features = inputs[self._input_feature_column_name]
         self._training_size = inputs.shape[0]
-        target_column_names = outputs.columns.tolist()
+        target_column_names = self._training_outputs.columns.tolist()
         if 'd3mIndex' in target_column_names:
             target_column_names.remove('d3mIndex')
+        if len(target_column_names) < 1:
+            raise ValueError("No target attribute from output detected!")
         if len(target_column_names) > 1:
-            logger.warn("Multiple target detected!")
-        else:
-            self._target_column_name = target_column_names[0]
+            logger.warn("Multiple target detected! Will only use first one")
+        self._target_column_name = target_column_names[0]
         class_names = set(self._training_outputs[self._target_column_name].tolist())
-
         self._number_of_classes = len(class_names)
         self._feature_shape = self._features[0].shape
         self._features_amount = self._training_inputs.shape[0]
@@ -184,7 +231,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         # update this reference to self._training_ouputs_ndarry
         for i, each in enumerate(self._training_outputs[self._target_column_name]):
             self._training_ouputs_ndarry[i, self._class_name_to_number[each]] = 1
-        
         self._fitted = False
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
@@ -208,28 +254,47 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._iterations_done = 0
         start = time.time()
         self._has_finished = False
-
+        if self._shuffle:
+            indices = np.random.permutation(self._training_inputs_ndarry.shape[0])
+        else:
+            indices = list(range(self._training_inputs_ndarry.shape[0]))
+        number_of_training_data = int( (1 - self._validate_data_percent) * self._training_size)
+        logger.info(str(number_of_training_data) + " of the " + str(self._training_size) + " input data will be used to trained. The remainede will be used for validation.")
+        training_idx, test_idx = indices[:number_of_training_data], indices[number_of_training_data:]
+        training_x, test_x = self._training_inputs_ndarry[training_idx,:], self._training_inputs_ndarry[test_idx,:]
+        training_y, test_y = self._training_ouputs_ndarry[training_idx,:], self._training_ouputs_ndarry[test_idx,:]
+        
         # repeat fit until interation down or epoch_loss less than threshold
         while time.time() < start + timeout and self._iterations_done < iterations:
             logger.info("Start fit on iteration " +str(self._iterations_done))
 
-            result = self._model.fit(self._training_inputs_ndarry, self._training_ouputs_ndarry, 
+            result = self._model.fit(training_x, training_y, 
+            # result = self._model.fit(self._training_inputs_ndarry, self._training_ouputs_ndarry, 
                 batch_size=self._batch_size,
-                validation_split = self._validate_data_percent,
+                # validation_split = self._validate_data_percent,
                 verbose=self._verbose_mode,
+                validation_data=(test_x, test_y),
                 shuffle = self._shuffle,
                 initial_epoch = self._iterations_done,
                 epochs=1+self._iterations_done)
             # result available for these values
                 # train_loss = result.history['loss']
-                # val_loss   = result.history['val_loss']
+                # test_loss   = result.history['val_loss']
                 # train_acc  = result.history['acc']
-                # val_acc    = result.history['val_acc']
-            epoch_loss = result.history['loss'][-1]
+                # test_acc    = result.history['val_acc']
+            epoch_loss = result.history['val_loss'][-1]
             self._iterations_done += 1
             if epoch_loss < self._loss_threshold:
                 self._has_finished = True
+                logger.info("The model is well fitted during "+str(self._iterations_done)+"interation. No more needed.")
                 return CallResult(None)
+        
+        logger.info("The model fitting finished with"+str(self._iterations_done)+"interation." )
+        logger.info("The final result is:")
+        logger.info("train_loss      = " +str(result.history['loss']))
+        logger.info("train_acc       = " +str(result.history['acc']))
+        logger.info("validation_loss = " +str(result.history['val_loss']))
+        logger.info("validation_acc  = " +str(result.history['val_acc']))
         return CallResult(None)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -241,7 +306,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         if not self._model:
             raise ValueError('The model not fitted or loaded!')
 
-        produce_input_feature = inputs.iloc[:,-1]
+        produce_input_feature = inputs[self._input_feature_column_name]
         result_length = inputs.shape[0]
         produce_input_ndarry = np.empty((result_length, self._feature_shape[0], self._feature_shape[1]))
         for i, each in enumerate(produce_input_feature):
@@ -253,13 +318,16 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         for each_predict in prediction:
             label = np.argmax(each_predict)
             results.append(number_to_class_name[label])
-
-        output_dataframe = inputs.iloc[:,:1]
+        output_dataframe = container.DataFrame(inputs['d3mIndex'])
         extracted_feature_dataframe = container.DataFrame({self._target_column_name: results}, generate_metadata=False)
         output_dataframe[self._target_column_name] = extracted_feature_dataframe
-        # output_dataframe[] = results
-        import pdb
-        pdb.set_trace()
+
+        # add metadata
+        for each_column in range(2, output_dataframe.shape[1]):
+            metadata_selector = (metadata_base.ALL_ELEMENTS, each_column)
+            metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/PredictedTarget',)}
+            output_dataframe.metadata = output_dataframe.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
+
         return output_dataframe
 
 
@@ -274,19 +342,24 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         keras_optimizers = importlib.import_module('keras.optimizers')
         model = keras_models.Sequential()
         # TODO: following parameters could also be hyperparameters for tuning
-        model.add(keras_recurrent.LSTM(2048, return_sequences=False,
+        model.add(keras_recurrent.LSTM(self._LSTM_units, return_sequences=False,
                        input_shape=self._feature_shape,
-                       dropout=0.5))
+                       dropout=self._dropout_rate))
         model.add(keras_layers.Dense(512, activation='relu'))
-        model.add(keras_layers.Dropout(0.5))
+        model.add(keras_layers.Dropout(self._dropout_rate))
         model.add(keras_layers.Dense(self._number_of_classes, activation='softmax'))
         self._metrics = ['accuracy']
         if self._number_of_classes >= 10:
             self._metrics.append('top_k_categorical_accuracy')
-        # Now compile the network.
-        optimizer = keras_optimizers.Adam(lr=self._learning_rate, decay=self._weight_decay)
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer,
-                           metrics=self._metrics)
+        # Now compile the network
+        if self._optimizer_type == 'adam':
+            optimizer = keras_optimizers.Adam(lr=self._learning_rate, decay=self._weight_decay)
+        elif self._optimizer_type == 'sgd':
+            optimizer = keras_optimizers.SGD(lr=self._learning_rate, decay=self._weight_decay, mementum = self._momentum)
+        else:
+            raise ValueError('Unsupported optimizer_type: {}. Available options: adam, sgd'.format(self._optimizer_type))
+        
+        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=self._metrics)
         return model
 '''
     def __getstate__(self) -> typing.Dict:

@@ -589,6 +589,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         # if it is a ndarray type data and it has 4 dimension, we can be sure that input has video format data
         if len(inputs.index) > 0 and type(inputs.iloc[0,-1]) is container.ndarray and len(inputs.iloc[0,-1].shape) == 4:
             # send the video ndarray part only
+            # TODO: we now use fixed columns (last column), it should be updated to use semantic types to check
             extracted_feature_dataframe = self._produce(inputs.iloc[:,-1])
         else:
             raise ValueError('No video format input found from inputs.')
@@ -619,7 +620,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             logger.info("Now processing No. " + str(i)+ " video.")
             frame_number = each_video.shape[0]
             if self._use_limitation and frame_number > self._maximum_frame or frame_number < self._minimum_frame:
-                features.append(None)
+                # features.append(None)
                 continue
             each_feature = self._process_one_video(each_video)
             features.append(each_feature)
@@ -644,7 +645,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             channel_number = 1
 
         # start processing
-        processed_output = np.empty((self._minimum_frame, 299, 299, channel_number))
+        processed_input = np.empty((self._minimum_frame, 299, 299, channel_number))
         if frame_number < self._minimum_frame:
             skip = frame_number / float(self._minimum_frame)
         else:
@@ -661,8 +662,10 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             if self._resize_data:
                 each_frame = imresize(each_frame, (299, 299))
             # put the processed frame into new output
-            processed_output[count] = each_frame
+            processed_input[count] = each_frame
         # run preprocess step
-        processed_output = self._preprocess(processed_output)
-        features = self._model.predict(processed_output)
+        processed_input = self._preprocess(processed_input)
+        features = self._model.predict(processed_input)
+        import pdb
+        pdb.set_trace()
         return features
