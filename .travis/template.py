@@ -409,7 +409,7 @@ class simple_config:
 DATASET_MAPPER = {
             'classification': "38_sick",
             'regression': "196_auto_mpg", 
-            'timeseries_regression': "uu1_datasmash"
+            'timeseries': "uu1_datasmash"
         }
 def _product_dict(dct):
     keys = dct.keys()
