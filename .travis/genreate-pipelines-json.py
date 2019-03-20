@@ -143,9 +143,11 @@ def main():
     # config_list = list(map(lambda x: x.generate_pipeline_direct().config, TEMPLATE_LIST))
     # generate pipelines for each configuration
     for each_template in TEMPLATE_LIST:
+        config = each_template.generate_pipeline_direct().config
+        datasetID = DATASET_MAPPER[each_template.template['taskType'].lower()]
         result = test_pipeline(each_template,
-                               each_template.generate_pipeline_direct().config,
-                               DATASET_MAPPER[each_template.template['taskType'].lower()])
+                               config,
+                               datasetID)
         remove_temp_files()
         # only generate the pipelines with it pass the test
         if result:
