@@ -171,7 +171,8 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
                         keras_model = self._model,
                         class_name_to_number = self._class_name_to_number,
                         target_column_name = self._target_column_name,
-                        feature_shape = self._feature_shape
+                        feature_shape = self._feature_shape,
+                        input_feature_column_name = self._input_feature_column_name
                       )
         return param
 
@@ -180,6 +181,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
+        self._input_feature_column_name = params["input_feature_column_name"]
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
 
