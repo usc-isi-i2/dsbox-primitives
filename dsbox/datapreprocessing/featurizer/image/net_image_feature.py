@@ -597,7 +597,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         # combine the extracted_feature_dataframe and input daraframe (but remove the video tensor to reduce the size of dataframe)
         last_column = len(inputs.columns) - 1
         output_dataFrame = inputs.iloc[:,:-1]
-        output_dataFrame = output_dataFrame.reset_index#
+        output_dataFrame = output_dataFrame.reset_index()
         output_dataFrame['extraced_features'] = extracted_feature_dataframe
         metadata_selector = (metadata_base.ALL_ELEMENTS, last_column)
         metadata_new_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Attribute',)}
@@ -620,7 +620,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             logger.info("Now processing No. " + str(i)+ " video.")
             frame_number = each_video.shape[0]
             if self._use_limitation and (frame_number > self._maximum_frame or frame_number < self._minimum_frame):
-                print("skip!!",i)# features.append(None)
+                logger.info("skip No. ",i)# features.append(None)
                 continue
             each_feature = self._process_one_video(each_video)
             features.append(each_feature)
