@@ -17,7 +17,7 @@ from scipy.misc import imresize
 import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
-from d3m.metadata import hyperparams
+from d3m.metadata import hyperparams, base as metadata_base
 from d3m import container
 
 from . import config
@@ -26,10 +26,46 @@ logger = logging.getLogger(__name__)
 
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
 Inputs = container.List
-
+Inputs_inceptionV3 = container.DataFrame
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
 Outputs = container.DataFrame  # extracted features
 
+class InceptionV3Hyperparams(hyperparams.Hyperparams):
+    minimum_frame = hyperparams.UniformInt(
+        lower=1,
+        upper=100000,
+        default=40,
+        description="Specify the least amount of the frame in a video, if the video is too short with less frame, we will not consider to use for training",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+        )
+    maximum_frame = hyperparams.UniformInt(
+        lower=1,
+        upper=100000,
+        default=300,
+        description="Specify the max amount of the frame in a video, if the video is too long, we will not consider to use for training",
+        semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
+        )
+    generate_metadata = hyperparams.UniformBool(
+        default=False,
+        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
+    do_preprocess = hyperparams.UniformBool(
+        default=True,
+        description="A control parameter to set whether to do preprocess step on input tensor, it normally should be set as true",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
+
+    do_resize = hyperparams.UniformBool(
+        default=True,
+        description="A control parameter to set whether to resize the input tensor to be correct shape as input, it normally should be set as true",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
+    use_limitation = hyperparams.UniformBool(
+        default=True,
+        description="A control parameter to consider the limitation of the maximum/minimum frame amount during processing. If set False, we will ignore the input videos outsite the frame amount limitation.",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
+        )
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
@@ -131,7 +167,9 @@ class WeightFile(typing.NamedTuple):
 
 class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams], KerasPrimitive):
     """
-    Image Feature Generation using pretrained deep neural network RestNet50.
+    Image Feature Generation using pretrained deep neural network Inception V3
+    Note that the input image format for this model is different than for the VGG16 and ResNet models 
+    (299x299 instead of 224x224)
 
     Parameters
     ----------
@@ -140,7 +178,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         indices are closer to the output layers of the network.
 
     _resize_data : Boolean, default: True, domain: {True, False}
-        If True resize images to 224 by 224.
+        If True resize images to 299x299.
     """
 
     # Resnet50 weight files info is from here:
@@ -449,3 +487,183 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+
+
+
+class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_inceptionV3, Outputs, InceptionV3Hyperparams], KerasPrimitive):
+    """
+    Image Feature Generation using pretrained deep neural network inception_V3.
+    """
+    
+    # inception_V3 weight files info is from here:
+    # https://github.com/keras-team/keras-applications/blob/master/keras_applications/inception_v3.py
+    _weight_files = [
+        WeightFile('inception_v3_weights_tf_dim_ordering_tf_kernels.h5',
+                   ('https://github.com/fchollet/deep-learning-models/'
+                    'releases/download/v0.5/'
+                    'inception_v3_weights_tf_dim_ordering_tf_kernels.h5'),
+                    '00c9ea4e4762f716ac4d300d6d9c2935639cc5e4d139b5790d765dcbeea539d0'),
+    ]
+
+    __author__ = 'USC ISI'
+    metadata = hyperparams.base.PrimitiveMetadata({
+        'id': 'dsbox-featurizer-image-inceptionV3',
+        'version': config.VERSION,
+        'name': "DSBox Image Featurizer inceptionV3",
+        'description': 'Generate image features using InceptionV3 model',
+        'python_path': 'd3m.primitives.feature_extraction.inceptionV3_image_feature.DSBOX',
+        'primitive_family': "FEATURE_EXTRACTION",
+        'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
+        'keywords': ['image', 'featurization', 'inceptionV3'],
+        'source': {
+            'name': config.D3M_PERFORMER_TEAM,
+            "contact": config.D3M_CONTACT,
+            'uris': [config.REPOSITORY]
+            },
+        # The same path the primitive is registered with entry points in setup.py.
+        'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
+        # Choose these from a controlled vocabulary in the schema. If anything is missing which would
+        # best describe the primitive, make a merge request.
+
+        # A metafeature about preconditions required for this primitive to operate well.
+        'precondition': [],
+        'hyperparms_to_tune': []
+    })
+
+    def __init__(self, *, hyperparams: InceptionV3Hyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
+        super().__init__(hyperparams=hyperparams, volumes=volumes)
+        KerasPrimitive.__init__(self)
+        self.hyperparams = hyperparams
+        self._minimum_frame = self.hyperparams['minimum_frame']
+        self._maximum_frame = self.hyperparams['maximum_frame']
+        self._preprocess_data = self.hyperparams['do_preprocess']
+        self._resize_data = self.hyperparams['do_resize']
+        self._use_limitation = self.hyperparams['use_limitation']
+        # All other attributes must be private with leading underscore
+        self._has_finished = False
+        self._iterations_done = False
+        self._model = None
+        # ===========================================================
+
+    def _lazy_init(self):
+        if self._initialized:
+            return
+
+        KerasPrimitive._lazy_init(self)
+
+        # Lazy import modules as not to slow down d3m.index
+        global inception_v3
+        inception_v3 = importlib.import_module('keras.applications.inception_v3')
+
+        self._setup_weight_files()
+
+        keras_backend.clear_session()
+
+        if self._model is None:
+            original = sys.stdout
+            sys.stdout = sys.stderr
+            self._model = inception_v3.InceptionV3(weights='imagenet', include_top=True)
+            sys.stdout = original
+
+        self._org_model = self._model
+        self._model = keras_models.Model(
+                inputs=self._org_model.input,
+                outputs=self._org_model.get_layer('avg_pool').output
+            )
+        # self._graph = tf.get_default_graph()
+
+        self._annotation = None
+
+    def produce(self, *, inputs: Inputs_inceptionV3, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+        """Apply neural network-based feature extraction to image_tensor"""
+
+        self._lazy_init()
+
+        # if "d3mIndex" not in inputs.columns:
+        #     logger.warn("No d3mIndex found for the input in inceptionV3 feature extraction primitive.")
+        #     image_d3mIndex = None
+        # else:
+        #     image_d3mIndex = inputs["d3mIndex"]
+
+        # take a look at the first row's last columns which should come from common-primitive's video reader
+        # if it is a ndarray type data and it has 4 dimension, we can be sure that input has video format data
+        if len(inputs.index) > 0 and type(inputs.iloc[0,-1]) is container.ndarray and len(inputs.iloc[0,-1].shape) == 4:
+            # send the video ndarray part only
+            # TODO: we now use fixed columns (last column), it should be updated to use semantic types to check
+            extracted_feature_dataframe = self._produce(inputs.iloc[:,-1])
+        else:
+            raise ValueError('No video format input found from inputs.')
+
+        # combine the extracted_feature_dataframe and input daraframe (but remove the video tensor to reduce the size of dataframe)
+        last_column = len(inputs.columns) - 1
+        output_dataFrame = inputs.iloc[:,:-1]
+        output_dataFrame = output_dataFrame.reset_index()
+        output_dataFrame['extraced_features'] = extracted_feature_dataframe
+        metadata_selector = (metadata_base.ALL_ELEMENTS, last_column)
+        metadata_new_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Attribute',)}
+        output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_new_column, selector=metadata_selector)
+        self._has_finished = True
+        self._iterations_done = True
+        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+
+    def _preprocess(self, image_tensor):
+        """Preprocess image data"""
+        return inception_v3.preprocess_input(image_tensor)
+
+    def _produce(self, input_videos):
+        """
+            Inner produce function, will return a dataframe with the extraed features column only
+        """
+        features = []
+        # extracted_feature_dataframe = container.DataFrame(columns = ["extraced_features"])
+        for i, each_video in enumerate(input_videos):
+            logger.info("Now processing No. " + str(i)+ " video.")
+            frame_number = each_video.shape[0]
+            if self._use_limitation and (frame_number > self._maximum_frame or frame_number < self._minimum_frame):
+                logger.info("skip No. ",i)# features.append(None)
+                continue
+            each_feature = self._process_one_video(each_video)
+            features.append(each_feature)
+            extracted_feature_dataframe = container.DataFrame({"extraced_features": features}, generate_metadata=False)
+
+        return extracted_feature_dataframe
+
+    def _process_one_video(self, input_video_ndarray):
+        """
+            Inner function to process the input video ndarry type data
+            and output a ndarry with extracted features
+        """
+        # initialize
+        channel_at_first = False
+        #check input video's frame format
+        frame_number = input_video_ndarray.shape[0]
+        if len(input_video_ndarray[0].shape) == 3:
+            channel_number = 3
+            if input_video_ndarray[0].shape[0] == 3:
+                channel_at_first = True
+        else:
+            channel_number = 1
+
+        # start processing
+        processed_input = np.empty((self._minimum_frame, 299, 299, channel_number))
+        if frame_number < self._minimum_frame:
+            skip = frame_number / float(self._minimum_frame)
+        else:
+            skip = frame_number // self._minimum_frame
+
+        for count in range(self._minimum_frame):
+            origin_frame_number = round(count * skip)
+            each_frame = input_video_ndarray[origin_frame_number]
+            if channel_number == 3 and channel_at_first:
+                each_frame = np.moveaxis(each_frame,0, 2)
+            elif channel_number == 1:
+                # if it is gray image(with only one channel)
+                each_frame = np.expand_dims(each_frame, axis=2)
+            if self._resize_data:
+                each_frame = imresize(each_frame, (299, 299))
+            # put the processed frame into new output
+            processed_input[count] = each_frame
+        # run preprocess step
+        processed_input = self._preprocess(processed_input)
+        features = self._model.predict(processed_input)
+        return features
