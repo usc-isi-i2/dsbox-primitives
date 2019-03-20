@@ -330,8 +330,9 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/PredictedTarget',)}
             output_dataframe.metadata = output_dataframe.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
 
-        return output_dataframe
-
+        self._has_finished = True
+        self._iterations_done = True
+        return CallResult(output_dataframe, self._has_finished, self._iterations_done)
 
 
     def _lazy_init_lstm(self) -> "keras.models":
