@@ -11,6 +11,8 @@ from dsbox.datapreprocessing.cleaner import config as cleaner_config
 TEMPLATE_LIST = []
 # add templates here
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
+TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
+TEMPLATE_LIST.append(DefaultRegressionTemplate())
 # ends
 
 def get_meta_json(dataset_name):

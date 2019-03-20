@@ -221,7 +221,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._target_column_name = target_column_names[0]
         class_names = set(self._training_outputs[self._target_column_name].tolist())
         self._number_of_classes = len(class_names)
-        self._feature_shape = self._features[0].shape
+        self._feature_shape = list(self._features[0].shape)
         self._features_amount = self._training_inputs.shape[0]
         self._training_inputs_ndarry = np.empty((self._features_amount, self._feature_shape[0], self._feature_shape[1]))
         for i, each in enumerate(self._features):
