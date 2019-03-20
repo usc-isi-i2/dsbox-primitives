@@ -193,7 +193,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
                 logger.warn("No d3mIndex found in input training dataset!")
                 inputs_index_with_contents = list(range(self._training_inputs.shape[0]))
             self._training_outputs = self._training_outputs.iloc[inputs_index_with_contents,:]
-        else:
+        elif self._training_inputs.shape[0] > self._training_outputs.shape[0]:
             raise ValueError("The length of inputs is larger than outputs which is impossible.")
             
         # TODO: maybe use a better way to find the feature input columns
