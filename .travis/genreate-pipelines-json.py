@@ -5,7 +5,7 @@ import subprocess
 import pandas as pd
 import shutil
 from template import DATASET_MAPPER, simple_config
-from library import DefaultClassificationTemplate # import testing template
+from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate # import testing template
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
 
 TEMPLATE_LIST = []
