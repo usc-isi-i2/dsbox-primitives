@@ -43,7 +43,7 @@ def get_primitive_hitted(config):
             primitive_hitted.append(temp)
     return primitive_hitted
 
-def generate_pipeline(config:dict, meta_json):
+def generate_pipeline(template, config:dict, meta_json):
     """
         Generate sample pipelines and corresponding meta
     """
@@ -56,7 +56,7 @@ def generate_pipeline(config:dict, meta_json):
         failed = []
         try:
             # generate the new pipeline
-            pipeline = a.to_pipeline(config)
+            pipeline = template.to_pipeline(config)
             pipeline_json = pipeline.to_json_structure()
             print("Generating at " + outdir +  "/" + pipeline_json['id'] + "...")
             file_name = os.path.join(outdir, pipeline_json['id']+".json")
@@ -153,7 +153,7 @@ def main():
         # only generate the pipelines with it pass the test
         if result:
             print("Test pipeline passed! Now generating the pipeline json files...")
-            failed = generate_pipeline(config, meta_json)
+            failed = generate_pipeline(each_template, config, meta_json)
         else:
             print("Test pipeline not passed! Please check the detail errors")
             raise ValueError("Auto generating pipelines failed")
