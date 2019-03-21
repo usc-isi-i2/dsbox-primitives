@@ -18,6 +18,7 @@ class DefaultClassificationTemplate(DSBoxTemplate):
             "name": "default_classification_template",
             "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
             "taskType": TaskType.CLASSIFICATION.name,
+            "runType": "classification",
             # See TaskType, range include 'CLASSIFICATION', 'CLUSTERING', 'COLLABORATIVE_FILTERING',
             # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
             # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'
@@ -69,6 +70,7 @@ class DefaultTimeseriesCollectionTemplate(DSBoxTemplate):
             # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
             # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'
             "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
+            "runType": "timeseries",
             "inputType": {"timeseries", "table"},  # See SEMANTIC_TYPES.keys() for range of values
             "output": "random_forest_step",  # Name of the final step generating the prediction
             "target": "extract_target_step",  # Name of the step generating the ground truth
@@ -158,6 +160,7 @@ class DefaultRegressionTemplate(DSBoxTemplate):
             "name": "default_regression_template",
             "taskSubtype": {TaskSubtype.UNIVARIATE.name, TaskSubtype.MULTIVARIATE.name},
             "taskType": TaskType.REGRESSION.name,
+            "runType": "regression",
             # See TaskType, range include 'CLASSIFICATION', 'CLUSTERING', 'COLLABORATIVE_FILTERING',
             # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
             # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'

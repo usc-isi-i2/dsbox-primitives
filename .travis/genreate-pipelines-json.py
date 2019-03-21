@@ -146,7 +146,7 @@ def main():
     # generate pipelines for each configuration
     for each_template in TEMPLATE_LIST:
         config = each_template.generate_pipeline_direct().config
-        datasetID = DATASET_MAPPER[each_template.template['taskType'].lower()]
+        datasetID = DATASET_MAPPER[each_template.template['runType'].lower()]
         meta_json = get_meta_json(datasetID)
         result = test_pipeline(each_template,
                                config,
