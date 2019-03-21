@@ -107,23 +107,20 @@ class Params(params.Params):
 class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperparams]):
     """
     video classification primitive that use lstm RNN network
-    offical site available at : https://pjreddie.com/darknet/yolo/
-
     Parameters
     ----------
-    outputlayer: The list of the output layer number from YOLO's DNN
     """
 
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
-        'id': 'dsbox-featurizer-object-detection-yolo',
+        'id': 'dsbox-featurizer-video-classification-lstm',
         'version': config.VERSION,
-        'name': "DSBox Object Detection YOLO",
+        'name': "DSBox Video Classification LSTM",
         'description': 'Find the corresponding object position from given images(tensors)',
-        'python_path': 'd3m.primitives.feature_extraction.yolo.DSBOX',
+        'python_path': 'd3m.primitives.feature_extraction.lstm.DSBOX',
         'primitive_family': "CLASSIFICATION",
         'algorithm_types': ["DEEP_NEURAL_NETWORK"],
-        'keywords': ['image', 'featurization', 'yolo'],
+        'keywords': ['image', 'featurization', 'lstm'],
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
