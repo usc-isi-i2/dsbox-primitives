@@ -7,12 +7,12 @@ Created on Jan 23, 2018
 import numpy as np
 import typing
 import logging
-
+import frozendict
 from d3m.metadata import hyperparams, params
 from d3m import container
 from d3m.exceptions import InvalidArgumentValueError
 import d3m.metadata.base as mbase
-
+from d3m.container.pandas import DataFrame as d3m_DataFrame
 from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRandomProjection
 
 # from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
@@ -131,14 +131,37 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(inputs_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
         # add d3mIndex metadata
         index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
-        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        index_metadata = {"name": "d3mIndex", "structural_type": str, 'semantic_types': ("https://metadata.datadrivendiscovery.org/types/TabularColumn", "https://metadata.datadrivendiscovery.org/types/PrimaryKey")}
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
         # add other metadata
+ 
         if self.hyperparams["generate_metadata"]:
+            if type(output_ndarray[0][0]) is np.float64:
+                metadata_each_column = {"structural_type": float, 'semantic_types': ("http://schema.org/Float", 'https://metadata.datadrivendiscovery.org/types/Attribute'), }
+            else:
+                metadata_each_column = {"structural_type": int, 'semantic_types': ("http://schema.org/Integer", 'https://metadata.datadrivendiscovery.org/types/Attribute'), }
             for each_column in range(1, output_dataFrame.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS, each_column)
-                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
                 output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
+
+            # 2019.4.15: now d3m need to check also inside the query of ((metadata_base.ALL_ELEMENTS,))
+            metadata_selector = (mbase.ALL_ELEMENTS, )
+            metadata_dimension_columns = {"name":"columns", "semantic_types":("https://metadata.datadrivendiscovery.org/types/TabularColumn",), "length":output_ndarray.shape[1]}
+            # d3m require it to be frozen ordered dict
+            metadata_dimension_columns = frozendict.FrozenOrderedDict(metadata_dimension_columns)
+            metadata_all_elements = {"dimension": metadata_dimension_columns}
+            metadata_all_elements = frozendict.FrozenOrderedDict(metadata_all_elements)
+            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_all_elements, selector=metadata_selector)
+            
+            # in the case of further more restricted check, also add metadta query of ()
+            metadata_selector = ()
+            metadata_dimension_rows = {"name":"rows", "semantic_types":("https://metadata.datadrivendiscovery.org/types/TabularRow",), "length":output_ndarray.shape[0]}
+            # d3m require it to be frozen ordered dict
+            metadata_dimension_rows = frozendict.FrozenOrderedDict(metadata_dimension_rows)
+            metadata_all = {"structural_type":d3m_DataFrame, "semantic_types":  ("https://metadata.datadrivendiscovery.org/types/Table",), "dimension":metadata_dimension_rows, "schema":"https://metadata.datadrivendiscovery.org/schemas/v0/container.json"}
+            metadata_all = frozendict.FrozenOrderedDict(metadata_all)
+            output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_all, selector=metadata_selector)
+
         return CallResult(output_dataFrame, True, None)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
@@ -197,8 +220,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         eps = self.hyperparams['eps']
         n_components = johnson_lindenstrauss_min_dim(n_samples=self._x_dim, eps=eps)
-
-        _logger.info("[INFO] n_components is", n_components)
+        _logger.info("[INFO] n_components is " + str(n_components))
         if n_components > self._y_dim:
             # Default n_components == 'auto' fails. Need to explicitly assign n_components
             self._model = GaussianRandomProjection(n_components=self._y_dim, random_state=self.random_seed)
