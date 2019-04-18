@@ -33,6 +33,14 @@ class ArimaParams(params.Params):
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
+    take_log = hyperparams.Hyperparameter[bool](
+        default=True,
+        description="Whether take log to inputs timeseries",
+        semantic_types=[
+            'https://metadata.datadrivendiscovery.org/types/TuningParameter'
+        ]
+    )
+
     auto = hyperparams.Hyperparameter[bool](
         default=True,
         description="Use Auto fit or not for ARIMA",
@@ -220,6 +228,8 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             return CallResult(None)
         if self._training_inputs is None:
             raise ValueError("Missing training data.")
+        if self.hyperparams["take_log"]:
+            self._training_inputs = np.log(self._training_inputs.value.ravel())
         if self.hyperparams["auto"]:
             self._model = auto_arima(self._training_inputs)
             self._fitted = True
@@ -248,7 +258,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                     scoring="mse",
                     scoring_args=None
             )
-            self._model.fit(sk_training_output)
+            self._model.fit(self._training_output)
             self._fitted = True
 
             return CallResult(None)
@@ -257,15 +267,20 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         n_periods = inputs.shape[0]
         if 'd3mIndex' in inputs:
             self._index = inputs['d3mIndex']
+        if self.hyperparams['take_log']:
+            inputs = np.log(inputs.value.ravel())
         if self.hyperparams['use_semantic_types'] is True:
             sk_inputs = inputs.iloc[:, self._training_indices]
         res_df = self._model.predict(n_periods=n_periods)
+        if self.hyperparams['take_log']:
+            res_df = np.exp(res_df)
         if self._index is not None:
             output = DataFrame({'d3mIndex': self._index, self._target_name: res_df})
-        output.metadata = inputs.metadata.clear(
-            source=self, for_value=output, generate_metadata=True)
-        output.metadata = self._add_target_semantic_types(
-            metadata=output.metadata, target_names=self._target_name, source=self)
+        if isinstance(output, DataFrame):
+            output.metadata = output.metadata.clear(
+                source=self, for_value=output, generate_metadata=True)
+            output.metadata = self._add_target_semantic_types(
+                metadata=output.metadata, target_names=self._target_name, source=self)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
