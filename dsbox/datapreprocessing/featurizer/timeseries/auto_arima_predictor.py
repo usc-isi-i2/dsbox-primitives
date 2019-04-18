@@ -213,7 +213,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             self._training_inputs = outputs.drop(columns=['d3mIndex'])# Arima takes shape(n,) as inputs, only target casting is applied
         else:
             self._training_inputs = outputs
-        self._target_name = inputs.columns[-1]
+        self._target_name = self._training_inputs.columns[-1]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         if self._fitted:
