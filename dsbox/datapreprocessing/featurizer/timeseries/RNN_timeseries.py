@@ -412,7 +412,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             ops.append(tf.assign(tf_vars[i_tf], self.smallest_weight[i_tf]))
         sess.run(ops)
 
-    def produce(self, *,  inputs: Inputs) -> CallResult[Outputs]:
+    def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         if not self._fitted:
             _logger.info("Plz fit!")
             return CallResult(None, self._has_finished, self._iterations_done)
