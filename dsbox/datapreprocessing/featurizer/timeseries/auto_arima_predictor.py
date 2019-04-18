@@ -6,14 +6,15 @@ import math
 import typing
 from typing import Any, Callable, List, Dict, Union, Optional
 import logging
+import copy
 
 from pyramid.arima import ARIMA, auto_arima
 
 from . import config
 
 from d3m.container.list import List
-from d3m.container.numpy import ndarray as d3m_ndarray
-from d3m.container import DataFrame as d3m_dataframe
+from d3m.container.numpy import ndarray
+from d3m.container import DataFrame
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m import utils
 from d3m.primitive_interfaces.base import CallResult, DockerContainer, MultiCallResult
@@ -23,8 +24,8 @@ from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
 
 
 # Inputs = container.List
-Inputs = d3m_dataframe
-Outputs = d3m_dataframe
+Inputs = DataFrame
+Outputs = DataFrame
 _logger = logging.getLogger(__name__)
 
 class ArimaParams(params.Params):
@@ -32,6 +33,12 @@ class ArimaParams(params.Params):
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
+    auto = hyperparams.Hyperparameter[bool](
+        default=True,
+        description="Use Auto fit or not for ARIMA",
+        semantic_types=[
+            'https://metadata.datadrivendiscovery.org/types/TuningParameter']
+    )
     P = hyperparams.Hyperparameter[int](
         default=0,
         description="the order (number of time lags) of the auto-regressive model",
@@ -51,10 +58,10 @@ class ArimaHyperparams(hyperparams.Hyperparams):
             'https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
     is_seasonal = hyperparams.UniformBool(
-        default=True,
+        default=False,
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Whether it is seasonal",
+        description="Whether it is seasonal"
     )
     seasonal_order = hyperparams.Set(
         elements=hyperparams.Hyperparameter[int](-1),
@@ -114,6 +121,7 @@ class ArimaHyperparams(hyperparams.Hyperparams):
         semantic_types=[
             'https://metadata.datadrivendiscovery.org/types/ControlParameter'],
         description="trace type",
+
     )
     suppress_warnings = hyperparams.UniformBool(
         default=True,
@@ -186,89 +194,87 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
 
         super().__init__(hyperparams=hyperparams, random_seed=random_seed,
                          docker_containers=docker_containers)
-        if self.hyperparams["is_seasonal"]:
-            seasonal_order = self.hyperparams["seasonal_order"]
-        else:
-            seasonal_order = None
-        self._clf = ARIMA(
-            order=(self.hyperparams["P"],
-                   self.hyperparams["D"], self.hyperparams["Q"]),
-            seasonal_order=seasonal_order,
-            # seasonal_order=self.hyperparams["seasonal_order"],
-            # seasonal_order=(0,1,1,12),
-            # start_params=self.hyperparams["start_params"],
-            # start_params = None,
-            transparams=self.hyperparams["transparams"],
-            method=self.hyperparams["method"],
-            trend=self.hyperparams["trend"],
-            solver=self.hyperparams["solver"],
-            maxiter=self.hyperparams["maxiter"],
-            disp=self.hyperparams["disp"],
-            # callback=self.hyperparams["callback"],
-            callback=None,
-            suppress_warnings=self.hyperparams["suppress_warnings"],
-            out_of_sample_size=False,
-            scoring="mse",
-            scoring_args=None
-        )
+        self._index = None
         self._training_inputs = None
-        self._training_outputs = None
-        self._target_names = None
-        self._training_indices = None
+        self._target_name = None
         self._fitted = False
         self._length_for_produce = 0
 
-    def set_training_data(self, *, inputs: Inputs) -> None:
-        inputs_timeseries = d3m_dataframe(inputs.iloc[:, -1])
-        inputs_d3mIndex = d3m_dataframe(inputs.iloc[:, 0])
-        if len(inputs_timeseries) == 0:
+    def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
+        ########################################################
+        # need to use inputs to figure out the params of ARIMA #
+        ########################################################
+        if len(inputs) == 0:
             _logging.info(
                 "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
-        column_name = inputs_timeseries.columns[0]
-        self._training_inputs, self._target_names = inputs_timeseries, column_name
-        self._training_outputs = inputs_timeseries
+        if 'd3mIndex' in outputs.columns:
+            self._index = outputs['d3mIndex']
+            self._training_inputs = outputs.drop(columns=['d3mIndex'])# Arima takes shape(n,) as inputs, only target casting is applied
+        else:
+            self._training_inputs = outputs
+        self._target_name = self._training_inputs.columns[-1]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         if self._fitted:
             return CallResult(None)
-
-        if self._training_inputs is None or self._training_outputs is None:
+        if self._training_inputs is None:
             raise ValueError("Missing training data.")
-        arima_training_output = d3m_ndarray(self._training_outputs)
+        if self.hyperparams["auto"]:
+            self._model = auto_arima(self._training_inputs)
+            self._fitted = True
+            return CallResult(None)
+        else:
+            if self.hyperparams["is_seasonal"]:
+                seasonal_order = self.hyperparams["seasonal_order"]
+            else:
+                seasonal_order = None
+            self._model = ARIMA(
+                    order=(
+                        self.hyperparams["P"],
+                        self.hyperparams["D"], self.hyperparams["Q"]
+                    ),
+                    seasonal_order=seasonal_order,
+                    transparams=self.hyperparams["transparams"],
+                    method=self.hyperparams["method"],
+                    trend=self.hyperparams["trend"],
+                    solver=self.hyperparams["solver"],
+                    maxiter=self.hyperparams["maxiter"],
+                    disp=self.hyperparams["disp"],
+                    # callback=self.hyperparams["callback"],
+                    callback=None,
+                    suppress_warnings=self.hyperparams["suppress_warnings"],
+                    out_of_sample_size=False,
+                    scoring="mse",
+                    scoring_args=None
+            )
+            self._model.fit(sk_training_output)
+            self._fitted = True
 
-        shape = arima_training_output.shape
-        if len(shape) == 2 and shape[1] == 1:
-            sk_training_output = np.ravel(arima_training_output)
-
-        self._clf.fit(sk_training_output)
-        self._fitted = True
-
-        return CallResult(None)
+            return CallResult(None)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-        arima_inputs = inputs
-        if self.hyperparams['use_semantic_types']:
+        n_periods = inputs.shape[0]
+        if 'd3mIndex' in inputs:
+            self._index = inputs['d3mIndex']
+        if self.hyperparams['use_semantic_types'] is True:
             sk_inputs = inputs.iloc[:, self._training_indices]
-        sk_output = self._clf.predict(n_periods=len(arima_inputs))
-        output = d3m_dataframe(sk_output, generate_metadata=False, source=self)
+        res_df = self._model.predict(n_periods=n_periods)
+        if self._index is not None:
+            output = DataFrame({'d3mIndex': self._index, self._target_name: res_df})
         output.metadata = inputs.metadata.clear(
             source=self, for_value=output, generate_metadata=True)
         output.metadata = self._add_target_semantic_types(
-            metadata=output.metadata, target_names=self._target_names, source=self)
-        if not self.hyperparams['use_semantic_types']:
-            return CallResult(output)
-        # outputs = common_utils.combine_columns(return_result=self.hyperparams['return_result'],
-        #                                        add_index_columns=self.hyperparams['add_index_columns'],
-        #                                        inputs=inputs, column_indices=self._training_indices, columns_list=[output], source=self)
-
-        return CallResult(output)
+            metadata=output.metadata, target_names=self._target_name, source=self)
+        self._has_finished = True
+        self._iterations_done = True
+        return CallResult(output, self._has_finished, self._iterations_done)
 
     def get_params(self) -> ArimaParams:
-        return Params(arima=self._clf)
+        return ArimaParams(arima=self._model)
 
     def set_params(self, *, params: ArimaParams) -> None:
-        self._clf = params["arima"]
+        self._model = params["arima"]
 
     @classmethod
     def _get_columns_to_fit(cls, inputs: Inputs, hyperparams: ArimaHyperparams):
@@ -303,7 +309,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         return False
 
     @classmethod
-    def _get_targets(cls, data: d3m_dataframe, hyperparams: ArimaHyperparams):
+    def _get_targets(cls, data: DataFrame, hyperparams: ArimaHyperparams):
         if not hyperparams['use_semantic_types']:
             return data, []
         target_names = []
@@ -340,47 +346,10 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                 }, source=source)
         return metadata
 
-# functions to fit in devel branch of d3m (2019-1-17)
-    def fit_multi_produce(self, *, produce_methods: typing.Sequence[str], inputs: Inputs, timeout: float = None, iterations: int = None) -> MultiCallResult:
-        """
-        A method calling ``fit`` and after that multiple produce methods at once.
-
-        This method allows primitive author to implement an optimized version of both fitting
-        and producing a primitive on same data.
-
-        If any additional method arguments are added to primitive's ``set_training_data`` method
-        or produce method(s), or removed from them, they have to be added to or removed from this
-        method as well. This method should accept an union of all arguments accepted by primitive's
-        ``set_training_data`` method and produce method(s) and then use them accordingly when
-        computing results.
-
-        The default implementation of this method just calls first ``set_training_data`` method,
-        ``fit`` method, and all produce methods listed in ``produce_methods`` in order and is
-        potentially inefficient.
-
-        Parameters
-        ----------
-        produce_methods : Sequence[str]
-            A list of names of produce methods to call.
-        inputs : Inputs
-            The inputs given to ``set_training_data`` and all produce methods.
-        outputs : Outputs
-            The outputs given to ``set_training_data``.
-        timeout : float
-            A maximum time this primitive should take to both fit the primitive and produce outputs
-            for all produce methods listed in ``produce_methods`` argument, in seconds.
-        iterations : int
-            How many of internal iterations should the primitive do for both fitting and producing
-            outputs of all produce methods.
-
-        Returns
-        -------
-        MultiCallResult
-            A dict of values for each produce method wrapped inside ``MultiCallResult``.
-        """
-
-        return self._fit_multi_produce(produce_methods=produce_methods, timeout=timeout, iterations=iterations, inputs=inputs)
-
-
 if __name__ == "__main__":
-    pass
+    ts = [1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 1, 2, 3, 4, 5, 6,
+          7, 8, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 1, 2,
+          3, 4, 5, 6, 7, 8, 8, 9]
+    h = 5
+    model = auto_arima(ts)
+    res = model.predict(n_period=h)
