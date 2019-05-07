@@ -1,0 +1,10 @@
+d3m.primitives.dsbox.DataFrameToTensor/d3m.primitives.data_preprocessing.DataFrameToTensor.DSBOX
+d3m.primitives.dsbox.ResNet50ImageFeature/d3m.primitives.feature_extraction.ResNet50ImageFeature.DSBOX
+d3m.primitives.dsbox.Vgg16ImageFeature/d3m.primitives.feature_extraction.Vgg16ImageFeature.DSBOX
+d3m.primitives.dsbox.MultiTableFeaturization/d3m.primitives.feature_extraction.MultiTableFeaturization.DSBOX
+d3m.primitives.dsbox.DoNothing/d3m.primitives.data_preprocessing.DoNothing.DSBOX
+d3m.primitives.dsbox.AutoArima/d3m.primitives.time_series_forecasting.Arima.DSBOX
+d3m.primitives.dsbox.GroupUpByTimeSeries/d3m.primitives.data_transformation.GroupUpByTimeSeries.DSBOX 
+d3m.primitives.dsbox.RandomProjectionTimeSeriesFeaturization/d3m.primitives.feature_extraction.RandomProjectionTimeSeriesFeaturization.DSBOX
+d3m.primitives.dsbox.RNNTimeSeries/d3m.primitives.time_series_forecasting.RNNTimeSeries.DSBOX
+d3m.primitives.dsbox.TimeseriesToList/d3m.primitives.data_preprocessing.TimeseriesToList.DSBOX

@@ -4,6 +4,7 @@ import argparse
 import os.path
 import subprocess
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
+from dsbox.datapreprocessing.featurizer import config as featurizer_config
 
 parser = argparse.ArgumentParser(description='Generate primitive.json descriptions')
 parser.add_argument('--dirname', action='store', default = 'output', help='Top-level directory to store the json descriptions, i.e. primitives_repo directory')

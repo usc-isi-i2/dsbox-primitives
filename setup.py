@@ -1,5 +1,6 @@
 from setuptools import setup
 from setuptools.command.install import install
+from setuptools.command.develop import develop
 
 
 class PostInstallCommand(install):
@@ -15,23 +16,47 @@ class PostInstallCommand(install):
                 print(line)
                 if '0' == part[1].split('.')[0]:
                     subprocess.call(['pip', 'uninstall', '-y', 'dsbox-featurizer'])
+        import keras.applications.resnet50 as resnet50
+        import keras.applications.vgg16 as vgg16
+        resnet50.ResNet50(weights='imagenet')
+        vgg16.VGG16(weights='imagenet', include_top=False)
         install.run(self)
 
+class PostDevelopCommand(develop):
+    """Post-installation for development mode."""
+    def run(self):
+        import keras.applications.resnet50 as resnet50
+        import keras.applications.vgg16 as vgg16
+        resnet50.ResNet50(weights='imagenet')
+        vgg16.VGG16(weights='imagenet', include_top=False)
+        develop.run(self)
 
-setup(name='dsbox-datacleaning',
-      version='1.4.4',
-      description='DSBox data processing tools for cleaning data',
+setup(name='dsbox-primitives',
+      version='1.0.0',
+      description='DSBox data processing primitives for both cleaning and featurizer',
       author='USC ISI',
-      url='https://github.com/usc-isi-i2/dsbox-cleaning.git',
+      url='https://github.com/usc-isi-i2/dsbox-primitives.git',
       maintainer_email='kyao@isi.edu',
       maintainer='Ke-Thia Yao',
       license='MIT',
-      packages=['dsbox', 'dsbox.datapreprocessing', 'dsbox.datapreprocessing.cleaner', 'dsbox.datapostprocessing'],
+      packages=[
+                'dsbox',
+                'dsbox.datapreprocessing',
+                'dsbox.datapreprocessing.cleaner', 
+                'dsbox.datapostprocessing',
+                'dsbox.datapreprocessing.featurizer',
+                'dsbox.datapreprocessing.featurizer.multiTable',
+                'dsbox.datapreprocessing.featurizer.image',
+                'dsbox.datapreprocessing.featurizer.pass',
+                'dsbox.datapreprocessing.featurizer.timeseries'
+               ],
       zip_safe=False,
       python_requires='>=3.6',
       install_requires=[
-          'scipy>=0.19.0', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
-          'scikit-learn>=0.18.0', 'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit'
+          'scipy>=0.19.0,<1.2', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
+          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
+          'scikit-learn>=0.18.0','wget',
+          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima"
       ],
       keywords='d3m_primitive',
       entry_points={
@@ -52,9 +77,24 @@ setup(name='dsbox-datacleaning',
               'data_preprocessing.unfold.DSBOX = dsbox.datapostprocessing:Unfold',
               'data_preprocessing.splitter.DSBOX = dsbox.datapreprocessing.cleaner:Splitter',
               'data_preprocessing.horizontal_concat.DSBOX = dsbox.datapostprocessing:HorizontalConcat',
-              'data_transformation.to_numeric.DSBOX = dsbox.datapreprocessing.cleaner:ToNumeric'
+              'data_transformation.to_numeric.DSBOX = dsbox.datapreprocessing.cleaner:ToNumeric',
+              'data_preprocessing.do_nothing.DSBOX = dsbox.datapreprocessing.featurizer.pass:DoNothing',
+              'data_preprocessing.do_nothing_for_dataset.DSBOX = dsbox.datapreprocessing.featurizer.pass:DoNothingForDataset',
+              'feature_extraction.multitable_featurization.DSBOX = dsbox.datapreprocessing.featurizer.multiTable:MultiTableFeaturization',
+              'data_preprocessing.dataframe_to_tensor.DSBOX = dsbox.datapreprocessing.featurizer.image:DataFrameToTensor',
+              'feature_extraction.yolo.DSBOX = dsbox.datapreprocessing.featurizer.image:Yolo',
+              'feature_extraction.lstm.DSBOX = dsbox.datapreprocessing.featurizer.image:LSTM',
+              'feature_extraction.vgg16_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
+              'feature_extraction.inceptionV3_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:InceptionV3ImageFeature',
+              'feature_extraction.resnet50_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
+              'data_preprocessing.time_series_to_list.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
+              'feature_extraction.random_projection_timeseries_featurization.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
+              'data_transformation.group_up_by_timeseries.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries',
+              'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
+              'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
           ],
       },
       cmdclass={
+          'develop': PostDevelopCommand,
           'install': PostInstallCommand
       })
