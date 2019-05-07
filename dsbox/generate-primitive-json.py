@@ -41,7 +41,7 @@ for p in PRIMITIVES:
     primitive_name = PREFIX + p
     outdir = os.path.join(arguments.dirname, 'v' + cleaner_config.D3M_API_VERSION,
                           cleaner_config.D3M_PERFORMER_TEAM, primitive_name,
-                          cleaner_config.VERSION)
+                          cleaner_config.VERSION) # at here, cleaner_config and featurizer config are the same thing
     subprocess.run(['mkdir', '-p', outdir])
 
     json_filename = os.path.join(outdir, 'primitive.json')

@@ -5,13 +5,13 @@ try:
     import d3m.__init__ as d3m_info
     D3M_API_VERSION = d3m_info.__version__
 except:
-    D3M_API_VERSION = '2019.2.18'
+    D3M_API_VERSION = '2019.4.4'
 
-VERSION = "1.0.2"
+VERSION = "1.0.0"
 TAG_NAME = "{git_commit}".format(git_commit=utils.current_git_commit(os.path.dirname(__file__)), )
 
-REPOSITORY = "https://github.com/usc-isi-i2/dsbox-featurizer"
-PACAKGE_NAME = "dsbox-featurizer"
+REPOSITORY = "https://github.com/usc-isi-i2/dsbox-primitives"
+PACAKGE_NAME = "dsbox-primitives"
 
 D3M_PERFORMER_TEAM = 'ISI'
 D3M_CONTACT = "mailto:kyao@isi.edu"
