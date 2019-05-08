@@ -6,7 +6,7 @@ import numpy as np
 import typing
 
 from d3m import index
-from d3m.container.dataset import SEMANTIC_TYPES
+# from d3m.container.dataset import D3M_ROLE_CONSTANTS_TO_SEMANTIC_TYPES, D3M_RESOURCE_TYPE_CONSTANTS_TO_SEMANTIC_TYPES, D3M_COLUMN_TYPE_CONSTANTS_TO_SEMANTIC_TYPES
 from d3m.metadata.problem import TaskType, TaskSubtype
 from template import DSBoxTemplate
 from template_steps import TemplateSteps
