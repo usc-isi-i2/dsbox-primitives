@@ -57,8 +57,8 @@ default_metafeatures = [
     'number_of_outlier_numeric_values', 'num_filename', 'number_of_tokens_containing_numeric_char', 'semantic_types']
 
 metafeature_hyperparam = hyperparams.Enumeration(
-    computable_metafeatures,
-    computable_metafeatures[0],
+    set(computable_metafeatures),
+    default=computable_metafeatures[0],
     semantic_types=['https://metadata.datadrivendiscovery.org/types/MetafeatureParameter'])
 
 
