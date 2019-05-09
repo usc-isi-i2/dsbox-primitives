@@ -14,12 +14,12 @@ from .data_profile import Profiler, Hyperparams as ProfilerHyperparams
 from .column_fold import FoldColumns, FoldHyperparameter
 from .voter import Voter, VoterHyperparameter
 # from .datamart_query_from_dataframe import QueryFromDataFrameHyperparams, QueryFromDataframe
-# from .datamart_augment import DatamartAugmentationHyperparams, DatamartAugmentation
+from .datamart_augment import DatamartAugmentation, DatamartAugmentationHyperparams
 # from .datamart_join import DatamartJoinHyperparams, DatamartJoin
-# from .datamart_download import DatamartDownload, DatamartDownloadHyperparams
-from .to_numeric import ToNumeric
+from .datamart_download import DatamartDownload, DatamartDownloadHyperparams
+from .to_numeric import ToNumeric 
 from .splitter import Splitter, SplitterHyperparameter
-
+from .wikifier import Wikifier,WikifierHyperparams
 # __all__ = ['Encoder', 'GreedyImputation', 'IterativeRegressionImputation',
 # 			'MICE', 'KNNImputation', 'MeanImputation', 'KnnHyperparameter',
 #                         'UEncHyperparameter','EncHyperparameter']
@@ -41,7 +41,9 @@ __all__ = ['Encoder', 'EncHyperparameter',
            'Splitter','SplitterHyperparameter',
         #    'QueryFromDataframe', 'DatamartAugmentation',
         #    'DatamartJoin',
-        #    'DatamartDownload','DatamartDownloadHyperparams',
+           'DatamartDownload','DatamartDownloadHyperparams',
+           'DatamartAugmentation','DatamartAugmentationHyperparams',
+           'Wikifier', 'WikifierHyperparams',
            'ToNumeric'
 ]
 

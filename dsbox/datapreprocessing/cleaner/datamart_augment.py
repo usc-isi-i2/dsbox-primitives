@@ -82,9 +82,9 @@ class DatamartAugmentation(TransformerPrimitiveBase[Inputs, Outputs, DatamartAug
     def __init__(self, *, hyperparams: DatamartAugmentationHyperparams)-> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.search_result = []
+        self._search_result = []
         for each in hyperparams["search_result"]:
-            self.search_result.append(DatamartSearchResult.construct(each))
+            self._search_result.append(DatamartSearchResult.construct(each))
         self._has_finished = False
         self._iterations_done = False
 
@@ -110,9 +110,8 @@ class DatamartAugmentation(TransformerPrimitiveBase[Inputs, Outputs, DatamartAug
             return CallResult(None, True, 1)
         if status == 1:  # run isi-datamart
             augmented_dataset = inputs
-            import pdb 
-            pdb.set_trace()
-            for each in self.search_result:
+            for i, each in enumerate(self._search_result):
+                _logger.info("Processing No." + str(i) + " search results")
                 augmented_dataset = each.augment(supplied_data=augmented_dataset)
         self._has_finished = True
         self._iterations_done = True

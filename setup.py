@@ -3,6 +3,14 @@ from setuptools.command.install import install
 from setuptools.command.develop import develop
 
 
+with open('requirements.txt', 'r') as f:
+    install_requires = list()
+    dependency_links = list()
+    for line in f:
+        re = line.strip()
+        if re:
+            install_requires.append(re)
+
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
@@ -52,12 +60,7 @@ setup(name='dsbox-primitives',
                ],
       zip_safe=False,
       python_requires='>=3.6',
-      install_requires=[
-          'scipy>=0.19.0,<1.2', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
-          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
-          'scikit-learn>=0.18.0','wget',
-          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima"
-      ],
+      install_requires=install_requires,
       keywords='d3m_primitive',
       entry_points={
           'd3m.primitives': [
@@ -91,7 +94,10 @@ setup(name='dsbox-primitives',
               'feature_extraction.random_projection_timeseries_featurization.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
               'data_transformation.group_up_by_timeseries.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries',
               'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
-              'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
+              'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries',
+              'data_augmentation.wikifier.DSBOX = dsbox.datapreprocessing.cleaner:Wikifier',
+              'data_augmentation.datamart_download.DSBOX = dsbox.datapreprocessing.cleaner:DatamartDownload',
+              'data_augmentation.datamart_augmentation.DSBOX = dsbox.datapreprocessing.cleaner:DatamartAugmentation',
           ],
       },
       cmdclass={
