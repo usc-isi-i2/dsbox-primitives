@@ -1,7 +1,7 @@
 scipy>=0.19.0,<1.2
 numpy>=1.11.1
 pandas>=0.20.1
-angdetect>=1.0.7
+langdetect>=1.0.7
 python-dateutil>=2.5.2
 six>=1.10.0
 stopit==1.1.2
