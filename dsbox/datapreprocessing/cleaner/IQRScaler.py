@@ -12,6 +12,7 @@ from numpy import ndarray
 from common_primitives import utils
 from sklearn.preprocessing import RobustScaler
 from d3m.metadata import hyperparams, params
+from d3m.metadata.base import DataMetadata
 from d3m.container import DataFrame as d3m_DataFrame
 from d3m.primitive_interfaces.base import CallResult
 import numpy as np
@@ -138,12 +139,12 @@ class IQRScaler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, IQRHyp
         self._fitted = False
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
-        numerical_attributes = utils.list_columns_with_semantic_types(
-            metadata=self._training_data.metadata,
+        numerical_attributes = DataMetadata.list_columns_with_semantic_types(
+            self=self._training_data.metadata,
             semantic_types=["http://schema.org/Float", "http://schema.org/Integer"])
 
-        all_attributes = utils.list_columns_with_semantic_types(
-            metadata=self._training_data.metadata,
+        all_attributes = DataMetadata.list_columns_with_semantic_types(
+            self=self._training_data.metadata,
             semantic_types=["https://metadata.datadrivendiscovery.org/types/Attribute"])
         self._s_cols = list(set(all_attributes).intersection(numerical_attributes))
         # print(" %d columns scaled" % (len(self._s_cols)))

@@ -11,6 +11,7 @@ import logging
 
 from d3m import container
 from d3m.metadata import hyperparams, params
+from d3m.metadata.base import DataMetadata
 from d3m.metadata.hyperparams import UniformBool
 import common_primitives.utils as utils
 
@@ -228,9 +229,9 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         """
 
         # inputs = inputs.convert_objects(convert_numeric=True)
-        attribute = utils.list_columns_with_semantic_types(
+        attribute = DataMetadata.list_columns_with_semantic_types(
             inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-        numeric = utils.list_columns_with_semantic_types(
+        numeric = DataMetadata.list_columns_with_semantic_types(
             inputs.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
         numeric = [x for x in numeric if x in attribute]
 
@@ -336,9 +337,9 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         #     is_eval = True
 
         # indices for numeric attribute columns only
-        attribute = utils.list_columns_with_semantic_types(
+        attribute = DataMetadata.list_columns_with_semantic_types(
             data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-        numeric = utils.list_columns_with_semantic_types(
+        numeric = DataMetadata.list_columns_with_semantic_types(
             data.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
         numeric = [x for x in numeric if x in attribute]
 

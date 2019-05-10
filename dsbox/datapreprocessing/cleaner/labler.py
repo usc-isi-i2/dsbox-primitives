@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict
-
+from d3m.metadata.base import DataMetadata
 from d3m import container, exceptions
 import d3m.metadata.base as mbase
 # from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase
@@ -96,16 +96,16 @@ class Labler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LablerHyp
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         self._fitted = True
-        categorical_attributes = common_utils.list_columns_with_semantic_types(
-            metadata=self._training_data.metadata,
+        categorical_attributes = DataMetadata.list_columns_with_semantic_types(
+            self=self._training_data.metadata,
             semantic_types=[
                 "https://metadata.datadrivendiscovery.org/types/OrdinalData",
                 "https://metadata.datadrivendiscovery.org/types/CategoricalData"
                 ]
             )
 
-        all_attributes = common_utils.list_columns_with_semantic_types(
-            metadata=self._training_data.metadata,
+        all_attributes = DataMetadata.list_columns_with_semantic_types(
+            self=self._training_data.metadata,
             semantic_types=["https://metadata.datadrivendiscovery.org/types/Attribute"]
             )
 

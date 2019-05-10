@@ -7,6 +7,8 @@ import pandas as pd
 from d3m import container
 from d3m.metadata import base as metadata_base, hyperparams
 from d3m.primitive_interfaces import base, transformer
+from d3m.base import utils as d3m_utils
+from d3m.metadata.base import DataMetadata
 from common_primitives import utils
 
 from . import config
@@ -84,7 +86,7 @@ class ToNumeric(transformer.TransformerPrimitiveBase[Inputs, Outputs, Hyperparam
         def can_use_column(column_index: int) -> bool:
             return cls._can_use_column(inputs_metadata, column_index)
 
-        columns_to_use, columns_not_to_use = utils.get_columns_to_use(inputs_metadata, hyperparams['use_columns'], hyperparams['exclude_columns'], can_use_column)
+        columns_to_use, columns_not_to_use = d3m_utils.get_columns_to_use(inputs_metadata, hyperparams['use_columns'], hyperparams['exclude_columns'], can_use_column)
         return columns_to_use
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> base.CallResult[Outputs]:
@@ -108,6 +110,6 @@ class ToNumeric(transformer.TransformerPrimitiveBase[Inputs, Outputs, Hyperparam
             # np.where returns int64 instead of int, D3M metadata checks for int
             numeric_colum_indices = [int(x) for x in np.where(output.dtypes != object)[0]]
             output = output.iloc[:, numeric_colum_indices]
-            output.metadata = utils.select_columns_metadata(output.metadata, numeric_colum_indices)
+            output.metadata = DataMetadata.select_columns(output.metadata, numeric_colum_indices)
 
         return base.CallResult(output)
