@@ -65,6 +65,7 @@ class DatamartDownload(TransformerPrimitiveBase[Inputs, Outputs, DatamartDownloa
             "uris": [config.REPOSITORY]
         },
         "installation": [config.INSTALLATION],
+        "pure_primitive": False,
         # 'precondition': [],
         # 'hyperparams_to_tune': []
 

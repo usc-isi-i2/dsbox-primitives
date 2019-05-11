@@ -74,6 +74,7 @@ class DatamartAugmentation(TransformerPrimitiveBase[Inputs, Outputs, DatamartAug
             "uris": [config.REPOSITORY]
         },
         "installation": [config.INSTALLATION],
+        "pure_primitive": False,
         # 'precondition': [],
         # 'hyperparams_to_tune': []
 
