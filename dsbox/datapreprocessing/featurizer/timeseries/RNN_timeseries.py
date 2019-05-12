@@ -63,7 +63,8 @@ class RNNHelper:
 
 
 class RNNParams(params.Params):
-    params: typing.List[np.ndarray]
+    target_name: str
+    weight: typing.List[np.ndarray]
 
 
 class RNNHyperparams(hyperparams.Hyperparams):
@@ -362,13 +363,14 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         if not self._fitted:
             _logger.info("plz fit!")
             return
-        return RNNParams(params=self.smallest_weight)
+        return RNNParams(target_name=self._target_name, weight=self.smallest_weight)
 
         # return RNNParams("./rnn_model.ckpt")
 
     def set_params(self, *, params: RNNParams) -> None:
-        self.smallest_weight = params["params"]
-        return
+        self._lazy_init()
+        self.smallest_weight = params["weight"]
+        self._target_name=params["target_name"]
 
         # open this file for loading
 
