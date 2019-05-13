@@ -49,16 +49,15 @@ computable_metafeatures = [
     'number_of_tokens_split_by_punctuation_containing_numeric_char', 'number_of_numeric_values',
     'ratio_of_distinct_tokens_split_by_punctuation', 'number_of_values_containing_numeric_char',
     'most_common_tokens_split_by_punctuation', 'number_of_distinct_values',
-    'pearson_correlation_of_features',
-    'semantic_types']
+    'pearson_correlation_of_features']
 
 default_metafeatures = [
     'ratio_of_values_containing_numeric_char', 'ratio_of_numeric_values',
     'number_of_outlier_numeric_values', 'num_filename', 'number_of_tokens_containing_numeric_char', 'semantic_types']
 
 metafeature_hyperparam = hyperparams.Enumeration(
-    list(set(computable_metafeatures)),
-    default=computable_metafeatures[0],
+    computable_metafeatures,
+    computable_metafeatures[0],
     semantic_types=['https://metadata.datadrivendiscovery.org/types/MetafeatureParameter'])
 
 
