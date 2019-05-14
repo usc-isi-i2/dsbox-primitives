@@ -229,7 +229,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         if self._training_inputs is None:
             raise ValueError("Missing training data.")
         if self.hyperparams["take_log"]:
-            self._training_inputs = np.log(self._training_inputs.value.ravel())
+            self._training_inputs = np.log(self._training_inputs.values.ravel())
         if self.hyperparams["auto"]:
             self._model = auto_arima(self._training_inputs)
             self._fitted = True
