@@ -11,7 +11,7 @@ import os
 import shutil
 import sys
 import typing
-
+import collections
 from scipy.misc import imresize
 
 import d3m.metadata.base as mbase
@@ -23,7 +23,7 @@ from d3m import container
 from . import config
 
 logger = logging.getLogger(__name__)
-
+CONTAINER_SCHEMA_VERSION = 'https://metadata.datadrivendiscovery.org/schemas/v0/container.json'
 # Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
 Inputs = container.List
 Inputs_inceptionV3 = container.DataFrame
@@ -46,7 +46,7 @@ class InceptionV3Hyperparams(hyperparams.Hyperparams):
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
         )
     generate_metadata = hyperparams.UniformBool(
-        default=False,
+        default=True,
         description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
@@ -313,14 +313,20 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(image_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
         # add d3mIndex metadata
         index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
-        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey'), 'structural_type':str }
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
         # add other metadata
         if self.hyperparams["generate_metadata"]:
+            # update 2019.5.15: update dataframe's shape metadatapart!
+            metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+            for each_selector, each_metadata in metadata_shape_part_dict.items():
+                output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
+
             for each_column in range(1, output_dataFrame.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS, each_column)
-                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute'), 'structural_type':float }
                 output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
+
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
@@ -476,13 +482,18 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         output_dataFrame = container.DataFrame(pd.concat([pd.DataFrame(image_d3mIndex, columns=['d3mIndex']), pd.DataFrame(output_dataFrame)], axis=1))
         # add d3mIndex metadata
         index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
-        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+        index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey'), 'structural_type':str }
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
         # add other metadata
         if self.hyperparams["generate_metadata"]:
+            # update 2019.5.15: update dataframe's shape metadatapart!
+            metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+            for each_selector, each_metadata in metadata_shape_part_dict.items():
+                output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
+
             for each_column in range(1, output_dataFrame.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS, each_column)
-                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute'), 'structural_type':float}
                 output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
@@ -600,7 +611,11 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         output_dataFrame = output_dataFrame.reset_index()
         output_dataFrame['extraced_features'] = extracted_feature_dataframe
         metadata_selector = (metadata_base.ALL_ELEMENTS, last_column)
-        metadata_new_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Attribute',)}
+        metadata_new_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/Attribute',), 'structural_type':float}
+        # update 2019.5.15: update dataframe's shape metadatapart!
+        metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+        for each_selector, each_metadata in metadata_shape_part_dict.items():
+            output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_new_column, selector=metadata_selector)
         self._has_finished = True
         self._iterations_done = True
@@ -667,3 +682,53 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         processed_input = self._preprocess(processed_input)
         features = self._model.predict(processed_input)
         return features
+
+
+def generate_metadata_shape_part(value, selector) -> dict:
+    """
+    recursively generate all metadata for shape part, return a dict
+    :param value:
+    :param selector:
+    :return:
+    """
+    generated_metadata: dict = {}
+    generated_metadata['schema'] = CONTAINER_SCHEMA_VERSION
+    if isinstance(value, container.Dataset):  # type: ignore
+        generated_metadata['dimension'] = {
+            'name': 'resources',
+            'semantic_types': ['https://metadata.datadrivendiscovery.org/types/DatasetResource'],
+            'length': len(value),
+        }
+
+        metadata_dict = collections.OrderedDict([(selector, generated_metadata)])
+
+        for k, v in value.items():
+            metadata_dict.update(generate_metadata_shape_part(v, selector + (k,)))
+
+        # It is unlikely that metadata is equal across dataset resources, so we do not try to compact metadata here.
+
+        return metadata_dict
+
+    if isinstance(value, container.DataFrame):  # type: ignore
+        generated_metadata['semantic_types'] = ['https://metadata.datadrivendiscovery.org/types/Table']
+
+        generated_metadata['dimension'] = {
+            'name': 'rows',
+            'semantic_types': ['https://metadata.datadrivendiscovery.org/types/TabularRow'],
+            'length': value.shape[0],
+        }
+
+        metadata_dict = collections.OrderedDict([(selector, generated_metadata)])
+
+        # Reusing the variable for next dimension.
+        generated_metadata = {
+            'dimension': {
+                'name': 'columns',
+                'semantic_types': ['https://metadata.datadrivendiscovery.org/types/TabularColumn'],
+                'length': value.shape[1],
+            },
+        }
+
+        selector_all_rows = selector + (mbase.ALL_ELEMENTS,)
+        metadata_dict[selector_all_rows] = generated_metadata
+        return metadata_dict

@@ -237,13 +237,19 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             # therefore, only use the mean_values to impute, should get a clean dataset
             attribute = DataMetadata.list_columns_with_semantic_types(
                 data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
+            
+            # try:
             for col in attribute:
                 if str(inputs.dtypes[inputs.columns[col]]) != "object":
-                    data.iloc[:, col].fillna(self.mean_values[data.columns[col]], inplace=True)
+                    if data.iloc[:, col].isnull().sum() != 0:
+                        data.iloc[:, col].fillna(self.mean_values[data.columns[col]], inplace=True)
                 else:
                     for i in range(data.shape[0]):
                         if data.iloc[i, col] == "" or pd.isnull(data.iloc[i, col]):
                             data.iloc[i, col] = self.mean_values[data.columns[col]]
+            # except:
+            #     import pdb
+            #     pdb.set_trace()
             data_clean = data
 
             # Update metadata
