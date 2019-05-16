@@ -355,30 +355,7 @@ class TemplateSteps:
                 {
                     "name": "feature_selector_step",
                     "primitives": [
-                        {
-                            # 1 March 2019: select_fwe disappeared from sklearn wrap
-                            # "primitive": "d3m.primitives.feature_selection.select_fwe.SKlearn",
-                            # "hyperparameters": {
-                            #     'use_semantic_types': [True],
-                            #     'add_index_columns': [True],
-                            #     'return_result': ['new'],
-                            #     'add_index_columns': [True],
-                            #     "alpha": [float(x) for x in np.logspace(-4, -1, 6)]
-                            # }
-                        },
-                        {
-                            "primitive": "d3m.primitives.feature_selection.generic_univariate_select.SKlearn",
-                            "hyperparameters": {
-                                'use_semantic_types': [True],
-                                'add_index_columns': [True],
-                                'return_result': ['new'],
-                                'add_index_columns': [True],
-                                "score_func": ["f_regression"],
-                                "mode": ["percentile"],
-                                "param": [5, 7, 10, 15, 30, 50, 75],
-                            }
-                        },
-                        "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
                     ],
                     "inputs":[first_input, second_input]
                 },
@@ -398,18 +375,7 @@ class TemplateSteps:
                         #         "alpha": [float(x) for x in np.logspace(-4, -1, 6)]
                         #     }
                         # },
-
-                        {
-                            "primitive": "d3m.primitives.feature_selection.generic_univariate_select.SKlearn",
-                            "hyperparameters": {
-                                'use_semantic_types': [True],
-                                'return_result': ['new'],
-                                'add_index_columns': [True],
-                                "mode": ["percentile"],
-                                "param": [5, 7, 10, 15, 30, 50, 75],
-                            }
-                        },
-                        "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
 
                     ],
                     "inputs":[first_input, second_input]
