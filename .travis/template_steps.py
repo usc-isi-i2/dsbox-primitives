@@ -355,7 +355,9 @@ class TemplateSteps:
                 {
                     "name": "feature_selector_step",
                     "primitives": [
-                        "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        {
+                            "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        }
                     ],
                     "inputs":[first_input, second_input]
                 },
@@ -375,7 +377,9 @@ class TemplateSteps:
                         #         "alpha": [float(x) for x in np.logspace(-4, -1, 6)]
                         #     }
                         # },
-                        "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        {
+                            "primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                        }
 
                     ],
                     "inputs":[first_input, second_input]
