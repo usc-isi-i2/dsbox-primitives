@@ -6,4 +6,4 @@ from .timeseries_to_list import TimeseriesToList
 # from .group_up_ts import GroupUpByTimeSeries
 from .auto_arima_predictor import AutoArima
 from .RNN_timeseries import RNNTimeSeries
-__all__ = [RandomProjectionTimeSeriesFeaturization, TimeseriesToList, GroupUpByTimeSeries, AutoArima, RNNTimeSeries]
+__all__ = [RandomProjectionTimeSeriesFeaturization, TimeseriesToList, AutoArima, RNNTimeSeries]
