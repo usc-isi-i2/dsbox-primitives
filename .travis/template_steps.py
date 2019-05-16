@@ -66,14 +66,9 @@ class TemplateSteps:
                 "inputs": ["clean_step"]
             },
             {
-                "name": "corex_step",
-                "primitives": ["d3m.primitives.feature_construction.corex_text.CorexText"],
-                "inputs": ["encode_step"]
-            },
-            {
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
-                "inputs":["corex_step"],
+                "inputs":["encode_step"],
             },
             {
                 "name": "impute_step",
@@ -206,25 +201,9 @@ class TemplateSteps:
                 "inputs": ["clean_step"]
             },
             {
-                "name": "corex_step",
-                "primitives": [
-                    {
-                        "primitive": "d3m.primitives.feature_construction.corex_text.CorexText",
-                        "hyperparameters":
-                            {
-                                'n_hidden': [5, 10],
-                                'threshold': [0, 500],
-                                'n_grams': [1, 3],
-                            }
-                    },
-                ],
-                "inputs": ["encoder_step"]
-            },
-
-            {
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
-                "inputs":["corex_step"],
+                "inputs":["encoder_step"],
             },
             {
                 "name": "impute_step",
