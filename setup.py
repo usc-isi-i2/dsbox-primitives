@@ -29,7 +29,7 @@ class PostInstallCommand(install):
         import keras.applications.inception_v3 as inception_v3
         resnet50.ResNet50(weights='imagenet')
         vgg16.VGG16(weights='imagenet', include_top=False)
-        inception_v3.inception_v3(weights='imagenet')
+        inception_v3.InceptionV3(weights='imagenet')
         install.run(self)
 
 class PostDevelopCommand(develop):
@@ -40,7 +40,7 @@ class PostDevelopCommand(develop):
         import keras.applications.inception_v3 as inception_v3
         resnet50.ResNet50(weights='imagenet')
         vgg16.VGG16(weights='imagenet', include_top=False)
-        inception_v3.inception_v3(weights='imagenet')
+        inception_v3.InceptionV3(weights='imagenet')
         develop.run(self)
 
 setup(name='dsbox-primitives',
