@@ -30,6 +30,7 @@ _logger = logging.getLogger(__name__)
 
 class ArimaParams(params.Params):
     arima: ARIMA
+    target_name: str
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
@@ -286,10 +287,11 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         return CallResult(output, self._has_finished, self._iterations_done)
 
     def get_params(self) -> ArimaParams:
-        return ArimaParams(arima=self._model)
+        return ArimaParams(arima=self._model, target_name=self._target_name)
 
     def set_params(self, *, params: ArimaParams) -> None:
         self._model = params["arima"]
+        self._target_name = params["target_name"]
 
     @classmethod
     def _get_columns_to_fit(cls, inputs: Inputs, hyperparams: ArimaHyperparams):

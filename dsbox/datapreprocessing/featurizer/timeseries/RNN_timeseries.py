@@ -65,6 +65,10 @@ class RNNHelper:
 class RNNParams(params.Params):
     target_name: str
     weight: typing.List[np.ndarray]
+    n_total: int
+    n_valid: int
+    n_predict_step: int
+    n_train: int
 
 
 class RNNHyperparams(hyperparams.Hyperparams):
@@ -189,8 +193,6 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         self._initialized = False
 
     def _lazy_init(self):
-        if self._initialized:
-            return
         global tf
         tf = importlib.import_module("tensorflow")
         with tf.variable_scope("model", reuse=tf.AUTO_REUSE) as scope:
@@ -363,14 +365,25 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         if not self._fitted:
             _logger.info("plz fit!")
             return
-        return RNNParams(target_name=self._target_name, weight=self.smallest_weight)
+        return RNNParams(
+                            target_name=self._target_name,
+                            weight=self.smallest_weight,
+                            n_total=self.n_total,
+                            n_train=self.n_train,
+                            n_valid=self.n_valid,
+                            n_predict_step=self.n_predict_step        
+                        )
 
         # return RNNParams("./rnn_model.ckpt")
 
     def set_params(self, *, params: RNNParams) -> None:
-        self._lazy_init()
         self.smallest_weight = params["weight"]
         self._target_name=params["target_name"]
+        self.n_total=params["n_total"]
+        self.n_valid=params["n_valid"]
+        self.n_predict_step=params["n_predict_step"]
+        self.n_train=params["n_train"]
+        self._lazy_init()
 
         # open this file for loading
 
@@ -440,7 +453,15 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
 
             _logger.info(pred_test.tolist())
         if self._index is not None:
-            output = d3m_dataframe({'d3mIndex': self._index[:len(pred_test)], self._target_name: pred_test.ravel()})
+        #     output = d3m_dataframe({'d3mIndex': self._index[:len(pred_test)], self._target_name: pred_test.ravel()})
+            res = []
+            length = len(self._index)
+            times = length // len(pred_test)
+            remain = length % len(pred_test)
+            for i in range(times):
+                res+=pred_test.ravel().tolist()
+            res += pred_test[:remain].ravel().tolist()
+            output = d3m_dataframe({'d3mIndex': self._index, self._target_name: res})
         output.metadata = inputs.metadata.clear(
             source=self, for_value=output, generate_metadata=True)
         output.metadata = self._add_target_semantic_types(
