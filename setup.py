@@ -26,8 +26,10 @@ class PostInstallCommand(install):
                     subprocess.call(['pip', 'uninstall', '-y', 'dsbox-featurizer'])
         import keras.applications.resnet50 as resnet50
         import keras.applications.vgg16 as vgg16
+        import keras.applications.inception_v3 as inception_v3
         resnet50.ResNet50(weights='imagenet')
         vgg16.VGG16(weights='imagenet', include_top=False)
+        inception_v3.inception_v3(weights='imagenet')
         install.run(self)
 
 class PostDevelopCommand(develop):
@@ -35,8 +37,10 @@ class PostDevelopCommand(develop):
     def run(self):
         import keras.applications.resnet50 as resnet50
         import keras.applications.vgg16 as vgg16
+        import keras.applications.inception_v3 as inception_v3
         resnet50.ResNet50(weights='imagenet')
         vgg16.VGG16(weights='imagenet', include_top=False)
+        inception_v3.inception_v3(weights='imagenet')
         develop.run(self)
 
 setup(name='dsbox-primitives',
