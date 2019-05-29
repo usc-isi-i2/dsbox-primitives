@@ -1,5 +1,13 @@
 from setuptools import setup
 
+with open('requirements.txt', 'r') as f:
+    install_requires = list()
+    dependency_links = list()
+    for line in f:
+        re = line.strip()
+        if re:
+            install_requires.append(re)
+
 setup(name='dsbox-primitives',
       version='1.0.0',
       description='DSBox data processing primitives for both cleaning and featurizer',
@@ -22,12 +30,7 @@ setup(name='dsbox-primitives',
       zip_safe=False,
       python_requires='>=3.6',
 
-      install_requires=[
-          'scipy', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
-          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
-          'scikit-learn>=0.18.0', 'wget',
-          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima"
-      ],
+      install_requires=install_requires,
       keywords='d3m_primitive',
       entry_points={
           'd3m.primitives': [
