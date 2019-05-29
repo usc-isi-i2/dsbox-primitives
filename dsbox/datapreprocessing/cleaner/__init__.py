@@ -14,10 +14,13 @@ from .data_profile import Profiler, Hyperparams as ProfilerHyperparams
 from .column_fold import FoldColumns, FoldHyperparameter
 from .voter import Voter, VoterHyperparameter
 # from .datamart_query_from_dataframe import QueryFromDataFrameHyperparams, QueryFromDataframe
-from .datamart_augment import DatamartAugmentation, DatamartAugmentationHyperparams
 # from .datamart_join import DatamartJoinHyperparams, DatamartJoin
-from .datamart_download import DatamartDownload, DatamartDownloadHyperparams
-from .to_numeric import ToNumeric 
+
+# kyao: remove datamart primitives 5/29/2019
+# from .datamart_augment import DatamartAugmentation, DatamartAugmentationHyperparams
+# from .datamart_download import DatamartDownload, DatamartDownloadHyperparams
+
+from .to_numeric import ToNumeric
 from .splitter import Splitter, SplitterHyperparameter
 from .wikifier import Wikifier,WikifierHyperparams
 # __all__ = ['Encoder', 'GreedyImputation', 'IterativeRegressionImputation',
@@ -41,8 +44,9 @@ __all__ = ['Encoder', 'EncHyperparameter',
            'Splitter','SplitterHyperparameter',
         #    'QueryFromDataframe', 'DatamartAugmentation',
         #    'DatamartJoin',
-           'DatamartDownload','DatamartDownloadHyperparams',
-           'DatamartAugmentation','DatamartAugmentationHyperparams',
+           # kyao: remove datamart primitives 5/29/2019
+           # 'DatamartDownload','DatamartDownloadHyperparams',
+           # 'DatamartAugmentation','DatamartAugmentationHyperparams',
            'Wikifier', 'WikifierHyperparams',
            'ToNumeric'
 ]

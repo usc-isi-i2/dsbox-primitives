@@ -62,7 +62,8 @@ setup(name='dsbox-primitives',
               'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
               'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries',
               'data_augmentation.wikifier.DSBOX = dsbox.datapreprocessing.cleaner:Wikifier',
-              'data_augmentation.datamart_download.DSBOX = dsbox.datapreprocessing.cleaner:DatamartDownload',
-              'data_augmentation.datamart_augmentation.DSBOX = dsbox.datapreprocessing.cleaner:DatamartAugmentation',
+              # kyao: remove datamart primitives 5/29/2019
+              # 'data_augmentation.datamart_download.DSBOX = dsbox.datapreprocessing.cleaner:DatamartDownload',
+              # 'data_augmentation.datamart_augmentation.DSBOX = dsbox.datapreprocessing.cleaner:DatamartAugmentation',
           ],
       })
