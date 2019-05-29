@@ -117,6 +117,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     target_class_id: The id of the object detection targets
     output_layer: The list of the output layer number from YOLO's DNN
     """
+    # _weight_files = [{'type': 'FILE',
+                      # 'key': 'yolov3.weights',
+                      # 'file_uri': "https://pjreddie.com/media/files/yolov3.weights",
+                      # 'file_digest': "523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297"}]
 
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -134,7 +138,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             'uris': [config.REPOSITORY]
             },
         # The same path the primitive is registered with entry points in setup.py.
-        'installation': [config.INSTALLATION],
+        'installation': [config.INSTALLATION],# + _weight_files,
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -146,7 +150,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     def __init__(self, *, hyperparams: YoloHyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-
+        import pdb
+        pdb.set_trace()
         # All other attributes must be private with leading underscore
         self._fitted = False
         self._has_finished = False
@@ -415,7 +420,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
         if self._inited:
             return
-
+        import pdb
+        pdb.set_trace()
         if self.hyperparams['use_fitted_weight']:
             logger.info("Getting weights file and config file from static volumes ...")
             if "yolov3_weights" in self.volumes:
@@ -423,15 +429,16 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 logger.info("Weights file found in static volumes")
                 self._weight_file_dir = self.volumes["yolov3_weights"]
             else:
-                logger.info("Weights file not found, will start downloading ...")
-                # otherwise download the weights file
-                download_loc = os.environ['D3MSTATICDIR']
-                file_name = os.path.join(download_loc,"yolov3.weights")
-                if not os.path.exists(file_name):
-                    url = "https://pjreddie.com/media/files/yolov3.weights"
-                    wget.download(url, download_loc)
-                self.volumes['yolov3_weights'] = file_name
-                logger.info("Weights file download finished ...")
+                raise ValueError("Can't get weights file!")
+                # logger.info("Weights file not found, will start downloading ...")
+                # # otherwise download the weights file
+                # download_loc = os.environ['D3MSTATICDIR']
+                # file_name = os.path.join(download_loc,"yolov3.weights")
+                # if not os.path.exists(file_name):
+                #     url = "https://pjreddie.com/media/files/yolov3.weights"
+                #     wget.download(url, download_loc)
+                # self.volumes['yolov3_weights'] = file_name
+                # logger.info("Weights file download finished ...")
 
             if "yolov3_config" in self.volumes:
                 # if we found weights in volumes, use that directly
