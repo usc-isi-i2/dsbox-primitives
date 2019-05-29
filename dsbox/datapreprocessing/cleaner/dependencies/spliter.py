@@ -85,7 +85,8 @@ class PhoneParser:
         for row in rows:
             if re.match(pattern, str(row)):
                 match_count += 1
-        if float(match_count) / len(rows) > 0.5:
+
+        if len(rows) > 0 and float(match_count) / len(rows) > 0.5:
             return True
         return False
 
@@ -177,9 +178,13 @@ class PunctuationParser:
             else:
                 re_list += one_split + '|'
         re_list.strip('|')
+
         for row in rows:
-            new_row = [x for x in re.split(re_list, str(row)) if x]
-            max_column_num = max(max_column_num, len(new_row))
+            try:
+                new_row = [x for x in re.split(re_list, str(row)) if x]
+                max_column_num = max(max_column_num, len(new_row))
+            except ValueError:
+                new_row = [str(row)]
             new_rows.append(new_row)
 
         row_count = 0

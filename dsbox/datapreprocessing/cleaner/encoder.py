@@ -2,6 +2,7 @@ import logging
 from typing import NamedTuple, Dict, List, Set, Union
 
 import d3m
+import frozendict
 import d3m.metadata.base as mbase
 import numpy as np
 import pandas as pd
@@ -252,7 +253,11 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
             encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS, index), old_metadata)
         # update dimensional information
         encoded.metadata = encoded.metadata.update((), self._input_data_copy.metadata.query(()))
-        encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS,), self._input_data_copy.metadata.query((mbase.ALL_ELEMENTS,)))
+        columns_query =dict(self._input_data_copy.metadata.query((mbase.ALL_ELEMENTS,)))
+        new_dimension_data = dict(columns_query['dimension'])
+        new_dimension_data['length'] = encoded.shape[1]
+        columns_query['dimension'] = frozendict.FrozenOrderedDict(new_dimension_data)
+        encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS,), frozendict.FrozenOrderedDict(columns_query))
         # merge/concat both the dataframes
         if not all_categorical:
             output = d3m_DataFrame.horizontal_concat(self._input_data_copy, encoded, use_right_metadata=True)

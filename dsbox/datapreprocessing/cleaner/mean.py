@@ -12,6 +12,7 @@ import stopit  # type: ignore
 from d3m import container
 from d3m.metadata import hyperparams, params
 from d3m.metadata.hyperparams import UniformBool
+from d3m.metadata.base import DataMetadata
 import d3m.metadata.base as mbase
 import common_primitives.utils as utils
 
@@ -139,7 +140,7 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
         inputs : Input
             The inputs.
         """
-        attribute = utils.list_columns_with_semantic_types(
+        attribute = DataMetadata.list_columns_with_semantic_types(
             inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
         nan_sum = 0
         for col in attribute:
@@ -234,15 +235,21 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
 
             # assume the features of testing data are same with the training data
             # therefore, only use the mean_values to impute, should get a clean dataset
-            attribute = utils.list_columns_with_semantic_types(
+            attribute = DataMetadata.list_columns_with_semantic_types(
                 data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
+            
+            # try:
             for col in attribute:
                 if str(inputs.dtypes[inputs.columns[col]]) != "object":
-                    data.iloc[:, col].fillna(self.mean_values[data.columns[col]], inplace=True)
+                    if data.iloc[:, col].isnull().sum() != 0:
+                        data.iloc[:, col].fillna(self.mean_values[data.columns[col]], inplace=True)
                 else:
                     for i in range(data.shape[0]):
                         if data.iloc[i, col] == "" or pd.isnull(data.iloc[i, col]):
                             data.iloc[i, col] = self.mean_values[data.columns[col]]
+            # except:
+            #     import pdb
+            #     pdb.set_trace()
             data_clean = data
 
             # Update metadata
@@ -304,12 +311,12 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
         return False
 
     def __get_fitted(self):
-        attribute = utils.list_columns_with_semantic_types(
+        attribute = DataMetadata.list_columns_with_semantic_types(
             self._train_x.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
 
         # Mean for numerical columns
 
-        self._numeric_columns = utils.list_columns_with_semantic_types(
+        self._numeric_columns = DataMetadata.list_columns_with_semantic_types(
             self._train_x.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
         self._numeric_columns = [x for x in self._numeric_columns if x in attribute]
 
@@ -324,7 +331,7 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
                 self.mean_values[name] = 0.0
 
         # Mode for categorical columns
-        self._categoric_columns = utils.list_columns_with_semantic_types(
+        self._categoric_columns = DataMetadata.list_columns_with_semantic_types(
             self._train_x.metadata, ['https://metadata.datadrivendiscovery.org/types/CategoricalData',
                                      'http://schema.org/Boolean'])
         self._categoric_columns = [x for x in self._categoric_columns if x in attribute]

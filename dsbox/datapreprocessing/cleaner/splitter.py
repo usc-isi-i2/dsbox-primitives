@@ -12,7 +12,7 @@ from common_primitives.dataset_remove_columns import RemoveColumnsPrimitive # _s
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
-from common_primitives import utils
+from d3m.base import utils as d3m_utils
 from . import config
 
 Input = Dataset
@@ -152,7 +152,7 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
 
     def set_training_data(self, *, inputs: Input) -> None:
         self._training_inputs = inputs
-        main_resource_id, main_resource = utils.get_tabular_resource(inputs, None, has_hyperparameter=False)
+        main_resource_id, main_resource = d3m_utils.get_tabular_resource(inputs, None, has_hyperparameter=False)
         self._main_resource_id = main_resource_id
         self._fitted = False
 
@@ -256,7 +256,7 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
 
         # We sort indices to get deterministic outputs from sets (which do not have deterministic order).
         self._row_remained = {resource_id: sorted(indices) for resource_id, indices in row_indices_to_keep_sets.items()}
-        output_dataset = utils.cut_dataset(input_dataset, self._row_remained)
+        output_dataset = Dataset.select_rows(input_dataset, self._row_remained)
 
         return output_dataset
 

@@ -1,6 +1,5 @@
 from setuptools import setup
 
-
 setup(name='dsbox-primitives',
       version='1.0.0',
       description='DSBox data processing primitives for both cleaning and featurizer',
@@ -22,6 +21,7 @@ setup(name='dsbox-primitives',
                ],
       zip_safe=False,
       python_requires='>=3.6',
+
       install_requires=[
           'scipy', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
@@ -42,7 +42,7 @@ setup(name='dsbox-primitives',
               'normalization.denormalize.DSBOX = dsbox.datapreprocessing.cleaner:Denormalize',
               'schema_discovery.profiler.DSBOX = dsbox.datapreprocessing.cleaner:Profiler',
               'data_cleaning.column_fold.DSBOX = dsbox.datapreprocessing.cleaner:FoldColumns',
-              'data_preprocessing.vertical_concat.DSBOX = dsbox.datapostprocessing:VerticalConcat',
+              'data_preprocessing.vertical_concatenate.DSBOX = dsbox.datapostprocessing:VerticalConcat',
               'data_preprocessing.ensemble_voting.DSBOX = dsbox.datapostprocessing:EnsembleVoting',
               'data_preprocessing.unfold.DSBOX = dsbox.datapostprocessing:Unfold',
               'data_preprocessing.splitter.DSBOX = dsbox.datapreprocessing.cleaner:Splitter',
@@ -59,8 +59,10 @@ setup(name='dsbox-primitives',
               'feature_extraction.resnet50_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
               'data_preprocessing.time_series_to_list.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:TimeseriesToList',
               'feature_extraction.random_projection_timeseries_featurization.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RandomProjectionTimeSeriesFeaturization',
-              'data_transformation.group_up_by_timeseries.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:GroupUpByTimeSeries',
               'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
-              'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries'
+              'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries',
+              'data_augmentation.wikifier.DSBOX = dsbox.datapreprocessing.cleaner:Wikifier',
+              'data_augmentation.datamart_download.DSBOX = dsbox.datapreprocessing.cleaner:DatamartDownload',
+              'data_augmentation.datamart_augmentation.DSBOX = dsbox.datapreprocessing.cleaner:DatamartAugmentation',
           ],
       })

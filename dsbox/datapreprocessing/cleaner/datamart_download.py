@@ -65,6 +65,7 @@ class DatamartDownload(TransformerPrimitiveBase[Inputs, Outputs, DatamartDownloa
             "uris": [config.REPOSITORY]
         },
         "installation": [config.INSTALLATION],
+        "pure_primitive": False,
         # 'precondition': [],
         # 'hyperparams_to_tune': []
 
@@ -73,8 +74,7 @@ class DatamartDownload(TransformerPrimitiveBase[Inputs, Outputs, DatamartDownloa
     def __init__(self, *, hyperparams: DatamartDownloadHyperparams)-> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self.search_result = []
-        self.search_result = DatamartSearchResult.construct(hyperparams["search_result"])
+        self._search_result = DatamartSearchResult.construct(hyperparams["search_result"])
         self._has_finished = False
         self._iterations_done = False
 
@@ -97,7 +97,7 @@ class DatamartDownload(TransformerPrimitiveBase[Inputs, Outputs, DatamartDownloa
             _logger.error("not a valid url")
             return CallResult(None, True, 1)
         if status == 1:  # run isi-datamart
-            download_result = self.search_result.download(supplied_data=inputs, generate_metadata = True, return_format = self.hyperparams['return_format'])
+            download_result = self._search_result.download(supplied_data=inputs, generate_metadata = True, return_format = self.hyperparams['return_format'])
 
         self._has_finished = True
         self._iterations_done = True
