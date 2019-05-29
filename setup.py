@@ -26,7 +26,8 @@ setup(name='dsbox-primitives',
           'scipy', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
           'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
           'scikit-learn>=0.18.0', 'wget',
-          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima"
+          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima",
+          'wikidata-wikifier@git+https://git@github.com/usc-isi-i2/wikidata-wikifier@39ed413cb0fa0b22184a1c5d4d88d720d816fc2d'
       ],
       keywords='d3m_primitive',
       entry_points={
