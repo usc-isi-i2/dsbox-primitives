@@ -4,13 +4,15 @@ import numpy as np
 import sys
 import typing
 import time
-# import cv2
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m import container
-import keras
-from keras.engine.sequential import Sequential
+
+# lazy init
+# import keras
+# from keras.engine.sequential import Sequential
+
 from . import config
 
 logger = logging.getLogger(__name__)
@@ -22,31 +24,31 @@ Outputs = container.DataFrame  # results
 
 class LSTMHyperparams(hyperparams.Hyperparams):
     LSTM_units = hyperparams.UniformInt(
-        default = 2048,
-        lower = 1,
-        upper = pow(2,31),
-        description = "Positive integer, dimensionality of the output space of LSTM model",
+        default=2048,
+        lower=1,
+        upper=pow(2, 31),
+        description="Positive integer, dimensionality of the output space of LSTM model",
         semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     verbose = hyperparams.UniformInt(
-        default = 0,
-        lower = 0,
-        upper = 3,
-        description = "Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch.",
+        default=0,
+        lower=0,
+        upper=3,
+        description="Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch.",
         semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     batch_size = hyperparams.UniformInt(
-        default = 32,
-        lower = 1,
-        upper = 10000,
-        description = "The batch size for RNN training",
+        default=32,
+        lower=1,
+        upper=10000,
+        description="The batch size for RNN training",
         semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     epochs = hyperparams.UniformInt(
-        default = 1000,
-        lower = 1,
-        upper = sys.maxsize,
-        description = "epochs to do on fit process",
+        default=1000,
+        lower=1,
+        upper=sys.maxsize,
+        description="epochs to do on fit process",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     shuffle = hyperparams.Hyperparameter[bool](
@@ -95,7 +97,7 @@ class LSTMHyperparams(hyperparams.Hyperparams):
 class Params(params.Params):
     target_column_name: str
     class_name_to_number: typing.Dict[str, int]
-    keras_model: Sequential
+    keras_model: typing.Dict  # keras.engine.Sequential, cannot use because of lazy init
     feature_shape: typing.List[int]
     input_feature_column_name: str
 
@@ -103,8 +105,6 @@ class Params(params.Params):
 class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperparams]):
     """
     video classification primitive that use lstm RNN network
-    Parameters
-    ----------
     """
 
     __author__ = 'USC ISI'
@@ -113,7 +113,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         'version': config.VERSION,
         'name': "DSBox Video Classification LSTM",
         'description': 'Find the corresponding object position from given images(tensors)',
-        'python_path': 'd3m.primitives.feature_extraction.lstm.DSBOX',
+        'python_path': 'd3m.primitives.classification.lstm.DSBOX',
         'primitive_family': "CLASSIFICATION",
         'algorithm_types': ["DEEP_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'lstm'],
@@ -161,7 +161,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     def get_params(self) -> Params:
         param = Params(
-            keras_model=self._model,
+            keras_model={'model': self._model},
             class_name_to_number=self._class_name_to_number,
             target_column_name=self._target_column_name,
             feature_shape=self._feature_shape,
@@ -170,7 +170,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         return param
 
     def set_params(self, *, params: Params) -> None:
-        self._model = params["keras_model"]
+        self._model = params["keras_model"]["model"]
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
@@ -327,7 +327,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._iterations_done = True
         return CallResult(output_dataframe, self._has_finished, self._iterations_done)
 
-    def _lazy_init_lstm(self) -> "keras.models":
+    def _lazy_init_lstm(self):  # -> "keras.models"
         """
             a lazy init function which initialize the LSTM model only when the primitive's fit/ produce method is called
         """
