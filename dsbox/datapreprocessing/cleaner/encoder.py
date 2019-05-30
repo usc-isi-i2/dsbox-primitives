@@ -30,7 +30,7 @@ class EncParams(params.Params):
 
 
 class EncHyperparameter(hyperparams.Hyperparams):
-    n_limit = UniformInt(lower=5, upper=100, default=12,
+    n_limit = UniformInt(lower=0, upper=100, default=12,
                          description='Limits the maximum number of columns generated from a single categorical column',
                          semantic_types=['http://schema.org/Integer',
                                          'https://metadata.datadrivendiscovery.org/types/TuningParameter'])
@@ -66,13 +66,9 @@ class EncHyperparameter(hyperparams.Hyperparams):
 
 class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHyperparameter]):
     """
-    An one-hot encoder, which
-    1. n_limit: max number of distinct values to one-hot encode,
-         remaining values with fewer occurence are put in [colname]_other_ column.
-
-    2. feed in data by set_training_data, then apply fit() function to tune the encoder.
-
-    3. produce(): input data would be encoded and return.
+    A robust one-hot encoder. Missing values are encoded as an additional column. Use hyperparamter n_limit to limit the
+    maximum number of column generated. If n_limit>0, then only the top n_limit most frequent values are encoded into
+    columns. the rest of the values are encoded into a single column."
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "18f0bb42-6350-3753-8f2d-d1c3da70f279",

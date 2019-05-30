@@ -68,21 +68,9 @@ class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
 
 class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, IR_Params, IterativeRegressionHyperparameter]):
     """
-    Impute the missing value by iteratively regress using other attributes.
-        It will fit and fill the missing value in the training set, and store the learned models.
-        In the `produce` phase, it will use the learned models to iteratively regress on the
-        testing data again, and return the imputed testing data.
-
-    Parameters:
-    ----------
-    verbose: bool
-        Control the verbosity
-
-    Attributes:
-    ----------
-    best_imputation: dict. key: column name; value: trained imputation method (parameters)
-        could be sklearn regression model, or "mean" (which means the regression failed)
-
+    Impute the missing value by iteratively regress using other attributes. It will fit and fill the missing value in
+    the training set, and store the learned models. In the `produce` phase, it will use the learned models to
+    iteratively regress on the testing data again, and return the imputed testing data.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         # Required

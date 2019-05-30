@@ -1,13 +1,7 @@
-import os
 import numpy as np  # type: ignore
-import pandas as pd  # type: ignore
-import stopit
-import math
 import typing
 import logging
 import importlib
-import shutil
-from typing import Any, Callable, List, Dict, Union, Optional
 
 
 # from pyramid.arima import ARIMA, auto_arima
@@ -21,14 +15,11 @@ import sklearn.preprocessing
 
 
 from d3m.container.list import List
-from d3m.container.numpy import ndarray as d3m_ndarray
 from d3m.container import DataFrame as d3m_dataframe
 from d3m.metadata import hyperparams, params, base as metadata_base
-from d3m import utils
-from d3m.primitive_interfaces.base import CallResult, DockerContainer, MultiCallResult
-import common_primitives.utils as common_utils
+from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
+
 
 Inputs = d3m_dataframe
 Outputs = d3m_dataframe
@@ -157,7 +148,9 @@ class RNNHyperparams(hyperparams.Hyperparams):
 
 
 class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, RNNHyperparams]):
-
+    """
+    Timeseries forcasting primitive using recurrent neural network built on tensorflow. Based on code from ISI's SAGE project.
+    """
     __author__ = "USC ISI"
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "c8d9e1b8-09f0-4b6a-b917-bfbc23f9d90b",
@@ -180,7 +173,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
     def __init__(self, *,
                  hyperparams: RNNHyperparams,
                  random_seed: int = 0,
-                 docker_containers: Dict[str, DockerContainer] = None,
+                 docker_containers: typing.Dict[str, DockerContainer] = None,
                  _verbose: int = 0) -> None:
 
         super().__init__(hyperparams=hyperparams, random_seed=random_seed,
@@ -221,7 +214,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 self.hyperparams["n_batch"], dtype=tf.float32)
 
             states_series, current_state = tf.nn.dynamic_rnn(self.cell, inputs_series, initial_state=self.cell_state,
-                                                            parallel_iterations=1)
+                                                             parallel_iterations=1)
 
             prediction = tf.matmul(
                 tf.tanh(tf.matmul(tf.squeeze(states_series), W1) + b1), W2) + b2
@@ -371,7 +364,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                             n_total=self.n_total,
                             n_train=self.n_train,
                             n_valid=self.n_valid,
-                            n_predict_step=self.n_predict_step        
+                            n_predict_step=self.n_predict_step
                         )
 
         # return RNNParams("./rnn_model.ckpt")
@@ -393,7 +386,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         ########################################################
         # self._lazy_init()
         if len(inputs) == 0:
-            _logging.info(
+            _logger.info(
                 "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
 
@@ -469,10 +462,10 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
-    
+
     @classmethod
     def _add_target_semantic_types(cls, metadata: metadata_base.DataMetadata,
-                                   source: typing.Any,  target_names: List = None,) -> metadata_base.DataMetadata:
+                                   source: typing.Any,  target_names: typing.List = None,) -> metadata_base.DataMetadata:
         for column_index in range(metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']):
             metadata = metadata.add_semantic_type((metadata_base.ALL_ELEMENTS, column_index),
                                                   'https://metadata.datadrivendiscovery.org/types/Target',

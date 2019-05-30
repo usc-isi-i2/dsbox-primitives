@@ -78,34 +78,13 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
     """
-    data profiler moduel. Now only supports csv data.
-
-    Parameters:
-    ----------
-    _punctuation_outlier_weight: a integer
-        the coefficient used in outlier detection for punctuation. default is 3
-
-    _numerical_outlier_weight
-
-    _token_delimiter: a string
-        delimiter that used to seperate tokens, default is blank space " ".
-
-    _detect_language: boolean
-        true: do detect language; false: not detect language
-
-    _topk: a integer
-
-    _verbose: boolean
-        control the _verbose
-
-    Attributes:
-    ----------
+    Generate a profile of the given dataset. The profiler is capable of detecting if column values consists of compound
+    values, date values, phone number values, alphanumeric token values and categorical values.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'b2612849-39e4-33ce-bfda-24f3e2cb1e93',
         'version': config.VERSION,
         'name': "DSBox Profiler",
-        'description': 'Generate profiles of datasets',
         'python_path': 'd3m.primitives.schema_discovery.profiler.DSBOX',
         'primitive_family': PrimitiveFamily.SCHEMA_DISCOVERY,
         'algorithm_types': [

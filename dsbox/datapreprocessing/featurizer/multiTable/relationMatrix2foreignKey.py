@@ -3,32 +3,33 @@ import numpy as np
 import logging
 _logger = logging.getLogger(__name__)
 
+
 def comp_skewness(all_tables, c1, c2):
     """
     """
     split = re.split("_", c1)
     filename = split[0]# + ".csv"
     column = all_tables[filename][split[1]]
-    if (not np.issubdtype(column.dtype, np.number)): 
-        _logger.info ("cannot compute for {}".format(c1))
-        return 1 # not numeric value inside
+    if (not np.issubdtype(column.dtype, np.number)):
+        _logger.info("cannot compute for {}".format(c1))
+        return 1  # not numeric value inside
     range1 = column.max() - column.min()
-    
+
     split = re.split("_", c2)
     filename = split[0] #+ ".csv"
     column = all_tables[filename][split[1]]
-    if (not np.issubdtype(column.dtype, np.number)): 
-        _logger.info ("cannot compute for {}".format(c2))
-        return 1 # not numeric value inside
+    if (not np.issubdtype(column.dtype, np.number)):
+        _logger.info("cannot compute for {}".format(c2))
+        return 1  # not numeric value inside
     range2 = column.max() - column.min()
-    
+
     skewness = range1/float(range2)
     if (skewness == 1):
-        _logger.info ("c1: {} c2: {}".format(c1, c2))
-    
-    
+        _logger.info("c1: {} c2: {}".format(c1, c2))
+
+
     return skewness
-    
+
 
 def relationMat2foreignKey(dataset, relation_matrix):
     """
@@ -37,11 +38,11 @@ def relationMat2foreignKey(dataset, relation_matrix):
         1. optimize time complexity
     """
 
-    all_tables = dataset # dict, key: name; value : pandas.DataFrame
+    all_tables = dataset  # dict, key: name; value : pandas.DataFrame
     index = relation_matrix.keys()
 
     result = set()
-    _logger.info ("found matched col pairs: (foreign key ==> primary key) \n")
+    _logger.info("found matched col pairs: (foreign key ==> primary key) \n")
     for col_i in index:
         skewness_dict = dict()
         for col_j in index:
@@ -61,15 +62,14 @@ def relationMat2foreignKey(dataset, relation_matrix):
                 skewness_dict[skewness] = col_j
 
         if (len(skewness_dict) > 0):
-            max_skewness = sorted(skewness_dict.keys())[-1] 
+            max_skewness = sorted(skewness_dict.keys())[-1]
             if (max_skewness < 0.7): continue
             col = skewness_dict[max_skewness]
-            result.add((col_i,col))
-            _logger.info ("==== select {}, from {}, skewness value is {}".format(col, skewness_dict.values(), max_skewness))
-            _logger.info ("{} ====> {}".format(col_i,col))
-    
-    return result
+            result.add((col_i, col))
+            _logger.info("==== select {}, from {}, skewness value is {}".format(col, skewness_dict.values(), max_skewness))
+            _logger.info("{} ====> {}".format(col_i, col))
 
+    return result
 
 
 # ====================== relation correction function==========================
@@ -93,5 +93,3 @@ def relations_correction(relations):
             relations_corrected.add((foreign_key, primary_key))
 
     return relations_corrected
-
-

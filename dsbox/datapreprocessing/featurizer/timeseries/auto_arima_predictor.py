@@ -1,32 +1,24 @@
-import os
 import numpy as np  # type: ignore
-import pandas as pd  # type: ignore
-import stopit
-import math
-import typing
-from typing import Any, Callable, List, Dict, Union, Optional
 import logging
-import copy
+import typing
 
 from pyramid.arima import ARIMA, auto_arima
 
 from . import config
 
-from d3m.container.list import List
-from d3m.container.numpy import ndarray
 from d3m.container import DataFrame
 from d3m.metadata import hyperparams, params, base as metadata_base
-from d3m import utils
-from d3m.primitive_interfaces.base import CallResult, DockerContainer, MultiCallResult
-import common_primitives.utils as common_utils
+from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
+
+import common_primitives.utils as common_utils
 
 
 # Inputs = container.List
 Inputs = DataFrame
 Outputs = DataFrame
 _logger = logging.getLogger(__name__)
+
 
 class ArimaParams(params.Params):
     arima: ARIMA
@@ -174,6 +166,9 @@ class ArimaHyperparams(hyperparams.Hyperparams):
 
 
 class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, ArimaHyperparams]):
+    """
+    ARIMA primitive for timeseries data regression/forecasting problems. Based on Pyarmid/Arima.
+    """
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         # Required
@@ -198,7 +193,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
     def __init__(self, *,
                  hyperparams: ArimaHyperparams,
                  random_seed: int = 0,
-                 docker_containers: Dict[str, DockerContainer] = None,
+                 docker_containers: typing.Dict[str, DockerContainer] = None,
                  _verbose: int = 0) -> None:
 
         super().__init__(hyperparams=hyperparams, random_seed=random_seed,
@@ -214,7 +209,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         # need to use inputs to figure out the params of ARIMA #
         ########################################################
         if len(inputs) == 0:
-            _logging.info(
+            _logger.info(
                 "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
         if 'd3mIndex' in outputs.columns:
@@ -349,7 +344,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
 
     @classmethod
     def _add_target_semantic_types(cls, metadata: metadata_base.DataMetadata,
-                                   source: typing.Any,  target_names: List = None,) -> metadata_base.DataMetadata:
+                                   source: typing.Any,  target_names: typing.List = None,) -> metadata_base.DataMetadata:
         for column_index in range(metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']):
             metadata = metadata.add_semantic_type((metadata_base.ALL_ELEMENTS, column_index),
                                                   'https://metadata.datadrivendiscovery.org/types/Target',

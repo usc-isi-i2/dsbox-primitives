@@ -100,14 +100,22 @@ class CleaningFeaturizerHyperparameter(hyperparams.Hyperparams):
 #     components_: typing.Any
 
 
-class CleaningFeaturizer(
-    UnsupervisedLearnerPrimitiveBase[Input, Output, CleaningFeaturizerParams, CleaningFeaturizerHyperparameter]):
+class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, CleaningFeaturizerParams, CleaningFeaturizerHyperparameter]):
+    """
+    A cleaning featurizer for imperfect data. Capabilities of this featurizer include:
+
+    + Split a column with compound string values (e.g. "118,32") to multiple columns.
+    + Split a date column into year, month, day, day-of-week.
+    + Split American phone number column into area code, prefix, and number.
+    + Split alphanumeric columns into multiple columns.
+
+    This primitive requires d3m.primitives.schema_discovery.profiler.DSBOX  profiler.
+    """
     metadata = hyperparams.base.PrimitiveMetadata({
         ### Required
         "id": "dsbox-cleaning-featurizer",
         "version": config.VERSION,
         "name": "DSBox Cleaning Featurizer",
-        "description": "Split single column into multile columns based on the semantics of the column. The semantics this primitive can detect include: phone numbers, dates, alpha numeric values, and multi-value columns",
         "python_path": "d3m.primitives.data_cleaning.cleaning_featurizer.DSBOX",
         "primitive_family": "DATA_CLEANING",
         "algorithm_types": ["DATA_CONVERSION"],

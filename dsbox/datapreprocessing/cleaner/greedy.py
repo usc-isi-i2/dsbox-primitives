@@ -6,7 +6,6 @@ import logging
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import stopit
-import math
 import typing
 
 from d3m import container
@@ -14,6 +13,7 @@ from d3m.metadata import hyperparams, params
 from d3m.metadata.hyperparams import UniformBool
 import d3m.metadata.base as mbase
 import common_primitives.utils as utils
+from d3m.base import utils as common_utils
 
 from . import config
 
@@ -60,25 +60,11 @@ class GreedyHyperparameter(hyperparams.Hyperparams):
         description="Also include primary index columns if input data has them. Applicable only if \"return_result\" is set to \"new\".",
     )
 
+
 class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, GreedyHyperparameter]):
     """
-    Impute the missing value by greedy search of the combinations of standalone simple imputation method.
-
-    Parameters:
-    ----------
-    verbose: bool
-        Control the verbosity
-
-    Attributes:
-    ----------
-    imputation_strategies: list of string,
-        each is a standalone simple imputation method
-
-    best_imputation: dict. key: column name; value: trained imputation method (parameters)
-            which is one of the imputation_strategies
-
-    model: a sklearn machine learning class
-        The machine learning model that will be used to evaluate the imputation strategies
+    Use greedy search to impute missing values by finding the best simple imputation method for each column.
+    The simple imputation methods include mean, min, max, and zero.
 
     """
 
@@ -237,7 +223,6 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
             d3mIndex = data["d3mIndex"]
             data = data.drop(["d3mIndex"], axis=1)
 
-
         # record keys:
         keys = data.keys()
         index = data.index
@@ -278,7 +263,6 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
             self._iterations_done = False
         return CallResult(value, self._has_finished, self._iterations_done)
 
-
     @classmethod
     def _get_columns_to_fit(cls, inputs: Input, hyperparams: GreedyHyperparameter):
         if not hyperparams['use_semantic_types']:
@@ -290,11 +274,10 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
         columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                             use_columns=hyperparams['use_columns'],
-                                                                             exclude_columns=hyperparams['exclude_columns'],
-                                                                             can_use_column=can_produce_column)
+                                                                                     use_columns=hyperparams['use_columns'],
+                                                                                     exclude_columns=hyperparams['exclude_columns'],
+                                                                                     can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
-
 
     @classmethod
     def _can_produce_column(cls, inputs_metadata: mbase.DataMetadata, column_index: int, hyperparams: GreedyHyperparameter) -> bool:

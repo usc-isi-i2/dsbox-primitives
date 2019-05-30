@@ -1,6 +1,5 @@
 import d3m.container
-from d3m.metadata import hyperparams, params
-from typing import Dict, List
+from d3m.metadata import hyperparams
 from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import random
@@ -24,7 +23,8 @@ class VoterHyperparameter(hyperparams.Hyperparams):
 
 class Voter(TransformerPrimitiveBase[Inputs, Outputs, VoterHyperparameter]):
     """
-    Voter primitive
+    A voting primitive. Each row with the same d3mIndex value votes for the category value for that d3mIndex. The value
+    with the majority wins. If there is no majority value, than the value is selected randomly among the values tied for first.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "dsbox-voter",

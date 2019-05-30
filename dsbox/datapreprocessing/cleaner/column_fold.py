@@ -32,13 +32,16 @@ class FoldHyperparameter(hyperparams.Hyperparams):
 
 
 class FoldColumns(UnsupervisedLearnerPrimitiveBase[Input, Output, FoldParams, FoldHyperparameter]):
-    # TODO update metadata
+    """
+    A column folding primitive for imperfect data. Fold multiple columns into one column based on common column name prefix.
+    For example, columns with names 'month-jan', 'month-feb', 'month-mar' and so on are folded into one column named 'month'."
+    """
+
     metadata = hyperparams.base.PrimitiveMetadata({
         ### Required
         "id": "dsbox-fold-columns",
         "version": config.VERSION,
         "name": "DSBox Fold Columns",
-        "description": "Fold multiple columns into one column based on common column name prefix. For example, fold columns with names 'month-jan', 'month-feb', 'month-mar' and so on, into one column named 'month'.",
         "python_path": "d3m.primitives.data_cleaning.column_fold.DSBOX",
         "primitive_family": "DATA_CLEANING",
         "algorithm_types": ["DATA_CONVERSION"],
