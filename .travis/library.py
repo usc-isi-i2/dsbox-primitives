@@ -281,7 +281,7 @@ class VotingTemplate(DSBoxTemplate):
                               "name": "model_step",
                               "primitives": [
                                   {
-                                      "primitive": "d3m.primitives.data_preprocessing.ensemble_voting.DSBOX",
+                                      "primitive": "d3m.primitives.classification.ensemble_voting.DSBOX",
                                       "hyperparameters": {}
                                   }],
                               "inputs": ["vertical_concat", "target"]
