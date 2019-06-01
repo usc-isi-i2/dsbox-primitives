@@ -15,7 +15,7 @@ from common_primitives import utils
 from . import config
 import time
 import collections
-from datamart.entries_new import DatamartSearchResult
+from datamart.entries import DatamartSearchResult
 # # field for importing datamart stuff
 # from datamart import augment
 # from datamart import Dataset

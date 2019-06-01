@@ -8,11 +8,11 @@ import random
 import itertools
 
 from d3m.container import Dataset
-from common_primitives.dataset_remove_columns import RemoveColumnsPrimitive # _select_column_metadata
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.base import utils as d3m_utils
+from d3m.metadata.base import DataMetadata
 from . import config
 
 Input = Dataset
@@ -214,12 +214,15 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         else:
             self._logger.info("sampling needed.")
 
+
+
         results = copy.copy(inputs)
         if self._status is Status.TEST:
             self._logger.info("In test process, no split on row needed") 
             return CallResult(results, True, 1)
 
         else:
+
             if self._need_reduce_row:
                 self._logger.info("Now sampling rows.") 
                 results = self._split_row(results)
@@ -266,10 +269,10 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         """
         input_dataset_shape = inputs[self._main_resource_id].shape
         # find target column, we should not split these column
-        target_column = utils.list_columns_with_semantic_types(self._training_inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
+        target_column = DataMetadata.list_columns_with_semantic_types(self._training_inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
         if not target_column:
             self._logger.warn("No target column found from the input dataset.")
-        index_column = utils.get_index_columns(self._training_inputs.metadata,at=(self._main_resource_id,))
+        index_column = DataMetadata.get_index_columns(self._training_inputs.metadata,at=(self._main_resource_id,))
         if not index_column:
             self._logger.warn("No index column found from the input dataset.")
 
@@ -290,12 +293,63 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
                 self._column_remained.extend(target_column)
                 self._column_remained.extend(index_column)
                 self._column_remained.sort()
-            # use common primitive's RemoveColumnsPrimitive inner function to finish sampling
 
         if len(self._column_remained) > 0: 
             # Just to make sure.
-            outputs.metadata = inputs.metadata.set_for_value(outputs, generate_metadata=False)
+            outputs.metadata = copy.deepcopy(inputs.metadata)
             outputs[self._main_resource_id] = inputs[self._main_resource_id].iloc[:, self._column_remained]
-            outputs.metadata = RemoveColumnsPrimitive._select_columns_metadata(outputs.metadata, self._main_resource_id, self._column_remained)
+            outputs.metadata = self._select_columns_metadata(outputs.metadata, self._main_resource_id, self._column_remained)
 
         return outputs
+
+    @classmethod
+    def _select_columns_metadata(cls, inputs_metadata: metadata_base.DataMetadata, resource_id: metadata_base.SelectorSegment,
+                                 columns: typing.Sequence[int]) -> metadata_base.DataMetadata:
+        """
+        This is similar to ``select_columns_metadata`` but operates on a Dataset.
+        """
+
+        if not columns:
+            raise exceptions.InvalidArgumentValueError("No columns selected.")
+
+        # This makes a copy so that we can modify metadata in-place.
+        output_metadata = inputs_metadata.update(
+            (resource_id, metadata_base.ALL_ELEMENTS,),
+            {
+                'dimension': {
+                    'length': len(columns),
+                },
+            },
+        )
+
+        if resource_id is metadata_base.ALL_ELEMENTS:
+            metadata_chain = itertools.chain(
+                [output_metadata._current_metadata.all_elements.all_elements if output_metadata._current_metadata.all_elements is not None else None],
+                output_metadata._current_metadata.all_elements.elements.values() if output_metadata._current_metadata.all_elements is not None else iter([None]),
+            )
+        else:
+            resource_id = typing.cast(metadata_base.SimpleSelectorSegment, resource_id)
+
+            metadata_chain = itertools.chain(
+                [output_metadata._current_metadata.all_elements.all_elements if output_metadata._current_metadata.all_elements is not None else None],
+                output_metadata._current_metadata.all_elements.elements.values() if output_metadata._current_metadata.all_elements is not None else iter([None]),
+                [output_metadata._current_metadata.elements[resource_id].all_elements],
+                output_metadata._current_metadata.elements[resource_id].elements.values(),
+            )
+
+        # TODO: Do this better. This change is missing an entry in metadata log.
+        for element_metadata_entry in metadata_chain:
+            if element_metadata_entry is None:
+                continue
+
+            elements = element_metadata_entry.elements
+            element_metadata_entry.elements = {}
+            for i, column_index in enumerate(columns):
+                if column_index in elements:
+                    # If "column_index" is really numeric, we re-enumerate it.
+                    if isinstance(column_index, int):
+                        element_metadata_entry.elements[i] = elements[column_index]
+                    else:
+                        element_metadata_entry.elements[column_index] = elements[column_index]
+
+        return output_metadata
