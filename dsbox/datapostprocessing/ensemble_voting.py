@@ -4,7 +4,6 @@ from d3m.metadata import hyperparams
 from dsbox.datapreprocessing.cleaner import config
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata.base import ALL_ELEMENTS
-import common_primitives.utils as common_utils
 import warnings
 
 __all__ = ('EnsembleVoting',)
@@ -15,7 +14,7 @@ Outputs = container.DataFrame
 
 class EnsembleVotingHyperparams(hyperparams.Hyperparams):
     ensemble_method = hyperparams.Enumeration(
-        values=['majority', 'mean', 'max', 'min', 'median', 'random'],
+        values=['majority', 'max', 'min'],
         default='majority',
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
         description="Controls which ensemble method should be used",
@@ -24,7 +23,8 @@ class EnsembleVotingHyperparams(hyperparams.Hyperparams):
 
 class EnsembleVoting(TransformerPrimitiveBase[Inputs, Outputs, EnsembleVotingHyperparams]):
     """
-        A primitive which generate single prediction result for one index if there is many
+    A ensemble voting primitive. The input dataframe should be the output of multiple learners concatenated together
+    using the data_preprocessing.horizontal_concat.DSBOX primitve.
     """
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -32,7 +32,7 @@ class EnsembleVoting(TransformerPrimitiveBase[Inputs, Outputs, EnsembleVotingHyp
         "version": config.VERSION,
         "name": "DSBox ensemble voting",
         "description": "A primitive which generate single prediction result for one index if there is many",
-        "python_path": "d3m.primitives.data_preprocessing.ensemble_voting.DSBOX",
+        "python_path": "d3m.primitives.classification.ensemble_voting.DSBOX",
         "primitive_family": "DATA_PREPROCESSING",
         "algorithm_types": ["ENSEMBLE_LEARNING"],
         "source": {
