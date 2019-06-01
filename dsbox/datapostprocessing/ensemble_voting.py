@@ -49,14 +49,14 @@ class EnsembleVoting(TransformerPrimitiveBase[Inputs, Outputs, EnsembleVotingHyp
         self.hyperparams = hyperparams
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-        index_col = common_utils.list_columns_with_semantic_types(
-            metadata=inputs.metadata, semantic_types=["https://metadata.datadrivendiscovery.org/types/PrimaryKey"])
+        index_col = inputs.metadata.list_columns_with_semantic_types(
+            semantic_types=["https://metadata.datadrivendiscovery.org/types/PrimaryKey"])
         if not index_col:
             warnings.warn("Did not find primary key column. Can not vote, output origin")
             return CallResult(inputs)
 
-        predict_target_col = common_utils.list_columns_with_semantic_types(
-            metadata=inputs.metadata, semantic_types=["https://metadata.datadrivendiscovery.org/types/PredictedTarget"])
+        predict_target_col = inputs.metadata.list_columns_with_semantic_types(
+            semantic_types=["https://metadata.datadrivendiscovery.org/types/PredictedTarget"])
         if not index_col:
             warnings.warn("Did not find PredictedTarget column. Can not vote, output origin")
             return CallResult(inputs)
@@ -91,7 +91,7 @@ class EnsembleVoting(TransformerPrimitiveBase[Inputs, Outputs, EnsembleVotingHyp
 
     @staticmethod
     def _get_index_and_target_df(inputs: container.DataFrame, use_cols):
-        metadata = common_utils.select_columns_metadata(inputs_metadata=inputs.metadata, columns=use_cols)
+        metadata = inputs.metadata.select_columns(columns=use_cols)
         new_df = inputs.iloc[:, use_cols]
         new_df.metadata = metadata
         return new_df

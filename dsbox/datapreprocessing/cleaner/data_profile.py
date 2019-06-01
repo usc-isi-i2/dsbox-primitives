@@ -2,16 +2,16 @@ import json
 
 from collections import defaultdict
 
-import d3m.metadata.base as mbase
-import numpy as np
-import pandas as pd
-import pytypes
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import pytypes  # type: ignore
 import logging
 import traceback
 
 from d3m import container, types
 from d3m.metadata import hyperparams
 from d3m.metadata.base import DataMetadata, PrimitiveFamily, PrimitiveAlgorithmType, Selector, ALL_ELEMENTS
+import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 
@@ -117,7 +117,7 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         self._topk = 10
         self._verbose = VERBOSE
         self._sample_df = None
-        self._DateFeaturizer = None
+        self._DateFeaturizer: DateFeaturizerOrg = None
         # list of specified features to compute
         self._specified_features = hyperparams["metafeatures"] if hyperparams else default_metafeatures
 
@@ -163,8 +163,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         self._DateFeaturizer = DateFeaturizerOrg(inputs)
         try:
             cols = self._DateFeaturizer.detect_date_columns(self._sample_df)
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Detect date failed", exec_info=True)
             cols = list()
         if cols:
             indices = [inputs.columns.get_loc(c) for c in cols if c in inputs.columns]
@@ -202,8 +202,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
 
         try:
             PhoneParser_indices = PhoneParser.detect(df=self._sample_df)
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Phone parser failed", exc_info=True)
             PhoneParser_indices = dict()
         if PhoneParser_indices.get("columns_to_perform"):
             for i in PhoneParser_indices["columns_to_perform"]:
@@ -236,8 +236,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         try:
             PunctuationSplitter_indices = PunctuationParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'])
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Punctuation parser failed", exc_info=True)
             PunctuationSplitter_indices = dict()
         if PunctuationSplitter_indices.get("columns_to_perform"):
             for i in PunctuationSplitter_indices["columns_to_perform"]:
@@ -269,8 +269,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         try:
             NumAlphaSplitter_indices = NumAlphaParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'], )
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Num alpha parser failed", exc_info=True)
             NumAlphaSplitter_indices = dict()
 
         if NumAlphaSplitter_indices.get("columns_to_perform"):

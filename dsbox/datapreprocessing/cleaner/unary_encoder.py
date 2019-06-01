@@ -1,15 +1,15 @@
-import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
 import copy
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 import typing
 
 from d3m import container
-from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
-from d3m.metadata import hyperparams, params
+from d3m.base import utils
 from d3m.container import DataFrame as d3m_DataFrame
-from d3m.primitive_interfaces.base import CallResult
-from common_primitives import utils
 from d3m.metadata import base as mbase
+from d3m.metadata import hyperparams, params
+from d3m.primitive_interfaces.base import CallResult
+from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from . import config
 
 Input = container.DataFrame
@@ -204,18 +204,17 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         unary encode later in the produce step.
         """
         if self._fitted:
-            return
+            return CallResult(None)
 
         if self._training_inputs is None:
             raise ValueError('Missing training(fitting) data.')
 
         data = self._training_inputs.copy()
-        all_attributes = utils.list_columns_with_semantic_types(metadata=data.metadata, semantic_types=[
+        all_attributes = data.metadata.list_columns_with_semantic_types(semantic_types=[
             "https://metadata.datadrivendiscovery.org/types/Attribute"])
 
         # Remove columns with all empty values, structural type str
-        numeric = utils.list_columns_with_semantic_types(
-            data.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
+        numeric = data.metadata.list_columns_with_semantic_types(['http://schema.org/Integer', 'http://schema.org/Float'])
         numeric = [x for x in numeric if x in all_attributes]
         for element in numeric:
             if data.metadata.query((mbase.ALL_ELEMENTS, element)).get('structural_type', ())==str:
@@ -230,18 +229,16 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         self._empty_columns = list(set(self._empty_columns))
         self._empty_columns.reverse()
         self._empty_columns = container.List(self._empty_columns)
-        data = utils.remove_columns(data, self._empty_columns)
+        data = data.remove_columns(self._empty_columns)
         # print('fit', data.shape)
 
-        categorical_attributes = utils.list_columns_with_semantic_types(
-            metadata=data.metadata,
+        categorical_attributes = data.metadata.list_columns_with_semantic_types(
             semantic_types=[
                 "https://metadata.datadrivendiscovery.org/types/OrdinalData",
                 "https://metadata.datadrivendiscovery.org/types/CategoricalData"
                 ]
             )
-        all_attributes = utils.list_columns_with_semantic_types(
-            metadata=data.metadata,
+        all_attributes = data.metadata.list_columns_with_semantic_types(
             semantic_types=["https://metadata.datadrivendiscovery.org/types/Attribute"]
             )
         self._cat_col_index = container.List(set(all_attributes).intersection(numeric))
@@ -309,7 +306,7 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
             data = inputs.copy()
         else:
             data = inputs[0].copy()
-        data = utils.remove_columns(data, self._empty_columns)
+        data = data.remove_columns(self._empty_columns)
         set_columns = set(data.columns)
 
         if set_columns != self._all_columns:
@@ -348,11 +345,10 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
                 'http://schema.org/Integer', 'https://metadata.datadrivendiscovery.org/types/Attribute')
             encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS, index), old_metadata)
         # after extracting the traget columns, remove these columns from dataFrame
-        data_else = utils.remove_columns(data, self._cat_col_index)
-        result = utils.horizontal_concat(data_else, encoded)
+        data_else = data.remove_columns(self._cat_col_index)
+        result = data_else.horizontal_concat(encoded)
 
         return CallResult(result, True, 1)
-
 
     @classmethod
     def _get_columns_to_fit(cls, inputs: Input, hyperparams: UEncHyperparameter):
@@ -364,12 +360,10 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                             use_columns=hyperparams['use_columns'],
-                                                                             exclude_columns=hyperparams['exclude_columns'],
-                                                                             can_use_column=can_produce_column)
+        columns_to_produce, columns_not_to_produce = utils.get_columns_to_use(
+            metadata=inputs_metadata,
+            use_columns=hyperparams['use_columns'], exclude_columns=hyperparams['exclude_columns'], can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
-
 
     @classmethod
     def _can_produce_column(cls, inputs_metadata: mbase.DataMetadata, column_index: int, hyperparams: UEncHyperparameter) -> bool:

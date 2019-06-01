@@ -7,8 +7,8 @@ import sys
 import random
 import itertools
 
+import d3m.exceptions as exceptions
 from d3m.container import Dataset
-from common_primitives.dataset_remove_columns import RemoveColumnsPrimitive # _select_column_metadata
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
@@ -18,10 +18,12 @@ from . import config
 Input = Dataset
 Output = Dataset
 
+
 class Status(enum.Enum):
     UNFIT = 0
     TRAIN = 1
     TEST = 2
+
 
 class Params(params.Params):
     status: Status
@@ -30,6 +32,7 @@ class Params(params.Params):
     main_resource_id: str
     column_remained: typing.List[int]
     row_remained: typing.Dict
+
 
 class SplitterHyperparameter(hyperparams.Hyperparams):
     threshold_column_length = hyperparams.UniformInt(
@@ -60,7 +63,7 @@ class SplitterHyperparameter(hyperparams.Hyperparams):
         lower=0,
         upper=1,
         default=0.5,
-        upper_inclusive = True,
+        upper_inclusive=True,
         description='The ratio to further reduce the threshold_row_length value for the condition that both the amount of column and row are very large',
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter']
     )
@@ -72,6 +75,7 @@ class SplitterHyperparameter(hyperparams.Hyperparams):
     #     description='The random seed for generating the sampling results, set up for consistent results.',
     #     semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter']
     # )
+
 
 class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterHyperparameter]):
     """
@@ -129,15 +133,14 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         self._training_inputs = None
         self._fitted = False
 
-
     def get_params(self) -> Params:
         param = Params(
-                       status = self._status,
-                       need_reduce_row = self._need_reduce_row,
-                       need_reduce_column = self._need_reduce_column,
-                       column_remained = self._column_remained,
-                       row_remained = self._row_remained,
-                       main_resource_id = self._main_resource_id
+                       status=self._status,
+                       need_reduce_row=self._need_reduce_row,
+                       need_reduce_column=self._need_reduce_column,
+                       column_remained=self._column_remained,
+                       row_remained=self._row_remained,
+                       main_resource_id=self._main_resource_id
                       )
         return param
 
@@ -159,11 +162,11 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         """
         check the shape of the main resource dataset. I
-        f the size is larger than threshold, the primitive will record and generate 
+        f the size is larger than threshold, the primitive will record and generate
         a list of column/ row that need to be remained.
         """
         if self._fitted:
-            return
+            return CallResult(None)
 
         if self._training_inputs is None:
             raise ValueError('Missing training(fitting) data.')
@@ -197,7 +200,6 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         self._fitted = True
         return CallResult(None, has_finished=True, iterations_done=1)
 
-
     def produce(self, *, inputs: Input, timeout: float = None, iterations: int = None) -> CallResult[Output]:
         """
         sample the dataset if needed
@@ -216,18 +218,19 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
 
         results = copy.copy(inputs)
         if self._status is Status.TEST:
-            self._logger.info("In test process, no split on row needed") 
+            self._logger.info("In test process, no split on row needed")
             return CallResult(results, True, 1)
 
         else:
+
             if self._need_reduce_row:
-                self._logger.info("Now sampling rows.") 
+                self._logger.info("Now sampling rows.")
                 results = self._split_row(results)
-                self._logger.info("Sampling rows finished.") 
+                self._logger.info("Sampling rows finished.")
             if self._need_reduce_column:
-                self._logger.info("Now sampling columns.") 
+                self._logger.info("Now sampling columns.")
                 results = self._split_column(results)
-                self._logger.info("Sampling columns finished.") 
+                self._logger.info("Sampling columns finished.")
             # if it is first time to run produce here, we should in train status
             # so we need to let the program know that for next time, we will in test process
             if self._status is Status.TRAIN:
@@ -266,10 +269,10 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         """
         input_dataset_shape = inputs[self._main_resource_id].shape
         # find target column, we should not split these column
-        target_column = utils.list_columns_with_semantic_types(self._training_inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
+        target_column = self._training_inputs.metadata.list_columns_with_semantic_types(['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
         if not target_column:
             self._logger.warn("No target column found from the input dataset.")
-        index_column = utils.get_index_columns(self._training_inputs.metadata,at=(self._main_resource_id,))
+        index_column = self._training_inputs.metadata.get_index_columns(at=(self._main_resource_id,))
         if not index_column:
             self._logger.warn("No index column found from the input dataset.")
 
@@ -290,12 +293,63 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
                 self._column_remained.extend(target_column)
                 self._column_remained.extend(index_column)
                 self._column_remained.sort()
-            # use common primitive's RemoveColumnsPrimitive inner function to finish sampling
 
-        if len(self._column_remained) > 0: 
+        if len(self._column_remained) > 0:
             # Just to make sure.
-            outputs.metadata = inputs.metadata.set_for_value(outputs, generate_metadata=False)
+            outputs.metadata = copy.deepcopy(inputs.metadata)
             outputs[self._main_resource_id] = inputs[self._main_resource_id].iloc[:, self._column_remained]
-            outputs.metadata = RemoveColumnsPrimitive._select_columns_metadata(outputs.metadata, self._main_resource_id, self._column_remained)
+            outputs.metadata = self._select_columns_metadata(outputs.metadata, self._main_resource_id, self._column_remained)
 
         return outputs
+
+    @classmethod
+    def _select_columns_metadata(cls, inputs_metadata: metadata_base.DataMetadata, resource_id: metadata_base.SelectorSegment,
+                                 columns: typing.Sequence[int]) -> metadata_base.DataMetadata:
+        """
+        This is similar to ``select_columns_metadata`` but operates on a Dataset.
+        """
+
+        if not columns:
+            raise exceptions.InvalidArgumentValueError("No columns selected.")
+
+        # This makes a copy so that we can modify metadata in-place.
+        output_metadata = inputs_metadata.update(
+            (resource_id, metadata_base.ALL_ELEMENTS,),
+            {
+                'dimension': {
+                    'length': len(columns),
+                },
+            },
+        )
+
+        if resource_id is metadata_base.ALL_ELEMENTS:
+            metadata_chain = itertools.chain(
+                [output_metadata._current_metadata.all_elements.all_elements if output_metadata._current_metadata.all_elements is not None else None],
+                output_metadata._current_metadata.all_elements.elements.values() if output_metadata._current_metadata.all_elements is not None else iter([None]),
+            )
+        else:
+            resource_id = typing.cast(metadata_base.SimpleSelectorSegment, resource_id)
+
+            metadata_chain = itertools.chain(
+                [output_metadata._current_metadata.all_elements.all_elements if output_metadata._current_metadata.all_elements is not None else None],
+                output_metadata._current_metadata.all_elements.elements.values() if output_metadata._current_metadata.all_elements is not None else iter([None]),
+                [output_metadata._current_metadata.elements[resource_id].all_elements],
+                output_metadata._current_metadata.elements[resource_id].elements.values(),
+            )
+
+        # TODO: Do this better. This change is missing an entry in metadata log.
+        for element_metadata_entry in metadata_chain:
+            if element_metadata_entry is None:
+                continue
+
+            elements = element_metadata_entry.elements
+            element_metadata_entry.elements = {}
+            for i, column_index in enumerate(columns):
+                if column_index in elements:
+                    # If "column_index" is really numeric, we re-enumerate it.
+                    if isinstance(column_index, int):
+                        element_metadata_entry.elements[i] = elements[column_index]
+                    else:
+                        element_metadata_entry.elements[column_index] = elements[column_index]
+
+        return output_metadata

@@ -2,7 +2,6 @@ import logging
 import typing
 
 import pandas as pd  # type: ignore
-import numpy as np
 
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 
@@ -14,11 +13,10 @@ from d3m.metadata import hyperparams, params
 from d3m.metadata.hyperparams import UniformBool
 from d3m.metadata.base import DataMetadata
 import d3m.metadata.base as mbase
-import common_primitives.utils as utils
 
 from . import config
 
-import common_primitives.utils as common_utils
+import d3m.base.utils as base_utils
 
 Input = container.DataFrame
 Output = container.DataFrame
@@ -287,7 +285,7 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
+        columns_to_produce, columns_not_to_produce = base_utils.get_columns_to_use(inputs_metadata,
                                                                                      use_columns=hyperparams[
                                                                                          'use_columns'],
                                                                                      exclude_columns=hyperparams[
