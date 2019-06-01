@@ -152,7 +152,6 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
                         nan_sum += 1
         if nan_sum == 0:  # no missing value exists
             if self._verbose:
-                print("Warning: no missing value in train dataset")
                 _logger.info('no missing value in train dataset')
 
         self._train_x = inputs
@@ -237,7 +236,7 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             # therefore, only use the mean_values to impute, should get a clean dataset
             attribute = DataMetadata.list_columns_with_semantic_types(
                 data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-            
+
             # try:
             for col in attribute:
                 if str(inputs.dtypes[inputs.columns[col]]) != "object":
