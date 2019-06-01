@@ -213,3 +213,78 @@ class DefaultRegressionTemplate(DSBoxTemplate):
                 }
             ]
         }
+
+
+class VotingTemplate(DSBoxTemplate):
+    def __init__(self):
+        DSBoxTemplate.__init__(self)
+        self.template = {
+            "name": "default_classification_template",
+            "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
+            "taskType": TaskType.CLASSIFICATION.name,
+            "runType": "classification",
+            "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
+            "output": "model_step",  # Name of the final step generating the prediction
+            "target": "extract_target_step",  # Name of the step generating the ground truth
+            "steps": (TemplateSteps.dsbox_generic_steps()
+                      + TemplateSteps.dsbox_feature_selector("classification", first_input='data', second_input='target')
+                      + [
+                          {
+                              "name": "model_substep_1",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.linear_discriminant_analysis.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "model_substep_2",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.nearest_centroid.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "model_substep_3",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.logistic_regression.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "vertical_concat",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.data_preprocessing.vertical_concatenate.DSBOX",
+                                      "hyperparameters": {}
+                                  }],
+                              "inputs": [["model_substep_1", "model_substep_2", "model_substep_3"]]
+                          },
+                          {
+                              "name": "model_step",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.data_preprocessing.ensemble_voting.DSBOX",
+                                      "hyperparameters": {}
+                                  }],
+                              "inputs": ["vertical_concat", "target"]
+                          }
+                      ])
+        }

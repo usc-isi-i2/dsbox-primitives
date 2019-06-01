@@ -12,6 +12,7 @@ Inputs = d3m.container.DataFrame
 Outputs = d3m.container.DataFrame
 _logger = logging.getLogger(__name__)
 
+
 class VoterHyperparameter(hyperparams.Hyperparams):
     classifier_voting_strategy = hyperparams.Enumeration(
         values=['random', 'majority'],
@@ -31,9 +32,9 @@ class Voter(TransformerPrimitiveBase[Inputs, Outputs, VoterHyperparameter]):
         "version": config.VERSION,
         "name": "ISI DSBox Prediction Voter",
         "description": "Voting primitive for choosing one prediction if there are multiple predictions",
-        "python_path": "d3m.primitives.data_cleaning.voter.DSBOX",
-        "primitive_family": "DATA_CLEANING",
-        "algorithm_types": ["DATA_CONVERSION"],
+        "python_path": "d3m.primitives.data_preprocessing.ensemble_voting.DSBOX",
+        "primitive_family": "CLASSIFICATION",
+        "algorithm_types": ["ENSEMBLE_LEARNING"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,

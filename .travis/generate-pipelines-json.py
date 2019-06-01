@@ -1,11 +1,11 @@
 import json
 import os
-import importlib
 import subprocess
 import pandas as pd
 import shutil
-from template import DATASET_MAPPER, simple_config
-from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate # import testing template
+
+from template import DATASET_MAPPER
+from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate, VotingTemplate  # import testing template
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
 
 TEMPLATE_LIST = []
@@ -13,7 +13,9 @@ TEMPLATE_LIST = []
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
+TEMPLATE_LIST.append(VotingTemplate())
 # ends
+
 
 def get_meta_json(dataset_name):
     # generate the meta file for pipelines
@@ -30,7 +32,7 @@ def get_meta_json(dataset_name):
                 "test_inputs": [dataset_name + "_dataset_TEST"],
                 "score_inputs": [dataset_name + "_dataset_SCORE"]
             }
-    
+
     return meta_json
 
 def get_primitive_hitted(config):
@@ -94,7 +96,7 @@ def test_pipeline(each_template, config, test_dataset_id):
         d3m_runtime_command = "python -m d3m.runtime -d dsbox-unit-test-datasets fit-produce -p tmp/test_pipeline.json -r dsbox-unit-test-datasets/" + \
                               test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json -i dsbox-unit-test-datasets/" + \
                               test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json -t dsbox-unit-test-datasets/" + \
-                              test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json -o tmp/produced_output.csv" 
+                              test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json -o tmp/produced_output.csv"
 
 
         p = subprocess.Popen(d3m_runtime_command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
@@ -151,6 +153,7 @@ def main():
         result = test_pipeline(each_template,
                                config,
                                datasetID)
+
         remove_temp_files()
         # only generate the pipelines with it pass the test
         if result:
@@ -171,4 +174,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
