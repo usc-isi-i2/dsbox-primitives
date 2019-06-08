@@ -1,23 +1,20 @@
-import numpy as np
-import pandas as pd
-from . import missing_value_pred as mvp
-import d3m.metadata.base as mbase
-from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
-from d3m.primitive_interfaces.base import CallResult
-import stopit
-import math
-import typing
 import logging
+import typing
+
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import stopit  # type: ignore
 
 from d3m import container
+from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
+
 from d3m.metadata import hyperparams, params
 from d3m.metadata.base import DataMetadata
 from d3m.metadata.hyperparams import UniformBool
-import common_primitives.utils as utils
-
-import typing
 
 from . import config
+from . import missing_value_pred as mvp
 
 Input = container.DataFrame
 Output = container.DataFrame
@@ -27,11 +24,12 @@ _logger = logging.getLogger(__name__)
 
 
 class IR_Params(params.Params):
-    fitted : typing.Union[typing.Any, None]
-    verbose : typing.Union[typing.Any, None]
-    iterations_done : typing.Union[typing.Any, None]
-    has_finished : typing.Union[typing.Any, None]
-    best_imputation : typing.Union[typing.Any, None]
+    fitted: typing.Union[typing.Any, None]
+    verbose: typing.Union[typing.Any, None]
+    iterations_done: typing.Union[typing.Any, None]
+    has_finished: typing.Union[typing.Any, None]
+    best_imputation: typing.Union[typing.Any, None]
+
 
 class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
     verbose = UniformBool(default=False,
@@ -66,11 +64,12 @@ class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
         description="Also include primary index columns if input data has them. Applicable only if \"return_result\" is set to \"new\".",
     )
 
+
 class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, IR_Params, IterativeRegressionHyperparameter]):
     """
-    Impute the missing value by iteratively regress using other attributes. It will fit and fill the missing value in
-    the training set, and store the learned models. In the `produce` phase, it will use the learned models to
-    iteratively regress on the testing data again, and return the imputed testing data.
+    Impute the missing value of numerical columns by iteratively regression using other numerical columns. It will fit
+    and fill the missing value in the training set, and store the learned models. In the `produce` phase, it will use
+    the learned models to iteratively regress on the testing data again, and return the imputed testing data.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         # Required
@@ -108,6 +107,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
 
         # All other attributes must be private with leading underscore
         self._best_imputation: typing.Dict = {}  # in params.regression_models
+        self._numeric_column_indices: typing.List = []
         self._train_x: Input = None
         self._is_fitted = True
         self._has_finished = True
@@ -120,14 +120,16 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         self._iterations_done = params['iterations_done']
         self._has_finished = params['has_finished']
         self._best_imputation = params['best_imputation']
+        self._numeric_column_indices = params['numeric_column_indices']
 
     def get_params(self) -> IR_Params:
         return IR_Params(
-            fitted = self._is_fitted,
-            verbose = self._verbose,
-            iterations_done = self._iterations_done,
-            has_finished = self._has_finished,
-            best_imputation = self._best_imputation
+            fitted=self._is_fitted,
+            verbose=self._verbose,
+            iterations_done=self._iterations_done,
+            has_finished=self._has_finished,
+            best_imputation=self._best_imputation,
+            numeric_column_indices=self._numeric_column_indices,
             )
 
     def set_training_data(self, *, inputs: Input) -> None:
@@ -181,9 +183,18 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
             # start fitting
             if self._verbose:
                 _logger.info("=========> iteratively regress method:")
-            data_clean, self._best_imputation = self.__iterativeRegress(data, iterations)
 
-        # self._train_x, self._best_imputation = self.__iterativeRegress(data, iterations)
+            attribute = DataMetadata.list_columns_with_semantic_types(
+                data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
+            numeric = DataMetadata.list_columns_with_semantic_types(
+                data.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
+            numeric = [x for x in numeric if x in attribute]
+            numeric_data = data.iloc[:, numeric].apply(
+                lambda col: pd.to_numeric(col, errors='coerce'))
+
+            data_clean, self._best_imputation = self.__iterativeRegress(numeric_data, iterations)
+            self._numeric_column_indices = numeric
+
         if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
             self._is_fitted = True
             self._iterations_done = True
@@ -216,32 +227,29 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
 
         """
 
-        # inputs = inputs.convert_objects(convert_numeric=True)
-        attribute = DataMetadata.list_columns_with_semantic_types(
-            inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-        numeric = DataMetadata.list_columns_with_semantic_types(
-            inputs.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
-        numeric = [x for x in numeric if x in attribute]
+        # attribute = DataMetadata.list_columns_with_semantic_types(
+        #     inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
+        # numeric = DataMetadata.list_columns_with_semantic_types(
+        #     inputs.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
+        # numeric = [x for x in numeric if x in attribute]
 
-        # keys = data.keys()
-        # missing_col_id = []
-
-        inputs = inputs.iloc[:, numeric].apply(
-            lambda col: pd.to_numeric(col, errors='coerce'))
+        # inputs = inputs.iloc ...
         # data = mvp.df2np(numeric_data, missing_col_id, self._verbose)
 
-        for i in numeric:
-            old_metadata = dict(inputs.metadata.query((mbase.ALL_ELEMENTS, i)))
-            old_metadata["structural_type"] = inputs.iloc[:, i].values.dtype.type
-            inputs.metadata = inputs.metadata.update((mbase.ALL_ELEMENTS, i), old_metadata)
-
-        # Impute numerical attributes only
+        # for i in numeric:
+        #     old_metadata = dict(inputs.metadata.query((mbase.ALL_ELEMENTS, i)))
+        #     old_metadata["structural_type"] = inputs.iloc[:, i].values.dtype.type
+        #     inputs.metadata = inputs.metadata.update((mbase.ALL_ELEMENTS, i), old_metadata)
 
         if (not self._is_fitted):
             # todo: specify a NotFittedError, like in sklearn
             raise ValueError("Calling produce before fitting.")
 
-        if (pd.isnull(inputs).sum().sum() == 0):    # no missing value exists
+        # Impute numerical attributes only
+        numeric_data = inputs.iloc[:, self._numeric_column_indices].apply(
+            lambda col: pd.to_numeric(col, errors='coerce'))
+
+        if (pd.isnull(numeric_data).sum().sum() == 0):    # no missing value exists
             if self._verbose:
                 _logger.info("Warning: no missing value in test dataset")
             self._has_finished = True
@@ -253,10 +261,10 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
             self._iterations_done = True
             iterations = 30  # only works for iteratively_regre method
 
-        data = inputs.copy()
-        # record keys:
-        keys = data.keys()
-        index = data.index
+        # data = inputs.copy()
+        # # record keys:
+        # keys = data.keys()
+        # index = data.index
 
         # setup the timeout
         with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
@@ -265,52 +273,20 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
             # start completing data...
             if self._verbose:
                 _logger.info("=========> iteratively regress method:")
-            data_clean = self.__regressImpute(data, self._best_imputation, iterations)
-        value = None
+            data_clean = self.__regressImpute(numeric_data, self._best_imputation, iterations)
+
+        value = inputs.copy()
+        value.iloc[:, self._numeric_column_indices] = data_clean
+
         if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
             self._is_fitted = True
             self._has_finished = True
-            value = pd.DataFrame(data_clean, index, keys)
-            value = container.DataFrame(value)
-            value.metadata = data.metadata
         elif to_ctx_mrg.state == to_ctx_mrg.TIMED_OUT:
             _logger.info("Timed Out...")
             self._is_fitted = False
             self._has_finished = False
             self._iterations_done = False
         return CallResult(value, self._has_finished, self._iterations_done)
-
-
-    @classmethod
-    def _get_columns_to_fit(cls, inputs: Input, hyperparams: IterativeRegressionHyperparameter):
-        if not hyperparams['use_semantic_types']:
-            return inputs, list(range(len(inputs.columns)))
-
-        inputs_metadata = inputs.metadata
-
-        def can_produce_column(column_index: int) -> bool:
-            return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
-
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                             use_columns=hyperparams['use_columns'],
-                                                                             exclude_columns=hyperparams['exclude_columns'],
-                                                                             can_use_column=can_produce_column)
-        return inputs.iloc[:, columns_to_produce], columns_to_produce
-
-
-    @classmethod
-    def _can_produce_column(cls, inputs_metadata: mbase.DataMetadata, column_index: int, hyperparams: IterativeRegressionHyperparameter) -> bool:
-        column_metadata = inputs_metadata.query((mbase.ALL_ELEMENTS, column_index))
-
-        semantic_types = column_metadata.get('semantic_types', [])
-        if len(semantic_types) == 0:
-            cls.logger.warning("No semantic types found in column metadata")
-            return False
-        if "https://metadata.datadrivendiscovery.org/types/Attribute" in semantic_types:
-            return True
-
-        return False
-
 
     #============================================ helper functions ============================================
     def __iterativeRegress(self, data, iterations):
@@ -324,21 +300,12 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         # else:
         #     is_eval = True
 
-        # indices for numeric attribute columns only
-        attribute = DataMetadata.list_columns_with_semantic_types(
-            data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-        numeric = DataMetadata.list_columns_with_semantic_types(
-            data.metadata, ['http://schema.org/Integer', 'http://schema.org/Float'])
-        numeric = [x for x in numeric if x in attribute]
-
         keys = data.keys()
         missing_col_id = []
-        numeric_data = data.iloc[:, numeric].apply(
-            lambda col: pd.to_numeric(col, errors='coerce'))
+        numeric_data = data.apply(lambda col: pd.to_numeric(col, errors='coerce'))
         data = mvp.df2np(numeric_data, missing_col_id, self._verbose)
 
         # Impute numerical attributes only
-        missing_col_id = [x for x in missing_col_id if x in numeric]
         missing_col_data = data[:, missing_col_id]
 
         # If all values in a column are missing, set that column to zero
