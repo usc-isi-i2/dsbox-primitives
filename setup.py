@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='dsbox-primitives',
-      version='1.0.0',
+      version='1.5.2',
       description='DSBox data processing primitives for both cleaning and featurizer',
       author='USC ISI',
       url='https://github.com/usc-isi-i2/dsbox-primitives.git',
