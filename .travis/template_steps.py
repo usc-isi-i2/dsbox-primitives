@@ -67,7 +67,7 @@ class TemplateSteps:
             },
             {
                 "name": "corex_step",
-                "primitives": ["d3m.primitives.feature_construction.corex_text.CorexText"],
+                "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
                 "inputs": ["encode_step"]
             },
             {
