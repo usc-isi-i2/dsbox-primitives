@@ -29,18 +29,17 @@ class DefaultClassificationTemplate(DSBoxTemplate):
                               "primitives": [
                                   {
                                       "primitive":
-                                      "d3m.primitives.classification.random_forest.SKlearn",
+                                      "d3m.primitives.classification.gradient_boosting.SKlearn",
                                       "hyperparameters":
                                       {
                                           'use_semantic_types': [True],
                                           'return_result': ['new'],
                                           'add_index_columns': [True],
-                                          # 'bootstrap': [True, False],
-                                          # 'max_depth': [15, 30, None],
-                                          # 'min_samples_leaf': [1, 2, 4],
-                                          # 'min_samples_split': [2, 5, 10],
-                                          # 'max_features': ['auto', 'sqrt'],
-                                          # 'n_estimators': [10, 50, 100],
+                                          'max_depth': [5],
+                                          'learning_rate':[0.1],
+                                          'min_samples_leaf': [2],
+                                          'min_samples_split': [3],
+                                          'n_estimators': [50],
                                          }
                                   }
                               ],
