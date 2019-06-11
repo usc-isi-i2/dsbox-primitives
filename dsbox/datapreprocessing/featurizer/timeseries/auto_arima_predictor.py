@@ -10,7 +10,7 @@ from d3m.container import DataFrame
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-
+from d3m.metadata.base import ALL_ELEMENTS
 import common_primitives.utils as common_utils
 
 
@@ -272,11 +272,15 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             res_df = np.exp(res_df)
         if self._index is not None:
             output = DataFrame({'d3mIndex': self._index, self._target_name: res_df})
+        else:
+            _logger.error("No d3mIndex found!")
+
         if isinstance(output, DataFrame):
-            output.metadata = output.metadata.clear(
-                source=self, for_value=output, generate_metadata=True)
-            output.metadata = self._add_target_semantic_types(
-                metadata=output.metadata, target_names=self._target_name, source=self)
+            output.metadata = output.metadata.clear(source=self, for_value=output, generate_metadata=True)
+            meta_d3mIndex = {"name": "d3mIndex", "structural_type":int, "semantic_types":["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/PrimaryKey"]}
+            meta_target = {"name": self._target_name, "structural_type":float, "semantic_types":["https://metadata.datadrivendiscovery.org/types/Target", "https://metadata.datadrivendiscovery.org/types/PredictedTarget"]}
+            output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 0), metadata=meta_d3mIndex)
+            output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 1), metadata=meta_target)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
@@ -344,8 +348,8 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
 
     @classmethod
     def _add_target_semantic_types(cls, metadata: metadata_base.DataMetadata,
-                                   source: typing.Any,  target_names: typing.List = None,) -> metadata_base.DataMetadata:
-        for column_index in range(metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']):
+                                   source: typing.Any,  target_names: typing.List, target_column_number: typing.List) -> metadata_base.DataMetadata:
+        for column_index in target_column_number:
             metadata = metadata.add_semantic_type((metadata_base.ALL_ELEMENTS, column_index),
                                                   'https://metadata.datadrivendiscovery.org/types/Target',
                                                   source=source)

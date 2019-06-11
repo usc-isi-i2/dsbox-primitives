@@ -19,7 +19,7 @@ from d3m.container import DataFrame as d3m_dataframe
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-
+from d3m.metadata.base import ALL_ELEMENTS
 
 Inputs = d3m_dataframe
 Outputs = d3m_dataframe
@@ -234,13 +234,6 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             pred_upper_valid = tf.slice(
                 prediction, (self.n_train - self.n_predict_step, 2), (self.n_valid, 1))
 
-            self.pred_point_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 0), (self.n_predict_step, 1))
-            self.pred_lower_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 1), (self.n_predict_step, 1))
-            self.pred_upper_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 2), (self.n_predict_step, 1))
-
             pred_point_total = tf.slice(
                 prediction, (0, 0), (self.n_total - self.n_valid, 1))
             pred_lower_total = tf.slice(
@@ -396,10 +389,10 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             self._index = outputs['d3mIndex']
             self._training_inputs = outputs.drop(columns=['d3mIndex'])# Arima takes shape(n,) as inputs, only target casting is applied
         else:
+            self._index = inputs['d3mIndex']
             self._training_inputs = outputs
         data = self._training_inputs.values
-        data_scaled = self.scaler.fit_transform(
-            data.reshape(-1, 1))
+        data_scaled = self.scaler.fit_transform(data.reshape(-1, 1))
         self._target_name = outputs.columns[-1]
 
         self.x = data_scaled.reshape(-1, 1)
@@ -422,8 +415,17 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         if not self._fitted:
-            _logger.info("Plz fit!")
+            _logger.info("Please run fit() first!")
             return CallResult(None, self._has_finished, self._iterations_done)
+
+        self.n_predict_step = inputs.shape[0]
+        self.pred_point_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 0), (self.n_predict_step, 1))
+        self.pred_lower_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 1), (self.n_predict_step, 1))
+        self.pred_upper_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 2), (self.n_predict_step, 1))
+
         with tf.Session(config=self.tf_config) as sess:
             sess.run(tf.global_variables_initializer())
             self._load_weights(sess)
@@ -445,20 +447,15 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 pred_test, np.maximum(pred_test_upper, pred_test_lower))
 
             _logger.info(pred_test.tolist())
-        if self._index is not None:
-        #     output = d3m_dataframe({'d3mIndex': self._index[:len(pred_test)], self._target_name: pred_test.ravel()})
-            res = []
-            length = len(self._index)
-            times = length // len(pred_test)
-            remain = length % len(pred_test)
-            for i in range(times):
-                res+=pred_test.ravel().tolist()
-            res += pred_test[:remain].ravel().tolist()
-            output = d3m_dataframe({'d3mIndex': self._index, self._target_name: res})
+
+        res=pred_test.ravel().tolist()
+        output = d3m_dataframe({'d3mIndex': inputs['d3mIndex'], self._target_name: res})
         output.metadata = inputs.metadata.clear(
             source=self, for_value=output, generate_metadata=True)
-        output.metadata = self._add_target_semantic_types(
-            metadata=output.metadata, target_names=self._target_name, source=self)
+        meta_d3mIndex = {"name": "d3mIndex", "structural_type":int, "semantic_types":["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/PrimaryKey"]}
+        meta_target = {"name": self._target_name, "structural_type":float, "semantic_types":["https://metadata.datadrivendiscovery.org/types/Target", "https://metadata.datadrivendiscovery.org/types/PredictedTarget"]}
+        output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 0), metadata=meta_d3mIndex)
+        output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 1), metadata=meta_target)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
