@@ -117,10 +117,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     target_class_id: The id of the object detection targets
     output_layer: The list of the output layer number from YOLO's DNN
     """
-    # _weight_files = [{'type': 'FILE',
-                      # 'key': 'yolov3.weights',
-                      # 'file_uri': "https://pjreddie.com/media/files/yolov3.weights",
-                      # 'file_digest': "523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297"}]
+    _weight_files = [{'type': 'FILE',
+                      'key': 'yolov3.weights',
+                      'file_uri': "https://pjreddie.com/media/files/yolov3.weights",
+                      'file_digest': "523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297"}]
 
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -138,7 +138,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             'uris': [config.REPOSITORY]
             },
         # The same path the primitive is registered with entry points in setup.py.
-        'installation': [config.INSTALLATION],# + _weight_files,
+        'installation': [config.INSTALLATION + _weight_files],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -150,8 +150,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     def __init__(self, *, hyperparams: YoloHyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-        import pdb
-        pdb.set_trace()
         # All other attributes must be private with leading underscore
         self._fitted = False
         self._has_finished = False
@@ -420,14 +418,12 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
         if self._inited:
             return
-        import pdb
-        pdb.set_trace()
         if self.hyperparams['use_fitted_weight']:
             logger.info("Getting weights file and config file from static volumes ...")
-            if "yolov3_weights" in self.volumes:
+            if "yolov3.weights" in self.volumes:
                 # if we found weights in volumes, use that directly
                 logger.info("Weights file found in static volumes")
-                self._weight_file_dir = self.volumes["yolov3_weights"]
+                self._weight_file_dir = self.volumes["yolov3.weights"]
             else:
                 raise ValueError("Can't get weights file!")
                 # logger.info("Weights file not found, will start downloading ...")
@@ -440,9 +436,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 # self.volumes['yolov3_weights'] = file_name
                 # logger.info("Weights file download finished ...")
 
-            if "yolov3_config" in self.volumes:
+            if "yolov3.cfg" in self.volumes:
                 # if we found weights in volumes, use that directly
-                self._weight_file_dir = self.volumes["yolov3_config"]
+                self._weight_file_dir = self.volumes["yolov3.cfg"]
                 logger.info("Config file found in static volumes")
             else:
                 logger.info("Config file not found, will use default one from model")
@@ -452,8 +448,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     config_file_loc_local = os.path.dirname(dsbox.datapreprocessing.featurizer.image.object_detection.__file__)
                     config_file_loc_local = os.path.join(config_file_loc_local, "yolov3.cfg")
                     shutil.copy(config_file_loc_local, download_loc)
-                self.volumes["yolov3_config"] = config_file_loc
-            self._model = cv2.dnn.readNet(self.volumes['yolov3_weights'], self.volumes['yolov3_config'])
+                self.volumes["yolov3.cfg"] = config_file_loc
+            self._model = cv2.dnn.readNet(self.volumes['yolov3_weights'], self.volumes['yolov3.cfg'])
             self._load_object_names()
             logger.info("Model initialize finished.")
 
