@@ -138,7 +138,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             'uris': [config.REPOSITORY]
             },
         # The same path the primitive is registered with entry points in setup.py.
-        'installation': [config.INSTALLATION + _weight_files],
+        'installation': [config.INSTALLATION] +  _weight_files,
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -407,7 +407,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
     def _load_object_names(self) -> None:
         """
-            Inner function used to load default detected object class names with default weight model
+            Inner function used to load default detected object class names with default ight model
         """
         from .yolov3_default_classes import detected_object_names
         self._object_names = detected_object_names.name_list
