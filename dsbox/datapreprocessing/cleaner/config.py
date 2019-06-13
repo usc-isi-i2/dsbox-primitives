@@ -14,7 +14,7 @@ REPOSITORY = "https://github.com/usc-isi-i2/dsbox-primitives"
 PACAKGE_NAME = "dsbox-primitives"
 
 D3M_PERFORMER_TEAM = 'ISI'
-D3M_CONTACT = "kyao:kyao@isi.edu"
+D3M_CONTACT = "mailto:kyao@isi.edu"
 
 if TAG_NAME:
     PACKAGE_URI = "git+" + REPOSITORY + "@" + TAG_NAME
