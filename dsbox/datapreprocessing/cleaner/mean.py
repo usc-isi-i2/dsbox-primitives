@@ -179,7 +179,8 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
 
             # start fitting
-            if self._verbose: print("=========> mean imputation method:")
+            if self._verbose:
+                print("=========> mean imputation method:")
             self.__get_fitted()
 
         if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
@@ -225,7 +226,8 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
 
             # start completing data...
-            if self._verbose: print("=========> impute by mean value of the attribute:")
+            if self._verbose:
+                print("=========> impute by mean value of the attribute:")
 
             data.iloc[:, self._numeric_columns] = data.iloc[:, self._numeric_columns].apply(
                 lambda col: pd.to_numeric(col, errors='coerce'))
@@ -285,12 +287,11 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = base_utils.get_columns_to_use(inputs_metadata,
-                                                                                     use_columns=hyperparams[
-                                                                                         'use_columns'],
-                                                                                     exclude_columns=hyperparams[
-                                                                                         'exclude_columns'],
-                                                                                     can_use_column=can_produce_column)
+        columns_to_produce, columns_not_to_produce = base_utils.get_columns_to_use(
+            inputs_metadata,
+            use_columns=hyperparams['use_columns'],
+            exclude_columns=hyperparams['exclude_columns'],
+            can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
 
     @classmethod
