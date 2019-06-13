@@ -29,6 +29,7 @@ class IR_Params(params.Params):
     iterations_done: typing.Union[typing.Any, None]
     has_finished: typing.Union[typing.Any, None]
     best_imputation: typing.Union[typing.Any, None]
+    numeric_column_indices: typing.Union[typing.Any, None]
 
 
 class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
