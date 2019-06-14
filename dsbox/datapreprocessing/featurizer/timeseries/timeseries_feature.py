@@ -55,7 +55,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     '''
-    classdocs
+    Timeseries collection featurization using random projection.
     '''
 
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -134,7 +134,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
         index_metadata = {"name": "d3mIndex", "structural_type": str, 'semantic_types': ("https://metadata.datadrivendiscovery.org/types/TabularColumn", "https://metadata.datadrivendiscovery.org/types/PrimaryKey")}
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
         # add other metadata
- 
+
         if self.hyperparams["generate_metadata"]:
             if type(output_ndarray[0][0]) is np.float64:
                 metadata_each_column = {"structural_type": float, 'semantic_types': ("http://schema.org/Float", 'https://metadata.datadrivendiscovery.org/types/Attribute'), }
@@ -152,7 +152,7 @@ class RandomProjectionTimeSeriesFeaturization(UnsupervisedLearnerPrimitiveBase[I
             metadata_all_elements = {"dimension": metadata_dimension_columns}
             metadata_all_elements = frozendict.FrozenOrderedDict(metadata_all_elements)
             output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_all_elements, selector=metadata_selector)
-            
+
             # in the case of further more restricted check, also add metadta query of ()
             metadata_selector = ()
             metadata_dimension_rows = {"name":"rows", "semantic_types":("https://metadata.datadrivendiscovery.org/types/TabularRow",), "length":output_ndarray.shape[0]}

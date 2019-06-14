@@ -1,24 +1,18 @@
 import logging
 import importlib
 import numpy as np
-import pandas as pd
-import os
 import sys
 import typing
 import time
-# import cv2
-import wget
-import copy
-import collections
-import random
-import common_primitives.utils as common_utils
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
-from keras.callbacks import History 
-from keras.models import load_model
 from d3m import container
-from keras.engine.sequential import Sequential
+
+# lazy init
+# import keras
+# from keras.engine.sequential import Sequential
+
 from . import config
 
 logger = logging.getLogger(__name__)
@@ -27,34 +21,35 @@ logger = logging.getLogger(__name__)
 Inputs = container.DataFrame
 Outputs = container.DataFrame  # results
 
+
 class LSTMHyperparams(hyperparams.Hyperparams):
     LSTM_units = hyperparams.UniformInt(
-        default = 2048,
-        lower = 1,
-        upper = pow(2,31),
-        description = "Positive integer, dimensionality of the output space of LSTM model",
-        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter",]
+        default=2048,
+        lower=1,
+        upper=pow(2, 31),
+        description="Positive integer, dimensionality of the output space of LSTM model",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     verbose = hyperparams.UniformInt(
-        default = 0,
-        lower = 0,
-        upper = 3,
-        description = "Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch.",
-        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter",]
+        default=0,
+        lower=0,
+        upper=3,
+        description="Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch.",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     batch_size = hyperparams.UniformInt(
-        default = 32,
-        lower = 1,
-        upper = 10000,
-        description = "The batch size for RNN training",
-        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter",]
+        default=32,
+        lower=1,
+        upper=10000,
+        description="The batch size for RNN training",
+        semantic_types=["https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     epochs = hyperparams.UniformInt(
-        default = 1000,
-        lower = 1,
-        upper = sys.maxsize,
-        description = "epochs to do on fit process",
-        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter",]
+        default=1000,
+        lower=1,
+        upper=sys.maxsize,
+        description="epochs to do on fit process",
+        semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter", ]
         )
     shuffle = hyperparams.Hyperparameter[bool](
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
@@ -97,18 +92,19 @@ class LSTMHyperparams(hyperparams.Hyperparams):
         default=0.9,
         description='Momentum used during training (fit), only for optimizer_type sgd.'
     )
+
+
 class Params(params.Params):
     target_column_name: str
     class_name_to_number: typing.Dict[str, int]
-    keras_model: Sequential
+    keras_model: typing.Dict  # keras.engine.Sequential, cannot use because of lazy init
     feature_shape: typing.List[int]
     input_feature_column_name: str
+
 
 class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperparams]):
     """
     video classification primitive that use lstm RNN network
-    Parameters
-    ----------
     """
 
     __author__ = 'USC ISI'
@@ -117,7 +113,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         'version': config.VERSION,
         'name': "DSBox Video Classification LSTM",
         'description': 'Find the corresponding object position from given images(tensors)',
-        'python_path': 'd3m.primitives.feature_extraction.lstm.DSBOX',
+        'python_path': 'd3m.primitives.classification.lstm.DSBOX',
         'primitive_family': "CLASSIFICATION",
         'algorithm_types': ["DEEP_NEURAL_NETWORK"],
         'keywords': ['image', 'featurization', 'lstm'],
@@ -136,7 +132,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
+    def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
 
@@ -144,7 +140,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._has_finished = False
         self._iterations_done = 0
         self._inited = False
-        self._model = None # this used to store the real of the model
+        self._model = None  # this used to store the real of the model
         self._training_inputs = None
         self._training_outputs = None
         self._epochs = self.hyperparams['epochs']
@@ -165,16 +161,16 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     def get_params(self) -> Params:
         param = Params(
-                        keras_model = self._model,
-                        class_name_to_number = self._class_name_to_number,
-                        target_column_name = self._target_column_name,
-                        feature_shape = self._feature_shape,
-                        input_feature_column_name = self._input_feature_column_name
-                      )
+            keras_model={'model': self._model},
+            class_name_to_number=self._class_name_to_number,
+            target_column_name=self._target_column_name,
+            feature_shape=self._feature_shape,
+            input_feature_column_name=self._input_feature_column_name
+        )
         return param
 
     def set_params(self, *, params: Params) -> None:
-        self._model = params["keras_model"]
+        self._model = params["keras_model"]["model"]
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
@@ -184,17 +180,17 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         self._training_inputs = inputs
         self._training_outputs = outputs
-        
+
         if self._training_inputs.shape[0] < self._training_outputs.shape[0]:
             if 'd3mIndex' in self._training_inputs.columns:
                 inputs_index_with_contents = self._training_inputs['d3mIndex'].astype(int).tolist()
             else:
                 logger.warn("No d3mIndex found in input training dataset!")
                 inputs_index_with_contents = list(range(self._training_inputs.shape[0]))
-            self._training_outputs = self._training_outputs.iloc[inputs_index_with_contents,:]
+            self._training_outputs = self._training_outputs.iloc[inputs_index_with_contents, :]
         elif self._training_inputs.shape[0] > self._training_outputs.shape[0]:
             raise ValueError("The length of inputs is larger than outputs which is impossible.")
-            
+
         # TODO: maybe use a better way to find the feature input columns
         input_column_names = []
         for each_column in self._training_inputs.columns:
@@ -260,22 +256,22 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         number_of_training_data = int( (1 - self._validate_data_percent) * self._training_size)
         logger.info(str(number_of_training_data) + " of the " + str(self._training_size) + " input data will be used to trained. The remainede will be used for validation.")
         training_idx, test_idx = indices[:number_of_training_data], indices[number_of_training_data:]
-        training_x, test_x = self._training_inputs_ndarry[training_idx,:], self._training_inputs_ndarry[test_idx,:]
-        training_y, test_y = self._training_ouputs_ndarry[training_idx,:], self._training_ouputs_ndarry[test_idx,:]
-        
+        training_x, test_x = self._training_inputs_ndarry[training_idx, :], self._training_inputs_ndarry[test_idx, :]
+        training_y, test_y = self._training_ouputs_ndarry[training_idx, :], self._training_ouputs_ndarry[test_idx, :]
+
         # repeat fit until interation down or epoch_loss less than threshold
         while time.time() < start + timeout and self._iterations_done < iterations:
             logger.info("Start fit on iteration " +str(self._iterations_done))
 
-            result = self._model.fit(training_x, training_y, 
-            # result = self._model.fit(self._training_inputs_ndarry, self._training_ouputs_ndarry, 
-                batch_size=self._batch_size,
-                # validation_split = self._validate_data_percent,
-                verbose=self._verbose_mode,
-                validation_data=(test_x, test_y),
-                shuffle = self._shuffle,
-                initial_epoch = self._iterations_done,
-                epochs=1+self._iterations_done)
+            result = self._model.fit(training_x, training_y,
+                                     # result = self._model.fit(self._training_inputs_ndarry, self._training_ouputs_ndarry,
+                                     batch_size=self._batch_size,
+                                     # validation_split = self._validate_data_percent,
+                                     verbose=self._verbose_mode,
+                                     validation_data=(test_x, test_y),
+                                     shuffle=self._shuffle,
+                                     initial_epoch=self._iterations_done,
+                                     epochs=1+self._iterations_done)
             # result available for these values
                 # train_loss = result.history['loss']
                 # test_loss   = result.history['val_loss']
@@ -287,13 +283,13 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
                 self._has_finished = True
                 logger.info("The model is well fitted during "+str(self._iterations_done)+"interation. No more needed.")
                 return CallResult(None)
-        
+
         logger.info("The model fitting finished with"+str(self._iterations_done)+"interation." )
         logger.info("The final result is:")
-        logger.info("train_loss      = " +str(result.history['loss']))
-        logger.info("train_acc       = " +str(result.history['acc']))
-        logger.info("validation_loss = " +str(result.history['val_loss']))
-        logger.info("validation_acc  = " +str(result.history['val_acc']))
+        logger.info("train_loss      = " + str(result.history['loss']))
+        logger.info("train_acc       = " + str(result.history['acc']))
+        logger.info("validation_loss = " + str(result.history['val_loss']))
+        logger.info("validation_acc  = " + str(result.history['val_acc']))
         return CallResult(None)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -331,8 +327,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._iterations_done = True
         return CallResult(output_dataframe, self._has_finished, self._iterations_done)
 
-
-    def _lazy_init_lstm(self) -> "keras.models":
+    def _lazy_init_lstm(self):  # -> "keras.models"
         """
             a lazy init function which initialize the LSTM model only when the primitive's fit/ produce method is called
         """
@@ -343,22 +338,22 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         model = keras_models.Sequential()
         # TODO: following parameters could also be hyperparameters for tuning
         model.add(keras_recurrent.LSTM(self._LSTM_units, return_sequences=False,
-                       input_shape=self._feature_shape,
-                       dropout=self._dropout_rate))
+                                       input_shape=self._feature_shape,
+                                       dropout=self._dropout_rate))
         model.add(keras_layers.Dense(512, activation='relu'))
         model.add(keras_layers.Dropout(self._dropout_rate))
         model.add(keras_layers.Dense(self._number_of_classes, activation='softmax'))
         self._metrics = ['accuracy']
         if self._number_of_classes >= 10:
             self._metrics.append('top_k_categorical_accuracy')
-        # Now compile the network
+            # Now compile the network
         if self._optimizer_type == 'adam':
             optimizer = keras_optimizers.Adam(lr=self._learning_rate, decay=self._weight_decay)
         elif self._optimizer_type == 'sgd':
-            optimizer = keras_optimizers.SGD(lr=self._learning_rate, decay=self._weight_decay, mementum = self._momentum)
+            optimizer = keras_optimizers.SGD(lr=self._learning_rate, decay=self._weight_decay, mementum=self._momentum)
         else:
             raise ValueError('Unsupported optimizer_type: {}. Available options: adam, sgd'.format(self._optimizer_type))
-        
+
         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=self._metrics)
         return model
 '''

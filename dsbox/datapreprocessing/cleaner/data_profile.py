@@ -2,16 +2,16 @@ import json
 
 from collections import defaultdict
 
-import d3m.metadata.base as mbase
-import numpy as np
-import pandas as pd
-import pytypes
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import pytypes  # type: ignore
 import logging
 import traceback
 
 from d3m import container, types
 from d3m.metadata import hyperparams
 from d3m.metadata.base import DataMetadata, PrimitiveFamily, PrimitiveAlgorithmType, Selector, ALL_ELEMENTS
+import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 
@@ -78,34 +78,13 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
     """
-    data profiler moduel. Now only supports csv data.
-
-    Parameters:
-    ----------
-    _punctuation_outlier_weight: a integer
-        the coefficient used in outlier detection for punctuation. default is 3
-
-    _numerical_outlier_weight
-
-    _token_delimiter: a string
-        delimiter that used to seperate tokens, default is blank space " ".
-
-    _detect_language: boolean
-        true: do detect language; false: not detect language
-
-    _topk: a integer
-
-    _verbose: boolean
-        control the _verbose
-
-    Attributes:
-    ----------
+    Generate a profile of the given dataset. The profiler is capable of detecting if column values consists of compound
+    values, date values, phone number values, alphanumeric token values and categorical values.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'b2612849-39e4-33ce-bfda-24f3e2cb1e93',
         'version': config.VERSION,
         'name': "DSBox Profiler",
-        'description': 'Generate profiles of datasets',
         'python_path': 'd3m.primitives.schema_discovery.profiler.DSBOX',
         'primitive_family': PrimitiveFamily.SCHEMA_DISCOVERY,
         'algorithm_types': [
@@ -138,7 +117,7 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         self._topk = 10
         self._verbose = VERBOSE
         self._sample_df = None
-        self._DateFeaturizer = None
+        self._DateFeaturizer: DateFeaturizerOrg = None
         # list of specified features to compute
         self._specified_features = hyperparams["metafeatures"] if hyperparams else default_metafeatures
 
@@ -184,8 +163,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         self._DateFeaturizer = DateFeaturizerOrg(inputs)
         try:
             cols = self._DateFeaturizer.detect_date_columns(self._sample_df)
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Detect date failed", exec_info=True)
             cols = list()
         if cols:
             indices = [inputs.columns.get_loc(c) for c in cols if c in inputs.columns]
@@ -223,8 +202,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
 
         try:
             PhoneParser_indices = PhoneParser.detect(df=self._sample_df)
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Phone parser failed", exc_info=True)
             PhoneParser_indices = dict()
         if PhoneParser_indices.get("columns_to_perform"):
             for i in PhoneParser_indices["columns_to_perform"]:
@@ -257,8 +236,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         try:
             PunctuationSplitter_indices = PunctuationParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'])
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Punctuation parser failed", exc_info=True)
             PunctuationSplitter_indices = dict()
         if PunctuationSplitter_indices.get("columns_to_perform"):
             for i in PunctuationSplitter_indices["columns_to_perform"]:
@@ -290,8 +269,8 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         try:
             NumAlphaSplitter_indices = NumAlphaParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'], )
-        except Exception as e:
-            _logger.error(traceback.print_exc(e))
+        except Exception:
+            _logger.error("Num alpha parser failed", exc_info=True)
             NumAlphaSplitter_indices = dict()
 
         if NumAlphaSplitter_indices.get("columns_to_perform"):

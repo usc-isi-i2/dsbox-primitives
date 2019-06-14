@@ -1,13 +1,7 @@
-import os
 import numpy as np  # type: ignore
-import pandas as pd  # type: ignore
-import stopit
-import math
 import typing
 import logging
 import importlib
-import shutil
-from typing import Any, Callable, List, Dict, Union, Optional
 
 
 # from pyramid.arima import ARIMA, auto_arima
@@ -21,14 +15,11 @@ import sklearn.preprocessing
 
 
 from d3m.container.list import List
-from d3m.container.numpy import ndarray as d3m_ndarray
 from d3m.container import DataFrame as d3m_dataframe
 from d3m.metadata import hyperparams, params, base as metadata_base
-from d3m import utils
-from d3m.primitive_interfaces.base import CallResult, DockerContainer, MultiCallResult
-import common_primitives.utils as common_utils
+from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-from d3m.primitive_interfaces.base import ProbabilisticCompositionalityMixin
+from d3m.metadata.base import ALL_ELEMENTS
 
 Inputs = d3m_dataframe
 Outputs = d3m_dataframe
@@ -157,7 +148,9 @@ class RNNHyperparams(hyperparams.Hyperparams):
 
 
 class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, RNNHyperparams]):
-
+    """
+    Timeseries forcasting primitive using recurrent neural network built on tensorflow. Based on code from ISI's SAGE project.
+    """
     __author__ = "USC ISI"
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "c8d9e1b8-09f0-4b6a-b917-bfbc23f9d90b",
@@ -180,7 +173,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
     def __init__(self, *,
                  hyperparams: RNNHyperparams,
                  random_seed: int = 0,
-                 docker_containers: Dict[str, DockerContainer] = None,
+                 docker_containers: typing.Dict[str, DockerContainer] = None,
                  _verbose: int = 0) -> None:
 
         super().__init__(hyperparams=hyperparams, random_seed=random_seed,
@@ -221,7 +214,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 self.hyperparams["n_batch"], dtype=tf.float32)
 
             states_series, current_state = tf.nn.dynamic_rnn(self.cell, inputs_series, initial_state=self.cell_state,
-                                                            parallel_iterations=1)
+                                                             parallel_iterations=1)
 
             prediction = tf.matmul(
                 tf.tanh(tf.matmul(tf.squeeze(states_series), W1) + b1), W2) + b2
@@ -240,13 +233,6 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 prediction, (self.n_train - self.n_predict_step, 1), (self.n_valid, 1))
             pred_upper_valid = tf.slice(
                 prediction, (self.n_train - self.n_predict_step, 2), (self.n_valid, 1))
-
-            self.pred_point_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 0), (self.n_predict_step, 1))
-            self.pred_lower_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 1), (self.n_predict_step, 1))
-            self.pred_upper_test = tf.slice(
-                prediction, (self.n_total - self.n_predict_step, 2), (self.n_predict_step, 1))
 
             pred_point_total = tf.slice(
                 prediction, (0, 0), (self.n_total - self.n_valid, 1))
@@ -371,7 +357,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                             n_total=self.n_total,
                             n_train=self.n_train,
                             n_valid=self.n_valid,
-                            n_predict_step=self.n_predict_step        
+                            n_predict_step=self.n_predict_step
                         )
 
         # return RNNParams("./rnn_model.ckpt")
@@ -393,7 +379,7 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
         ########################################################
         # self._lazy_init()
         if len(inputs) == 0:
-            _logging.info(
+            _logger.info(
                 "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
             return
 
@@ -403,10 +389,10 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
             self._index = outputs['d3mIndex']
             self._training_inputs = outputs.drop(columns=['d3mIndex'])# Arima takes shape(n,) as inputs, only target casting is applied
         else:
+            self._index = inputs['d3mIndex']
             self._training_inputs = outputs
         data = self._training_inputs.values
-        data_scaled = self.scaler.fit_transform(
-            data.reshape(-1, 1))
+        data_scaled = self.scaler.fit_transform(data.reshape(-1, 1))
         self._target_name = outputs.columns[-1]
 
         self.x = data_scaled.reshape(-1, 1)
@@ -429,8 +415,17 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         if not self._fitted:
-            _logger.info("Plz fit!")
+            _logger.info("Please run fit() first!")
             return CallResult(None, self._has_finished, self._iterations_done)
+
+        self.n_predict_step = inputs.shape[0]
+        self.pred_point_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 0), (self.n_predict_step, 1))
+        self.pred_lower_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 1), (self.n_predict_step, 1))
+        self.pred_upper_test = tf.slice(
+            self.prediction_method, (self.n_total - self.n_predict_step, 2), (self.n_predict_step, 1))
+
         with tf.Session(config=self.tf_config) as sess:
             sess.run(tf.global_variables_initializer())
             self._load_weights(sess)
@@ -452,27 +447,22 @@ class RNNTimeSeries(SupervisedLearnerPrimitiveBase[Inputs, Outputs, RNNParams, R
                 pred_test, np.maximum(pred_test_upper, pred_test_lower))
 
             _logger.info(pred_test.tolist())
-        if self._index is not None:
-        #     output = d3m_dataframe({'d3mIndex': self._index[:len(pred_test)], self._target_name: pred_test.ravel()})
-            res = []
-            length = len(self._index)
-            times = length // len(pred_test)
-            remain = length % len(pred_test)
-            for i in range(times):
-                res+=pred_test.ravel().tolist()
-            res += pred_test[:remain].ravel().tolist()
-            output = d3m_dataframe({'d3mIndex': self._index, self._target_name: res})
+
+        res=pred_test.ravel().tolist()
+        output = d3m_dataframe({'d3mIndex': inputs['d3mIndex'], self._target_name: res})
         output.metadata = inputs.metadata.clear(
             source=self, for_value=output, generate_metadata=True)
-        output.metadata = self._add_target_semantic_types(
-            metadata=output.metadata, target_names=self._target_name, source=self)
+        meta_d3mIndex = {"name": "d3mIndex", "structural_type":int, "semantic_types":["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/PrimaryKey"]}
+        meta_target = {"name": self._target_name, "structural_type":float, "semantic_types":["https://metadata.datadrivendiscovery.org/types/Target", "https://metadata.datadrivendiscovery.org/types/PredictedTarget"]}
+        output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 0), metadata=meta_d3mIndex)
+        output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 1), metadata=meta_target)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
-    
+
     @classmethod
     def _add_target_semantic_types(cls, metadata: metadata_base.DataMetadata,
-                                   source: typing.Any,  target_names: List = None,) -> metadata_base.DataMetadata:
+                                   source: typing.Any,  target_names: typing.List = None,) -> metadata_base.DataMetadata:
         for column_index in range(metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']):
             metadata = metadata.add_semantic_type((metadata_base.ALL_ELEMENTS, column_index),
                                                   'https://metadata.datadrivendiscovery.org/types/Target',

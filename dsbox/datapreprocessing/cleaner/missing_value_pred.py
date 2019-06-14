@@ -1,6 +1,7 @@
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
 
+
 def popular_value(array):
     """
     array: 1D array
@@ -19,6 +20,7 @@ def popular_value(array):
             popular = key
 
     return popular
+
 
 def myImputer(data, value="zero", verbose=False):
     """
@@ -73,8 +75,8 @@ def imputeData(data, missing_col_id, imputation_strategies, verbose=False):
         col_id = missing_col_id[i]
         data_clean[:,col_id] = myImputer(data[:,col_id], strategy)
 
-
     return data_clean
+
 
 def bayeImpute(data, target_col, verbose=False):
     '''
@@ -114,12 +116,12 @@ def bayeImpute(data, target_col, verbose=False):
     # special case in predict:
     # if the model goes wrong: predicts nan value. using mean method instead
     if (pd.isnull(result).sum() > 0):
-        if verbose: print ("Warning: model gets nan value, using mean instead")
+        if verbose: print("Warning: model gets nan value, using mean instead")
         model = "mean"
-        original_data[:,target_col] = myImputer(original_data[:,target_col], model)
+        original_data[:, target_col] = myImputer(original_data[:, target_col], model)
         return original_data, model
 
-    original_data[mv_mask, target_col] = result #put the imputation result back to original data, following the index
+    original_data[mv_mask, target_col] = result  # put the imputation result back to original data, following the index
 
     # print("coefficient: {}".format(model.coef_))
     return original_data, model
@@ -147,15 +149,16 @@ def transform(data, target_col, model, verbose=False):
 
     # special case in predict:
     # if the model goes wrong: predicts nan value. using mean method instead
-    if (model=='mean' or pd.isnull(result).sum() > 0):
-        if verbose: print ("Warning: model gets nan value, using mean instead")
+    if (model == 'mean' or pd.isnull(result).sum() > 0):
+        if verbose: print("Warning: model gets nan value, using mean instead")
         model = "mean"
         original_data[:,target_col] = myImputer(original_data[:,target_col], model)
         return original_data
-    original_data[mv_mask, target_col] = result #put the imputation result back to original data, following the index
+    original_data[mv_mask, target_col] = result  # put the imputation result back to original data, following the index
 
     # print("coefficient: {}".format(model.coef_))
     return original_data
+
 
 def df2np(data, missing_col_id=[], verbose=False):
     """

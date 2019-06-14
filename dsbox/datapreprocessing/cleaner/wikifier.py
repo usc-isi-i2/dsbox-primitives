@@ -101,7 +101,7 @@ class Wikifier(TransformerPrimitiveBase[Inputs, Outputs, WikifierHyperparams]):
             if 'http://schema.org/Integer' in each_column_semantic_type or 'http://schema.org/Float' in each_column_semantic_type:
                 temp.remove(each)
         self._target_columns = temp
-        print(self._target_columns)
+        _logger.info(self._target_columns)
 
         _logger.info("final target columns are:" + str(temp))
         result = self._produce_for_d3m_dataset()

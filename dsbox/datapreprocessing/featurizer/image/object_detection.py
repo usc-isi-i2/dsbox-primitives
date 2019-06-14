@@ -34,7 +34,7 @@ class YoloHyperparams(hyperparams.Hyperparams):
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
     # target_object_names = hyperparams.Set(
-    #     elements = 
+    #     elements =
     #     )
     blob_scale_factor = hyperparams.Uniform(
         default=0.00392,
@@ -57,7 +57,7 @@ class YoloHyperparams(hyperparams.Hyperparams):
         description=" spatial size for output image (y-dimension) in blob",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
         )
-    # scalar with mean values which are subtracted from channels. 
+    # scalar with mean values which are subtracted from channels.
     # Values are intended to be in (mean-R, mean-G, mean-B) order if image has BGR ordering and swapRB is true.
     blob_mean_R = hyperparams.Uniform(
         default=0,
@@ -117,10 +117,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     target_class_id: The id of the object detection targets
     output_layer: The list of the output layer number from YOLO's DNN
     """
-    # _weight_files = [{'type': 'FILE',
-                      # 'key': 'yolov3.weights',
-                      # 'file_uri': "https://pjreddie.com/media/files/yolov3.weights",
-                      # 'file_digest': "523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297"}]
+    _weight_files = [{'type': 'FILE',
+                      'key': 'yolov3.weights',
+                      'file_uri': "https://pjreddie.com/media/files/yolov3.weights",
+                      'file_digest': "523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297"}]
 
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
@@ -138,7 +138,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             'uris': [config.REPOSITORY]
             },
         # The same path the primitive is registered with entry points in setup.py.
-        'installation': [config.INSTALLATION],# + _weight_files,
+        'installation': [config.INSTALLATION] + _weight_files,
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -150,8 +150,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     def __init__(self, *, hyperparams: YoloHyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-        import pdb
-        pdb.set_trace()
         # All other attributes must be private with leading underscore
         self._fitted = False
         self._has_finished = False
@@ -165,7 +163,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self._target_class_id: typing.List[int] = []
         self._location_base_uris = ""
         self._output_layer: typing.List[str] = []
-        
+
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         """
             If using the pre-training model, here we will use this model to detect what inside the bounding boxes from
@@ -205,7 +203,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.debug("processing", each_image_name, "on", ground_truth_box)
             # update 2019.5.9: cut the image into the bounding box area only
             each_image = self._cut_image(each_image, ground_truth_box)
-            # Creates 4-dimensional blob from image. 
+            # Creates 4-dimensional blob from image.
             # swapRB has to be True, otherwise the channel is not R,G,B style
             blob = cv2.dnn.blobFromImage(each_image, scale, (blob_x, blob_y), (mean_R, mean_G, mean_B), True, crop=crop)
             # set input blob for the network
@@ -218,7 +216,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             boxes = []
             width = each_image.shape[1]
             height = each_image.shape[0]
-            # for each detection from each output layer 
+            # for each detection from each output layer
             # get the confidence, class id, bounding box params
             # and ignore weak detections
             for out in outs:
@@ -329,7 +327,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 logger.error("loading image from " + image_path + " failed!")
                 continue
             logger.debug("Now detecting objects in", each_image_name)
-            # Creates 4-dimensional blob from image. 
+            # Creates 4-dimensional blob from image.
             # swapRB has to be True, otherwise the channel is not R,G,B style
             blob = cv2.dnn.blobFromImage(each_image, scale, (blob_x, blob_y), (mean_R, mean_G, mean_B), True, crop=crop)
             # set input blob for the network
@@ -344,7 +342,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             boxes = []
             width = each_image.shape[1]
             height = each_image.shape[0]
-            # for each detetion from each output layer 
+            # for each detetion from each output layer
             # get the confidence, class id, bounding box params
             # and ignore weak detections
             for out in outs:
@@ -381,7 +379,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     h = int(box[3])
                     box_result = [str(x), str(y), str(x), str(y+h), str(x+w), str(y+h), str(x+w), str(y)]
                     box_result = ",".join(box_result) # remove "[" and "]"
-                    # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h) 
+                    # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
                     output_dataFrame = output_dataFrame.append({"d3mIndex":dict_image_name_to_d3mIndex[each_image_name], self._target_column_name: box_result, "confidence":confidences[i]}, ignore_index=True)
                     # if need to check the bound boxes's output, draw the bounding boxes on the output image
                     if self.hyperparams['output_to_tmp_dir']:
@@ -409,7 +407,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
     def _load_object_names(self) -> None:
         """
-            Inner function used to load default detected object class names with default weight model
+            Inner function used to load default detected object class names with default ight model
         """
         from .yolov3_default_classes import detected_object_names
         self._object_names = detected_object_names.name_list
@@ -420,47 +418,21 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
         if self._inited:
             return
-        import pdb
-        pdb.set_trace()
         if self.hyperparams['use_fitted_weight']:
             logger.info("Getting weights file and config file from static volumes ...")
-            if "yolov3_weights" in self.volumes:
-                # if we found weights in volumes, use that directly
-                logger.info("Weights file found in static volumes")
-                self._weight_file_dir = self.volumes["yolov3_weights"]
-            else:
-                raise ValueError("Can't get weights file!")
-                # logger.info("Weights file not found, will start downloading ...")
-                # # otherwise download the weights file
-                # download_loc = os.environ['D3MSTATICDIR']
-                # file_name = os.path.join(download_loc,"yolov3.weights")
-                # if not os.path.exists(file_name):
-                #     url = "https://pjreddie.com/media/files/yolov3.weights"
-                #     wget.download(url, download_loc)
-                # self.volumes['yolov3_weights'] = file_name
-                # logger.info("Weights file download finished ...")
 
-            if "yolov3_config" in self.volumes:
-                # if we found weights in volumes, use that directly
-                self._weight_file_dir = self.volumes["yolov3_config"]
-                logger.info("Config file found in static volumes")
-            else:
-                logger.info("Config file not found, will use default one from model")
-                config_file_loc = os.path.join(download_loc, "yolov3.cfg")
-                if not os.path.exists(config_file_loc):
-                    import dsbox.datapreprocessing.featurizer.image.object_detection
-                    config_file_loc_local = os.path.dirname(dsbox.datapreprocessing.featurizer.image.object_detection.__file__)
-                    config_file_loc_local = os.path.join(config_file_loc_local, "yolov3.cfg")
-                    shutil.copy(config_file_loc_local, download_loc)
-                self.volumes["yolov3_config"] = config_file_loc
-            self._model = cv2.dnn.readNet(self.volumes['yolov3_weights'], self.volumes['yolov3_config'])
+            if "yolov3.weights" not in self.volumes:
+                raise ValueError("Can't get weights file!")
+
+            yolov3_cfg_file = os.path.join(os.path.dirname(__file__), 'yolov3.cfg')
+            self._model = cv2.dnn.readNet(self.volumes['yolov3.weights'], yolov3_cfg_file)
             self._load_object_names()
             logger.info("Model initialize finished.")
 
         else:
             logger.info("Using customized model...")
             logger.info("This function not finished yet.")
-            # self._model = 
+            # self._model =
 
         self._inited = True
 

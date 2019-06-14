@@ -1,17 +1,16 @@
 import logging
-from typing import NamedTuple, Dict, List, Set, Union
+import typing
 
-import d3m
-import frozendict
-import d3m.metadata.base as mbase
-import numpy as np
-import pandas as pd
-from common_primitives import utils
-from d3m.container import DataFrame as d3m_DataFrame
-from d3m.metadata import hyperparams as metadata_hyperparams
+import frozendict  # type: ignore
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+
+from d3m import container
+from d3m.base import utils
 from d3m.metadata import hyperparams, params
+import d3m.metadata.base as mbase
 from d3m.metadata.base import DataMetadata
-from d3m.metadata.hyperparams import Enumeration, UniformInt, UniformBool
+from d3m.metadata.hyperparams import UniformInt
 from d3m.primitive_interfaces.base import CallResult
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 
@@ -19,18 +18,18 @@ from . import config
 
 _logger = logging.getLogger(__name__)
 
-Input = d3m.container.DataFrame
-Output = d3m.container.DataFrame
+Input = container.DataFrame
+Output = container.DataFrame
 
 
 class EncParams(params.Params):
-    mapping: Dict
-    cat_columns: List[str]
-    empty_columns: List[int]
+    mapping: typing.Dict
+    cat_columns: typing.List[str]
+    empty_columns: typing.List[int]
 
 
 class EncHyperparameter(hyperparams.Hyperparams):
-    n_limit = UniformInt(lower=5, upper=100, default=12,
+    n_limit = UniformInt(lower=0, upper=100, default=12,
                          description='Limits the maximum number of columns generated from a single categorical column',
                          semantic_types=['http://schema.org/Integer',
                                          'https://metadata.datadrivendiscovery.org/types/TuningParameter'])
@@ -66,13 +65,9 @@ class EncHyperparameter(hyperparams.Hyperparams):
 
 class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHyperparameter]):
     """
-    An one-hot encoder, which
-    1. n_limit: max number of distinct values to one-hot encode,
-         remaining values with fewer occurence are put in [colname]_other_ column.
-
-    2. feed in data by set_training_data, then apply fit() function to tune the encoder.
-
-    3. produce(): input data would be encoded and return.
+    A robust one-hot encoder. Missing values are encoded as an additional column. Use hyperparamter n_limit to limit the
+    maximum number of column generated. If n_limit>0, then only the top n_limit most frequent values are encoded into
+    columns. the rest of the values are encoded into a single column."
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "18f0bb42-6350-3753-8f2d-d1c3da70f279",
@@ -98,13 +93,13 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
 
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
-        self._mapping: Dict = {}
+        self._mapping: typing.Dict = {}
         self._input_data: Input = None
-        self._input_data_copy = None
-        self._fitted = False
-        self._cat_columns = []
-        self._col_index = None
-        self._empty_columns = []
+        self._input_data_copy: Input = None
+        self._fitted: bool = False
+        self._cat_columns: typing.List[str] = []
+        # self._col_index = None
+        self._empty_columns: typing.List[str] = []
 
     def set_training_data(self, *, inputs: Input) -> None:
         self._input_data = inputs
@@ -123,7 +118,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
 
         if self._fitted:
-            return
+            return CallResult(None)
 
         if self._input_data is None:
             raise ValueError('Missing training(fitting) data.')
@@ -156,7 +151,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
 
         _logger.debug('Removing entirely empty columns: {}'.format(data.columns[self._empty_columns]))
 
-        data = d3m_DataFrame.remove_columns(data, self._empty_columns)
+        data = container.DataFrame.remove_columns(data, self._empty_columns)
 
         categorical_attributes = DataMetadata.list_columns_with_semantic_types(data.metadata,
                                                                         semantic_types=[
@@ -192,7 +187,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
 
         # Remove columns with all empty values
         _logger.debug('Removing entirely empty columns: {}'.format(self._input_data_copy.columns[self._empty_columns]))
-        self._input_data_copy = d3m_DataFrame.remove_columns(self._input_data_copy, self._empty_columns)
+        self._input_data_copy = container.DataFrame.remove_columns(self._input_data_copy, self._empty_columns)
 
         # Return if there is nothing to encode
         if len(self._cat_columns) == 0:
@@ -230,7 +225,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
 
         all_categorical = False
         try:
-            self._input_data_copy = d3m_DataFrame.remove_columns(self._input_data_copy, drop_indices)
+            self._input_data_copy = container.DataFrame.remove_columns(self._input_data_copy, drop_indices)
         except ValueError:
             _logger.warning("[warn] All the attributes are categorical!")
             all_categorical = True
@@ -240,29 +235,29 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         # data_rest.metadata = utils.select_columns_metadata(self._input_data_copy.metadata, self._col_index)
 
         # encode data
-        # encoded = d3m_DataFrame(pd.get_dummies(data_encode, dummy_na=True, prefix=self._cat_columns, prefix_sep='_',
+        # encoded = container.DataFrame(pd.get_dummies(data_encode, dummy_na=True, prefix=self._cat_columns, prefix_sep='_',
         #                                        columns=self._cat_columns))
-        encoded = d3m_DataFrame(pd.concat(res, axis=1))
+        encoded_df = container.DataFrame(pd.concat(res, axis=1))
 
         # update metadata for existing columns
-        for index in range(len(encoded.columns)):
-            old_metadata = dict(encoded.metadata.query((mbase.ALL_ELEMENTS, index)))
+        for index in range(len(encoded_df.columns)):
+            old_metadata = dict(encoded_df.metadata.query((mbase.ALL_ELEMENTS, index)))
             old_metadata["structural_type"] = int
             old_metadata["semantic_types"] = (
                 'http://schema.org/Integer', 'https://metadata.datadrivendiscovery.org/types/Attribute')
-            encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS, index), old_metadata)
+            encoded_df.metadata = encoded_df.metadata.update((mbase.ALL_ELEMENTS, index), old_metadata)
         # update dimensional information
-        encoded.metadata = encoded.metadata.update((), self._input_data_copy.metadata.query(()))
-        columns_query =dict(self._input_data_copy.metadata.query((mbase.ALL_ELEMENTS,)))
+        encoded_df.metadata = encoded_df.metadata.update((), self._input_data_copy.metadata.query(()))
+        columns_query = dict(self._input_data_copy.metadata.query((mbase.ALL_ELEMENTS,)))
         new_dimension_data = dict(columns_query['dimension'])
-        new_dimension_data['length'] = encoded.shape[1]
+        new_dimension_data['length'] = encoded_df.shape[1]
         columns_query['dimension'] = frozendict.FrozenOrderedDict(new_dimension_data)
-        encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS,), frozendict.FrozenOrderedDict(columns_query))
+        encoded_df.metadata = encoded_df.metadata.update((mbase.ALL_ELEMENTS,), frozendict.FrozenOrderedDict(columns_query))
         # merge/concat both the dataframes
         if not all_categorical:
-            output = d3m_DataFrame.horizontal_concat(self._input_data_copy, encoded, use_right_metadata=True)
+            output = container.DataFrame.horizontal_concat(self._input_data_copy, encoded_df, use_right_metadata=True)
         else:
-            output = encoded
+            output = encoded_df
         return CallResult(output, True, 1)
 
     def get_params(self) -> EncParams:
@@ -289,12 +284,10 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                                     use_columns=hyperparams[
-                                                                                         'use_columns'],
-                                                                                     exclude_columns=hyperparams[
-                                                                                         'exclude_columns'],
-                                                                                     can_use_column=can_produce_column)
+        columns_to_produce, columns_not_to_produce = utils.get_columns_to_use(
+            inputs_metadata, use_columns=hyperparams['use_columns'],
+            exclude_columns=hyperparams['exclude_columns'],
+            can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
 
     @classmethod

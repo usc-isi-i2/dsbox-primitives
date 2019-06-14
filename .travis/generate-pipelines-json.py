@@ -1,11 +1,11 @@
 import json
 import os
-import importlib
 import subprocess
 import pandas as pd
 import shutil
-from template import DATASET_MAPPER, simple_config
-from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate # import testing template
+
+from template import DATASET_MAPPER
+from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate, VotingTemplate  # import testing template
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
 
 TEMPLATE_LIST = []
@@ -13,7 +13,9 @@ TEMPLATE_LIST = []
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
+TEMPLATE_LIST.append(VotingTemplate())
 # ends
+
 
 def get_meta_json(dataset_name):
     # generate the meta file for pipelines
@@ -30,8 +32,9 @@ def get_meta_json(dataset_name):
                 "test_inputs": [dataset_name + "_dataset_TEST"],
                 "score_inputs": [dataset_name + "_dataset_SCORE"]
             }
-    
+
     return meta_json
+
 
 def get_primitive_hitted(config):
     """
@@ -45,7 +48,8 @@ def get_primitive_hitted(config):
             primitive_hitted.append(temp)
     return primitive_hitted
 
-def generate_pipeline(template, config:dict, meta_json):
+
+def generate_pipeline(template, config: dict, meta_json):
     """
         Generate sample pipelines and corresponding meta
     """
@@ -63,18 +67,17 @@ def generate_pipeline(template, config:dict, meta_json):
             print("Generating at " + outdir +  "/" + pipeline_json['id'] + "...")
             file_name = os.path.join(outdir, pipeline_json['id']+".json")
             meta_name = os.path.join(outdir, pipeline_json['id']+".meta")
-            with open(file_name,"w") as f:
-                json.dump(pipeline_json,f,separators=(',', ':'),indent=4)
-            with open(meta_name,"w") as f:
-                json.dump(meta_json,f,separators=(',', ':'),indent=4)
+            with open(file_name, "w") as f:
+                json.dump(pipeline_json, f, separators=(',', ':'),indent=4)
+            with open(meta_name, "w") as f:
+                json.dump(meta_json, f, separators=(',', ':'),indent=4)
             print("succeeded!")
-        except:
+        except Exception:
             failed.append(file_name)
             print("!!!!!!!")
             print("failed!")
             print("!!!!!!!")
     return failed
-
 
 
 def remove_temp_files():
@@ -83,18 +86,19 @@ def remove_temp_files():
         file_path = os.path.join("tmp", each_file)
         os.remove(file_path)
 
+
 def test_pipeline(each_template, config, test_dataset_id):
     try:
         pipeline = each_template.to_pipeline(config)
         pipeline_json = pipeline.to_json_structure()
         os.makedirs("tmp", exist_ok=True)
         temp_pipeline = os.path.join("tmp/test_pipeline.json")
-        with open(temp_pipeline,"w") as f:
-            json.dump(pipeline_json,f)
-        d3m_runtime_command = "python -m d3m.runtime -d dsbox-unit-test-datasets fit-produce -p tmp/test_pipeline.json -r dsbox-unit-test-datasets/" + \
+        with open(temp_pipeline, "w") as f:
+            json.dump(pipeline_json, f)
+        d3m_runtime_command = "python -m d3m runtime -d dsbox-unit-test-datasets fit-produce -p tmp/test_pipeline.json -r dsbox-unit-test-datasets/" + \
                               test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json -i dsbox-unit-test-datasets/" + \
                               test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json -t dsbox-unit-test-datasets/" + \
-                              test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json -o tmp/produced_output.csv" 
+                              test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json -o tmp/produced_output.csv"
 
 
         p = subprocess.Popen(d3m_runtime_command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
@@ -102,7 +106,7 @@ def test_pipeline(each_template, config, test_dataset_id):
         try:
             # load prediction file
             predictions = pd.read_csv("tmp/produced_output.csv")
-        except:
+        except Exception:
             print("predictions file load failed, please check the pipeline.")
             return False
 
@@ -130,15 +134,16 @@ def test_pipeline(each_template, config, test_dataset_id):
             return False
 
         return True
-    except:
+    except Exception:
         raise ValueError("Running train-test with config" + each_template +"failed!")
         return False
+
 
 def main():
     # clean up the old output files if necessary
     try:
         shutil.rmtree("output")
-    except:
+    except Exception:
         pass
 
     # config_list = os.listdir("pipeline_configs")
@@ -151,6 +156,7 @@ def main():
         result = test_pipeline(each_template,
                                config,
                                datasetID)
+
         remove_temp_files()
         # only generate the pipelines with it pass the test
         if result:
@@ -171,4 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

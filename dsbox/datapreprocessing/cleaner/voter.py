@@ -1,6 +1,5 @@
 import d3m.container
-from d3m.metadata import hyperparams, params
-from typing import Dict, List
+from d3m.metadata import hyperparams
 from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import random
@@ -13,6 +12,7 @@ Inputs = d3m.container.DataFrame
 Outputs = d3m.container.DataFrame
 _logger = logging.getLogger(__name__)
 
+
 class VoterHyperparameter(hyperparams.Hyperparams):
     classifier_voting_strategy = hyperparams.Enumeration(
         values=['random', 'majority'],
@@ -24,16 +24,17 @@ class VoterHyperparameter(hyperparams.Hyperparams):
 
 class Voter(TransformerPrimitiveBase[Inputs, Outputs, VoterHyperparameter]):
     """
-    Voter primitive
+    A voting primitive. Each row with the same d3mIndex value votes for the category value for that d3mIndex. The value
+    with the majority wins. If there is no majority value, than the value is selected randomly among the values tied for first.
     """
     metadata = hyperparams.base.PrimitiveMetadata({
         "id": "dsbox-voter",
         "version": config.VERSION,
         "name": "ISI DSBox Prediction Voter",
         "description": "Voting primitive for choosing one prediction if there are multiple predictions",
-        "python_path": "d3m.primitives.data_cleaning.voter.DSBOX",
-        "primitive_family": "DATA_CLEANING",
-        "algorithm_types": ["DATA_CONVERSION"],
+        "python_path": "d3m.primitives.data_preprocessing.ensemble_voting.DSBOX",
+        "primitive_family": "CLASSIFICATION",
+        "algorithm_types": ["ENSEMBLE_LEARNING"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,

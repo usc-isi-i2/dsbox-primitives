@@ -2,7 +2,7 @@ import logging
 import re
 import time
 
-import stopit #  type: ignore
+import stopit  # type: ignore
 import pandas as pd
 
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
@@ -19,6 +19,7 @@ Outputs = container.DataFrame
 
 _logger = logging.getLogger(__name__)
 
+
 class MultiTableFeaturizationHyperparams(hyperparams.Hyperparams):
     VERBOSE = hyperparams.Hyperparameter[bool](
         default=False,
@@ -28,13 +29,15 @@ class MultiTableFeaturizationHyperparams(hyperparams.Hyperparams):
 
 
 class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, MultiTableFeaturizationHyperparams]):
-
+    """
+    Generate a featurized table from multiple-table dataset using aggregation. It will automatically detect foriegn key
+    relationships among multiple tables, and join the tables into one table using aggregation.
+    """
     __author__ = 'USC ISI'
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-multi-table-featurization-aggregation',
         'version': config.VERSION,
         'name': "DSBox Multiple Table Featurizer Aggregation",
-        'description': 'Generate a featurized table from multiple-table dataset using aggregation. It will automatically detect foriegn key relationships among multiple tables, and join the tables into one table using aggregation.',
         'python_path': 'd3m.primitives.feature_extraction.multitable_featurization.DSBOX',
         'primitive_family': "FEATURE_EXTRACTION",
         'algorithm_types': ["RELATIONAL_DATA_MINING"],
@@ -42,10 +45,10 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         'source': {
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
-            'uris': [ config.REPOSITORY ]
+            'uris': [config.REPOSITORY]
             },
             # The same path the primitive is registered with entry points in setup.py.
-        'installation': [ config.INSTALLATION ],
+        'installation': [config.INSTALLATION],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
 
@@ -87,7 +90,6 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 self._has_finished = False
                 self._iterations_done = False
                 return CallResult(None, self._has_finished, self._iterations_done)
-
 
     def _core(self, inputs: Inputs) -> Outputs:
         """
@@ -144,18 +146,18 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             _logger.debug('Relations')
             for target_column_name, resource_column_name in relations:
                 _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
-        relations = self._relations_correction(relations = relations)
+        relations = self._relations_correction(relations=relations)
         if self._verbose:
-            _logger.info ("==========relations:=============")
-            _logger.info (relations) # to see if the relations make sense
-            _logger.info ("=================================")
+            _logger.info("==========relations:=============")
+            _logger.info(relations) # to see if the relations make sense
+            _logger.info("=================================")
         if _logger.getEffectiveLevel() <= 10:
             _logger.debug('Corrected Relations')
             for target_column_name, resource_column_name in relations:
                 _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
 
         # step 3: featurization
-        start=time.clock()
+        start = time.clock()
         _logger.info("[INFO] Multi-table join start.")
         aggregator = Aggregator(relations, data, self._verbose)
         for each_relation in relations:
@@ -167,9 +169,9 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             if main_resource_id in each_relation[0]:
                 big_table = aggregator.forward(each_relation[0])
                 break
-        finish=time.clock()
-        _logger.info("[INFO] Multi-table join finished, totally take ",finish - start,'seconds.')
-        big_table = container.DataFrame(pd.DataFrame(big_table),generate_metadata=True)
+        finish = time.clock()
+        _logger.info("[INFO] Multi-table join finished, totally take ", finish-start, 'seconds.')
+        big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=True)
         # add back metadata
         for index in range(len(big_table.columns)):
             old_metadata = all_metadata[big_table.columns[index]]

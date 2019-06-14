@@ -66,9 +66,14 @@ class TemplateSteps:
                 "inputs": ["clean_step"]
             },
             {
+                "name": "corex_step",
+                "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
+                "inputs": ["encode_step"]
+            },
+            {
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
-                "inputs":["encode_step"],
+                "inputs":["corex_step"],
             },
             {
                 "name": "impute_step",

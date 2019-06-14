@@ -2,7 +2,6 @@ import logging
 import typing
 
 import pandas as pd  # type: ignore
-import numpy as np
 
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 
@@ -14,11 +13,10 @@ from d3m.metadata import hyperparams, params
 from d3m.metadata.hyperparams import UniformBool
 from d3m.metadata.base import DataMetadata
 import d3m.metadata.base as mbase
-import common_primitives.utils as utils
 
 from . import config
 
-import common_primitives.utils as common_utils
+import d3m.base.utils as base_utils
 
 Input = container.DataFrame
 Output = container.DataFrame
@@ -152,7 +150,6 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
                         nan_sum += 1
         if nan_sum == 0:  # no missing value exists
             if self._verbose:
-                print("Warning: no missing value in train dataset")
                 _logger.info('no missing value in train dataset')
 
         self._train_x = inputs
@@ -182,7 +179,8 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
 
             # start fitting
-            if self._verbose: print("=========> mean imputation method:")
+            if self._verbose:
+                print("=========> mean imputation method:")
             self.__get_fitted()
 
         if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
@@ -228,7 +226,8 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             assert to_ctx_mrg.state == to_ctx_mrg.EXECUTING
 
             # start completing data...
-            if self._verbose: print("=========> impute by mean value of the attribute:")
+            if self._verbose:
+                print("=========> impute by mean value of the attribute:")
 
             data.iloc[:, self._numeric_columns] = data.iloc[:, self._numeric_columns].apply(
                 lambda col: pd.to_numeric(col, errors='coerce'))
@@ -237,7 +236,7 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
             # therefore, only use the mean_values to impute, should get a clean dataset
             attribute = DataMetadata.list_columns_with_semantic_types(
                 data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
-            
+
             # try:
             for col in attribute:
                 if str(inputs.dtypes[inputs.columns[col]]) != "object":
@@ -288,12 +287,11 @@ class MeanImputation(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, Mea
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                                     use_columns=hyperparams[
-                                                                                         'use_columns'],
-                                                                                     exclude_columns=hyperparams[
-                                                                                         'exclude_columns'],
-                                                                                     can_use_column=can_produce_column)
+        columns_to_produce, columns_not_to_produce = base_utils.get_columns_to_use(
+            inputs_metadata,
+            use_columns=hyperparams['use_columns'],
+            exclude_columns=hyperparams['exclude_columns'],
+            can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
 
     @classmethod
