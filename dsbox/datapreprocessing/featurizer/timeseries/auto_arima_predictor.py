@@ -2,10 +2,11 @@ import numpy as np  # type: ignore
 import logging
 import typing
 
-from pyramid.arima import ARIMA, auto_arima
-
+from pmdarima.arima import ARIMA, auto_arima
+from collections import defaultdict
 from . import config
 
+from d3m.metadata.base import DataMetadata, ALL_ELEMENTS
 from d3m.container import DataFrame
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.primitive_interfaces.base import CallResult, DockerContainer
@@ -13,7 +14,7 @@ from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimit
 from d3m.metadata.base import ALL_ELEMENTS
 import common_primitives.utils as common_utils
 
-
+ONE_TIME_SERIES_KEY = 'only_one_time_series'
 # Inputs = container.List
 Inputs = DataFrame
 Outputs = DataFrame
@@ -26,14 +27,6 @@ class ArimaParams(params.Params):
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
-    take_log = hyperparams.Hyperparameter[bool](
-        default=True,
-        description="Whether take log to inputs timeseries",
-        semantic_types=[
-            'https://metadata.datadrivendiscovery.org/types/TuningParameter'
-        ]
-    )
-
     auto = hyperparams.Hyperparameter[bool](
         default=True,
         description="Use Auto fit or not for ARIMA",
@@ -200,90 +193,229 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                          docker_containers=docker_containers)
         self._index = None
         self._training_inputs = None
+        self._training_outputs = None
         self._target_name = None
         self._fitted = False
+        self._time_series = dict()
         self._length_for_produce = 0
+        self._key_columns = []
+        self._index_and_value_columns = []
+        self._last_time = dict()
+        self._model = dict()
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         ########################################################
         # need to use inputs to figure out the params of ARIMA #
         ########################################################
-        if len(inputs) == 0:
-            _logger.info(
-                "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
-            return
-        if 'd3mIndex' in outputs.columns:
-            self._index = outputs['d3mIndex']
-            self._training_inputs = outputs.drop(columns=['d3mIndex'])# Arima takes shape(n,) as inputs, only target casting is applied
-        else:
-            self._training_inputs = outputs
-        self._target_name = self._training_inputs.columns[-1]
+        self._training_inputs = copy.deepcopy(inputs)
+        self._training_outputs = copy.deepcopy(outputs)
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         if self._fitted:
             return CallResult(None)
         if self._training_inputs is None:
             raise ValueError("Missing training data.")
-        if self.hyperparams["take_log"]:
-            self._training_inputs = np.log(self._training_inputs.values.ravel())
+
+        if len(self._training_inputs) == 0:
+            _logger.error("Inputs timeseries data to timeseries_featurization primitive's length is 0.")
+            return
+
+        for i in range(self._training_inputs.shape[1]):
+            each_meta = inputs.metadata.query((ALL_ELEMENTS, i))
+            # TODO: in stock market, "Year" column is also a CategoricalData???
+            if "https://metadata.datadrivendiscovery.org/types/CategoricalData" in each_meta['semantic_types'] and "https://metadata.datadrivendiscovery.org/types/Time" not in each_meta['semantic_types']:
+                self._key_columns.append(i)
+
+            if "https://metadata.datadrivendiscovery.org/types/TrueTarget" in each_meta['semantic_types'] or "https://metadata.datadrivendiscovery.org/types/Time" in each_meta['semantic_types']:
+                self._index_and_value_columns.append(i)
+
+        if len(self._index_and_value_columns) == 0:
+            _logger.info("No CategoricalData column found, will treat as only 1 timeseries input")
+            self._fit_single_timeseries()
+        else:
+            _logger.info("CategoricalData column found, will treat as multiple timeseries input")
+            self._fit_multiple_timeseries()
+
+        target_columns = res3.value.metadata.list_columns_with_semantic_types(("https://metadata.datadrivendiscovery.org/types/SuggestedTarget",))
+        if len(target_columns) > 1:
+            _logger.warning("More than 1 target columns found! Will ignore the others")
+        elif len(target_columns) == 0:
+            _logger.error("No target found in training output data!")
+            return CallResult(None)
+        self._target_name = self._training_outputs.columns[target_columns[0]]
+
         if self.hyperparams["auto"]:
-            self._model = auto_arima(self._training_inputs)
+            for key, val in self._time_series.items():
+                self._model[key] = auto_arima(val)
             self._fitted = True
             return CallResult(None)
+
         else:
             if self.hyperparams["is_seasonal"]:
                 seasonal_order = self.hyperparams["seasonal_order"]
             else:
                 seasonal_order = None
-            self._model = ARIMA(
-                    order=(
-                        self.hyperparams["P"],
-                        self.hyperparams["D"], self.hyperparams["Q"]
-                    ),
-                    seasonal_order=seasonal_order,
-                    transparams=self.hyperparams["transparams"],
-                    method=self.hyperparams["method"],
-                    trend=self.hyperparams["trend"],
-                    solver=self.hyperparams["solver"],
-                    maxiter=self.hyperparams["maxiter"],
-                    disp=self.hyperparams["disp"],
-                    # callback=self.hyperparams["callback"],
-                    callback=None,
-                    suppress_warnings=self.hyperparams["suppress_warnings"],
-                    out_of_sample_size=False,
-                    scoring="mse",
-                    scoring_args=None
-            )
-            self._model.fit(self._training_output)
+            for key, val in self._time_series.items():
+                each_model = ARIMA(
+                        order=(
+                            self.hyperparams["P"],
+                            self.hyperparams["D"], self.hyperparams["Q"]
+                        ),
+                        seasonal_order=seasonal_order,
+                        transparams=self.hyperparams["transparams"],
+                        method=self.hyperparams["method"],
+                        trend=self.hyperparams["trend"],
+                        solver=self.hyperparams["solver"],
+                        maxiter=self.hyperparams["maxiter"],
+                        disp=self.hyperparams["disp"],
+                        # callback=self.hyperparams["callback"],
+                        callback=None,
+                        suppress_warnings=self.hyperparams["suppress_warnings"],
+                        out_of_sample_size=False,
+                        scoring="mse",
+                        scoring_args=None
+                )
+                each_model.fit(val)
+                self._model[key] = each_model
             self._fitted = True
 
             return CallResult(None)
 
-    def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-        n_periods = inputs.shape[0]
-        if 'd3mIndex' in inputs:
-            self._index = inputs['d3mIndex']
-        if self.hyperparams['take_log']:
-            inputs = np.log(inputs.value.ravel())
-        if self.hyperparams['use_semantic_types'] is True:
-            sk_inputs = inputs.iloc[:, self._training_indices]
-        res_df = self._model.predict(n_periods=n_periods)
-        if self.hyperparams['take_log']:
-            res_df = np.exp(res_df)
-        if self._index is not None:
-            output = DataFrame({'d3mIndex': self._index, self._target_name: res_df})
-        else:
-            _logger.error("No d3mIndex found!")
+    def _fit_single_timeseries(self) -> None:
+        """
+        Inner function used to generate the timesequence with only 1 timeseries condition (e.g. 56_sunspot)
+        It will add the formated timesequence to self._time_series for further use
+        """
+        # Arima takes shape(n,) as inputs, only target casting is applied
+        # if 'd3mIndex' in self._training_outputs.columns:
+        #     self._index = self._training_outputs['d3mIndex']
+        #     temp = self._training_outputs.drop(columns=['d3mIndex'])
+        # else:
+        #     temp = self._training_outputs
+            
+        temp = self._process_time_unit(self._training_outputs)
+        temp = temp.sort_values(by=['time_unit'])
+        previous_time = None
+        previous_val = None
+        sequences = []
+        for _, each_row in temp.iterrows():
+            current_time = int(each_row["time_unit"])
+            current_val = val_type(each_row["count"])
+            if not previous_time:
+                previous_time = current_time
+                previous_val = current_val
+                sequences.append(current_val)
+                continue
+            diff = current_time - previous_time
+            if diff > 1:
+                for i in range(1, diff):
+                    new_val = val_type((current_val - previous_val) / diff * i + previous_val)
+                    sequences.append(new_val)
+            sequences.append(current_val)
+            previous_time = current_time
+            previous_val = current_val
+        self._last_time[ONE_TIME_SERIES_KEY] = current_time
+        self._time_series[ONE_TIME_SERIES_KEY] = sequences
 
-        if isinstance(output, DataFrame):
-            output.metadata = output.metadata.clear(source=self, for_value=output, generate_metadata=True)
-            meta_d3mIndex = {"name": "d3mIndex", "structural_type":int, "semantic_types":["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/PrimaryKey"]}
-            meta_target = {"name": self._target_name, "structural_type":float, "semantic_types":["https://metadata.datadrivendiscovery.org/types/Target", "https://metadata.datadrivendiscovery.org/types/PredictedTarget"]}
-            output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 0), metadata=meta_d3mIndex)
-            output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 1), metadata=meta_target)
+    def _fit_multiple_timeseries(self) -> None:
+        """
+        Inner function used to generate the timesequence with more than timeseries condition (e.g. LL1_736_population_spawn)
+        It will add the formated timesequence to self._time_series for further use
+        """
+        self._training_inputs = self._process_time_unit(self._training_inputs)
+        records = defaultdict(list)
+        for row_number, each_row in self._training_inputs.iterrows():
+            key_name = []
+            for each in self._key_columns:
+                key_name.append(each_row[each])
+            records[tuple(key_name)].append(row_number)
+
+        val_type = self._training_outputs[self._target_name].dtype.name
+        if "int" in val_type:
+            val_type = int
+        else:
+            val_type = float
+
+        for key, val in records.items():
+            temp = self._training_inputs.iloc[val, :]
+            temp = temp.sort_values(by=['time_unit'])
+            previous_time = None
+            previous_val = None
+            sequences = []
+            for _, each_row in temp.iterrows():
+                current_time = int(each_row["time_unit"])
+                current_val = val_type(each_row["count"])
+                if not previous_time:
+                    previous_time = current_time
+                    previous_val = current_val
+                    sequences.append(current_val)
+                    continue
+                diff = current_time - previous_time
+                if diff > 1:
+                    for i in range(1, diff):
+                        new_val = val_type((current_val - previous_val) / diff * i + previous_val)
+                        sequences.append(new_val)
+                sequences.append(current_val)
+                previous_time = current_time
+                previous_val = current_val
+            # record to last time appeared in training data
+            self._last_time[key] = current_time
+            self._time_series[key] = sequences
+
+    def _process_time_unit(self, input_df) -> DataFrame:
+        """
+        Inner function used to process a input df's Time data. 
+        It will transform the input Time format data into a 3 columns output.
+        With a format as:
+        First column as d3mIndex
+        Second column as Time unit called "time_unit" in int format
+        Thid column as value unit called "count" in int or float format
+        """
+
+
+    def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+
+        if len(self._model) == 1:
+            output = self._produce_single_timeseries(inputs)
+        else:
+            output = self._produce_multiple_timeseries()
+
+    def _produce_single_timeseries(self, inputs):
+        # if self.hyperparams['use_semantic_types'] is True:
+        #     sk_inputs = inputs.iloc[:, self._training_indices]
+
+        inputs_copy = copy.deepcopy(inputs)
+        inputs_processed = self._process_time_unit(inputs_copy)
+        inputs_processed = inputs_processed.sort_values(by=['time_unit'])
+        test_last_time = inputs_processed.iloc[-1]['time_unit']
+        train_last_time = self._last_time[ONE_TIME_SERIES_KEY]
+        n_periods = test_last_time - train_last_time
+        res = self._model[ONE_TIME_SERIES_KEY].predict(n_periods=n_periods)
+
+        for i in range(inputs_processed.shape[0]):
+            val = res[inputs_processed.iloc[i]['time_unit'] - train_last_time]
+            inputs_processed.iloc[i]['count'] = val
+
+        inputs_processed = inputs_processed.set_index('d3mIndex')
+        
+        # transform inputs_processed back to the original intput base on d3mIndex
+        output = copy.deepcopy(inputs)
+        for i in range(output.shape[0]):
+            index = output.iloc[i]['d3mIndex']
+            output.iloc[i][self._target_name] = inputs_processed.iloc[inputs_processed]['count']
+
+        # if isinstance(output, DataFrame):
+        #     output.metadata = output.metadata.clear(source=self, for_value=output, generate_metadata=True)
+        #     meta_d3mIndex = {"name": "d3mIndex", "structural_type":int, "semantic_types":["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/PrimaryKey"]}
+        #     meta_target = {"name": self._target_name, "structural_type":float, "semantic_types":["https://metadata.datadrivendiscovery.org/types/Target", "https://metadata.datadrivendiscovery.org/types/PredictedTarget"]}
+        #     output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 0), metadata=meta_d3mIndex)
+        #     output.metadata = output.metadata.update(selector=(ALL_ELEMENTS, 1), metadata=meta_target)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
+
+
+
 
     def get_params(self) -> ArimaParams:
         return ArimaParams(arima=self._model, target_name=self._target_name)
@@ -368,4 +500,4 @@ if __name__ == "__main__":
           3, 4, 5, 6, 7, 8, 8, 9]
     h = 5
     model = auto_arima(ts)
-    res = model.predict(n_period=h)
+    res = model.predict(n_periods=h)
