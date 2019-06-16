@@ -378,9 +378,11 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         if len(self._model) == 1:
             output = self._produce_single_timeseries(inputs)
         else:
-            output = self._produce_multiple_timeseries()
+            output = self._produce_multiple_timeseries(inputs)
 
-    def _produce_single_timeseries(self, inputs):
+        return output
+
+    def _produce_single_timeseries(self, inputs) -> "CallResult":
         # if self.hyperparams['use_semantic_types'] is True:
         #     sk_inputs = inputs.iloc[:, self._training_indices]
 
@@ -397,12 +399,14 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             inputs_processed.iloc[i]['count'] = val
 
         inputs_processed = inputs_processed.set_index('d3mIndex')
-        
+
         # transform inputs_processed back to the original intput base on d3mIndex
         output = copy.deepcopy(inputs)
         for i in range(output.shape[0]):
             index = output.iloc[i]['d3mIndex']
-            output.iloc[i][self._target_name] = inputs_processed.iloc[inputs_processed]['count']
+            output.iloc[i][self._target_name] = inputs_processed.iloc[index]['count']
+
+        # maybe still need these part of codes
 
         # if isinstance(output, DataFrame):
         #     output.metadata = output.metadata.clear(source=self, for_value=output, generate_metadata=True)
@@ -414,7 +418,10 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         self._iterations_done = True
         return CallResult(output, self._has_finished, self._iterations_done)
 
-
+    def _produce_multiple_timeseries(self, inputs) -> "CallResult":
+        """
+        same as produce_single_timeseries, just for condition of multiple timeseries
+        """
 
 
     def get_params(self) -> ArimaParams:
