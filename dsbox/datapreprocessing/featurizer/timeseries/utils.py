@@ -61,6 +61,13 @@ class TimeIndicatorType(enum.Enum):
 # 5,abbv,2013,01-11,28.695
 
 
+TIME_TYPE = 'https://metadata.datadrivendiscovery.org/types/Time'
+INTEGER_TYPE = 'http://schema.org/Integer'
+CATEGORICAL_TYPE = 'https://metadata.datadrivendiscovery.org/types/CategoricalData'
+TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/TrueTarget'
+# TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
+
+
 def next_month(value: datetime.datetime) -> datetime.datetime:
     '''Increment by one month'''
     year = value.year
@@ -88,12 +95,11 @@ def next_day(value: datetime.datetime) -> datetime.datetime:
 
 
 class TimeIndicator:
-    time_type = 'https://metadata.datadrivendiscovery.org/types/Time'
-    integer_type = 'http://schema.org/Integer'
-    categorical_type = 'https://metadata.datadrivendiscovery.org/types/CategoricalData'
-
+    '''
+    Given d3m dataframe, detect is time indicator column style (TimeIndicatorType).
+    '''
     def __init__(self, training_data: container.DataFrame):
-        time_indicator_index = training_data.metadata.get_columns_with_semantic_type(self.time_type)
+        time_indicator_index = training_data.metadata.get_columns_with_semantic_type(TIME_TYPE)
         if len(time_indicator_index) > 1:
             _logger.warn(f'More than one time indicator columns. Using first one: {time_indicator_index}')
         self.time_indicator_index: int = time_indicator_index[0]
@@ -104,6 +110,9 @@ class TimeIndicator:
             self.year_index = self._find_year_index(training_data)
 
     def get_datetime(self, row: pd.Series) -> typing.Union[int, datetime.date]:
+        '''
+        Returns datetime associated with a row.
+        '''
         row_list = row.tolist()
         value = row_list[self.time_indicator_index]
         if self.indicator_style == TimeIndicatorType.INTEGER:
@@ -118,7 +127,16 @@ class TimeIndicator:
             return datetime.date(year, fields[0], fields[1])
         return None
 
+    def get_datetimes(self, data: container.DataFrame) -> typing.List[typing.Union[int, datetime.date]]:
+        '''
+        Returns all datetimes associated with the dataframe
+        '''
+        return [self.get_datetime(data.iloc[idx, :]) for idx in range(data.shape[0])]
+
     def get_next_time(self, date: typing.Union[int, datetime.date]) -> typing.Union[int, datetime.date]:
+        '''
+        Returns next time period based on time indicator style.
+        '''
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return date+1
         if self.indicator_style == TimeIndicatorType.YEAR:
@@ -130,6 +148,9 @@ class TimeIndicator:
         return None
 
     def get_difference(self, start, end) -> int:  # start, end: typing.Union[int, datetime.date]
+        '''
+        Difference between two dates based on time indicator style.
+        '''
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return end - start
         if self.indicator_style == TimeIndicatorType.YEAR:
@@ -141,9 +162,26 @@ class TimeIndicator:
             return delta.days
         return None
 
+    def get_date_range(self, data: container.DataFrame) -> pd.Index:
+        '''
+        Difference index range between two dates based on time indicator style.
+        '''
+        first = self.get_datetime(data.iloc[0, :])
+        last = self.get_datetime(data.iloc[-1, :])
+        if self.indicator_style == TimeIndicatorType.INTEGER:
+            return pd.Index(list(range(first, last+1)))
+
+        periods = 1 + self.get_difference(first, last)
+        if self.indicator_style == TimeIndicatorType.YEAR:
+            return pd.date_range(first, periods=periods, freq='YS')
+        if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
+            return pd.date_range(first, periods=periods, freq='MS')
+        if self.indicator_style == TimeIndicatorType.MONTH_DAY:
+            return pd.date_range(first, periods=periods, freq='D')
+
     def _deduce_style(self, training_data: container.DataFrame, time_indicator_index: int) -> TimeIndicatorType:
         metadata = training_data.metadata.query([mbase.ALL_ELEMENTS, time_indicator_index])
-        if self.integer_type in metadata['semantic_types']:
+        if INTEGER_TYPE in metadata['semantic_types']:
             return TimeIndicatorType.INTEGER
 
         column = training_data.iloc[:, time_indicator_index]
@@ -170,7 +208,7 @@ class TimeIndicator:
             return TimeIndicatorType.MONTH_DAY
 
     def _find_year_index(self, training_data: container.DataFrame) -> int:
-        categorical_indices = training_data.metadata.get_columns_with_semantic_type(self.categorical_type)
+        categorical_indices = training_data.metadata.get_columns_with_semantic_type(CATEGORICAL_TYPE)
         for index in categorical_indices:
             metadata = training_data.metadata.query([mbase.ALL_ELEMENTS, index])
             if metadata['structural_type'] is str:
@@ -205,6 +243,38 @@ class TimeIndicator:
             if value > 9999 or value < 1:
                 return False
         return True
+
+
+class ExtractTimeseries():
+    '''
+    Given data with muliple embedded timeseries, extract individual timeseries values. In addition the missing values
+    are filled using 'pad'.
+    '''
+    def __init__(self, data, time_indicator):
+        self.data = data
+        self.time_indicator = time_indicator
+        self.target_index = data.metadata.get_columns_with_semantic_type(TRUE_TARGET_TYPE)[0]
+
+        self.categorical_indices = data.metadata.get_columns_with_semantic_type(CATEGORICAL_TYPE)
+        # if time_indicator.year_index > -1:
+        #     self.categorical_indices.remove(time_indicator.year_index)
+        #     self.categorical_indices.append(time_indicator.year_index)
+        self.categorical_column_name = [self.data.columns[i] for i in self.categorical_indices]
+
+    def target_groupby(self) -> typing.Tuple[typing.Tuple, pd.DataFrame]:
+        for name, group in self.data.groupby(self.categorical_column_name):
+            yield name, self.expand_fill(group)
+
+    def expand_fill(self, data: pd.DataFrame) -> pd.DataFrame:
+        # add datetime index
+        data.index = self.time_indicator.get_datetimes(data)
+
+        targets = data.iloc[:, [self.target_index]]
+
+        # redindex to add missing rows
+        index2 = self.time_indicator.get_date_range(data)
+        targets = targets.reindex(index2, method='pad')
+        return targets
 
 
 class MultiVariableTimeseries():
