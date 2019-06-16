@@ -8,8 +8,8 @@ import logging
 import typing
 
 
-import numpy as np
-import pandas as pd
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 
 import d3m.container as container
 import d3m.metadata.base as mbase
@@ -61,7 +61,7 @@ class TimeIndicatorType(enum.Enum):
 # 5,abbv,2013,01-11,28.695
 
 
-def next_month(value: datetime) -> datetime:
+def next_month(value: datetime.datetime) -> datetime.datetime:
     '''Increment by one month'''
     year = value.year
     month = value.month
@@ -75,14 +75,14 @@ def next_month(value: datetime) -> datetime:
     return value.replace(year=year, month=month)
 
 
-def next_day(value: datetime) -> datetime:
+def next_day(value: datetime.datetime) -> datetime.datetime:
     '''Increment by one day'''
     day = 1 + value.day
     try:
-        value = value.replace(day)
+        value = value.replace(day=day)
     except ValueError:
         day = 1
-        value = value.replace(day)
+        value = value.replace(day=day)
         value = next_month(value)
     return value
 
@@ -93,18 +93,19 @@ class TimeIndicator:
     categorical_type = 'https://metadata.datadrivendiscovery.org/types/CategoricalData'
 
     def __init__(self, training_data: container.DataFrame):
-        self.time_indicator_index = training_data.get_columns_with_semantic_type(self.time_semantic_type)
-        if len(self.time_indicator_index) > 1:
-            _logger.warn(f'More than one time indicator columns. Using first one: {self.time_indicator_index}')
-        self.time_indicator_index = self.time_indicator_index[0]
+        time_indicator_index = training_data.metadata.get_columns_with_semantic_type(self.time_type)
+        if len(time_indicator_index) > 1:
+            _logger.warn(f'More than one time indicator columns. Using first one: {time_indicator_index}')
+        self.time_indicator_index: int = time_indicator_index[0]
         self.indicator_style = self._deduce_style(training_data, self.time_indicator_index)
 
         self.year_index = -1
         if self.indicator_style == TimeIndicatorType.MONTH_DAY:
             self.year_index = self._find_year_index(training_data)
 
-    def get_datetime(self, row: pd.Series) -> typing.UNION[int, datetime.date]:
-        value = row.iloc[self.time_indicator_index]
+    def get_datetime(self, row: pd.Series) -> typing.Union[int, datetime.date]:
+        row_list = row.tolist()
+        value = row_list[self.time_indicator_index]
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return int(value)
         if self.indicator_style == TimeIndicatorType.YEAR:
@@ -113,10 +114,11 @@ class TimeIndicator:
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
             return datetime.date(fields[0], fields[1], 1)
         if self.indicator_style == TimeIndicatorType.MONTH_DAY:
-            year = int(row.iloc[self.year_index])
+            year = int(row_list[self.year_index])
             return datetime.date(year, fields[0], fields[1])
+        return None
 
-    def get_next_time(self, date: typing.UNION[int, datetime.date]) -> typing.UNION[int, datetime.date]:
+    def get_next_time(self, date: typing.Union[int, datetime.date]) -> typing.Union[int, datetime.date]:
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return date+1
         if self.indicator_style == TimeIndicatorType.YEAR:
@@ -127,7 +129,7 @@ class TimeIndicator:
             return next_day(date)
         return None
 
-    def get_difference(self, start: typing.UNION[int, datetime.date], end: typing.UNION[int, datetime.date]) -> int:
+    def get_difference(self, start, end) -> int:  # start, end: typing.Union[int, datetime.date]
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return end - start
         if self.indicator_style == TimeIndicatorType.YEAR:
@@ -140,13 +142,13 @@ class TimeIndicator:
         return None
 
     def _deduce_style(self, training_data: container.DataFrame, time_indicator_index: int) -> TimeIndicatorType:
-        metadata = training_data.query([mbase.metadata, time_indicator_index])
-        if self.time_type in metadata['semantic_types']:
+        metadata = training_data.metadata.query([mbase.ALL_ELEMENTS, time_indicator_index])
+        if self.integer_type in metadata['semantic_types']:
             return TimeIndicatorType.INTEGER
 
         column = training_data.iloc[:, time_indicator_index]
         if len(column) > 50:
-            subset_index = np.random.choice(len(column), 50, relpace=False)
+            subset_index = np.random.choice(len(column), 50, replace=False)
         else:
             subset_index = range(len(column))
         values = column[subset_index]
@@ -160,7 +162,7 @@ class TimeIndicator:
             # More than two filelds
             return TimeIndicatorType.OTHER
 
-        field0 = np.array([x[0] for x in fields])
+        field0 = np.array([int(x[0]) for x in fields])
 
         if np.any(field0 > 12):
             return TimeIndicatorType.YEAR_MONTH
@@ -168,15 +170,16 @@ class TimeIndicator:
             return TimeIndicatorType.MONTH_DAY
 
     def _find_year_index(self, training_data: container.DataFrame) -> int:
-        categorical_indices = training_data.get_columns_with_semantic_type(self.categorical_type)
+        categorical_indices = training_data.metadata.get_columns_with_semantic_type(self.categorical_type)
         for index in categorical_indices:
-            metadata = training_data.query([mbase.metadata, index])
-            if metadata['structural_type'] == 'str':
+            metadata = training_data.metadata.query([mbase.ALL_ELEMENTS, index])
+            if metadata['structural_type'] is str:
                 if self._string_column_is_year(training_data.iloc[:, index]):
                     return index
-            elif metadata['structural_type'] == 'int':
+            elif metadata['structural_type'] is int:
                 if self._int_column_is_year(training_data.iloc[:, index]):
                     return index
+        return -1
 
     def _string_column_is_year(self, column) -> bool:
         if len(column) > 50:
@@ -249,7 +252,7 @@ class MultiVariableTimeseries():
         self.range = self._get_time_range(data.iloc[:, time_index])
 
         # Maps column tuple name to integer, e.g. ('cas9_CAD', 'S_0102') maps to 0.
-        self.column_index = {}
+        self.column_index: typing.Dict = {}
 
     @staticmethod
     def _get_time_range(time_values: pd.Series) -> range:
