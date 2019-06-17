@@ -13,6 +13,7 @@ from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPr
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.base import utils as d3m_utils
+from d3m.metadata.base import DataMetadata
 from . import config
 
 Input = Dataset
@@ -216,6 +217,8 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         else:
             self._logger.info("sampling needed.")
 
+
+
         results = copy.copy(inputs)
         if self._status is Status.TEST:
             self._logger.info("In test process, no split on row needed")
@@ -269,10 +272,10 @@ class Splitter(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, SplitterH
         """
         input_dataset_shape = inputs[self._main_resource_id].shape
         # find target column, we should not split these column
-        target_column = self._training_inputs.metadata.list_columns_with_semantic_types(['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
+        target_column = DataMetadata.list_columns_with_semantic_types(self._training_inputs.metadata, ['https://metadata.datadrivendiscovery.org/types/TrueTarget'], at=(self._main_resource_id,))
         if not target_column:
             self._logger.warn("No target column found from the input dataset.")
-        index_column = self._training_inputs.metadata.get_index_columns(at=(self._main_resource_id,))
+        index_column = DataMetadata.get_index_columns(self._training_inputs.metadata,at=(self._main_resource_id,))
         if not index_column:
             self._logger.warn("No index column found from the input dataset.")
 

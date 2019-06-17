@@ -1,7 +1,15 @@
 from setuptools import setup
 
+with open('requirements.txt', 'r') as f:
+    install_requires = list()
+    dependency_links = list()
+    for line in f:
+        re = line.strip()
+        if re:
+            install_requires.append(re)
+
 setup(name='dsbox-primitives',
-      version='1.5.2',
+      version='1.5.3',
       description='DSBox data processing primitives for both cleaning and featurizer',
       author='USC ISI',
       url='https://github.com/usc-isi-i2/dsbox-primitives.git',
@@ -21,14 +29,7 @@ setup(name='dsbox-primitives',
                ],
       zip_safe=False,
       python_requires='>=3.6',
-
-      install_requires=[
-          'scipy==1.2.1', 'numpy>=1.11.1', 'pandas>=0.20.1', 'langdetect>=1.0.7',
-          'python-dateutil>=2.5.2', 'six>=1.10.0', 'stopit==1.1.2',
-          'scikit-learn>=0.18.0', 'wget',
-          'Keras==2.2.4', 'Pillow', 'h5py', "pyramid-arima",
-          'wikidata-wikifier@git+https://git@github.com/usc-isi-i2/wikidata-wikifier@39ed413cb0fa0b22184a1c5d4d88d720d816fc2d'
-      ],
+      install_requires=install_requires,
       keywords='d3m_primitive',
       entry_points={
           'd3m.primitives': [
@@ -58,13 +59,9 @@ setup(name='dsbox-primitives',
               'feature_extraction.resnet50_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:ResNet50ImageFeature',
               'feature_extraction.vgg16_image_feature.DSBOX = dsbox.datapreprocessing.featurizer.image:Vgg16ImageFeature',
               'feature_extraction.yolo.DSBOX = dsbox.datapreprocessing.featurizer.image:Yolo',
-              # 'normalization.denormalize.DSBOX = dsbox.datapreprocessing.cleaner:Denormalize',
               'normalization.iqr_scaler.DSBOX = dsbox.datapreprocessing.cleaner:IQRScaler',
               'schema_discovery.profiler.DSBOX = dsbox.datapreprocessing.cleaner:Profiler',
               'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
               'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries',
-              # kyao: remove datamart primitives 5/29/2019
-              # 'data_augmentation.datamart_download.DSBOX = dsbox.datapreprocessing.cleaner:DatamartDownload',
-              # 'data_augmentation.datamart_augmentation.DSBOX = dsbox.datapreprocessing.cleaner:DatamartAugmentation',
           ],
       })

@@ -63,9 +63,10 @@ class TimeIndicatorType(enum.Enum):
 
 TIME_TYPE = 'https://metadata.datadrivendiscovery.org/types/Time'
 INTEGER_TYPE = 'http://schema.org/Integer'
+FLOAT_TYPE = 'http://schema.org/Float'
 CATEGORICAL_TYPE = 'https://metadata.datadrivendiscovery.org/types/CategoricalData'
 TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/TrueTarget'
-# TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
+# SUGGESTED_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
 
 
 def next_month(value: datetime.datetime) -> datetime.datetime:
@@ -157,17 +158,17 @@ class TimeIndicator:
             return end.year - start.year
         delta = end - start
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
-            return round(delta.days/30)
+            return round(delta.days/30.4375)
         if self.indicator_style == TimeIndicatorType.MONTH_DAY:
             return delta.days
         return None
 
-    def get_date_range(self, data: container.DataFrame) -> pd.Index:
+    def get_date_range(self, first, last) -> pd.Index:
         '''
-        Difference index range between two dates based on time indicator style.
+        Range between two dates based on time indicator style.
         '''
-        first = self.get_datetime(data.iloc[0, :])
-        last = self.get_datetime(data.iloc[-1, :])
+        # first = self.get_datetime(data.iloc[0, :])
+        # last = self.get_datetime(data.iloc[-1, :])
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return pd.Index(list(range(first, last+1)))
 
@@ -189,8 +190,9 @@ class TimeIndicator:
             subset_index = np.random.choice(len(column), 50, replace=False)
         else:
             subset_index = range(len(column))
-        values = column[subset_index]
-        fields = [value.split('-') for value in values]
+        values = column.iloc[subset_index]
+        # Need to check for str, missing value is np.nan (float)
+        fields = [value.split('-') for value in values if isinstance(value, str)]
 
         field_counts = np.array([len(field) for field in fields])
         if np.all(field_counts == 1):
@@ -253,7 +255,11 @@ class ExtractTimeseries():
     def __init__(self, data, time_indicator):
         self.data = data
         self.time_indicator = time_indicator
+
+        # Assume only on target
         self.target_index = data.metadata.get_columns_with_semantic_type(TRUE_TARGET_TYPE)[0]
+        self.feature_indices = data.metadata.list_columns_with_semantic_types([FLOAT_TYPE, INTEGER_TYPE])
+        self.feature_indices.remove(self.target_index)
 
         self.categorical_indices = data.metadata.get_columns_with_semantic_type(CATEGORICAL_TYPE)
         # if time_indicator.year_index > -1:
@@ -261,20 +267,53 @@ class ExtractTimeseries():
         #     self.categorical_indices.append(time_indicator.year_index)
         self.categorical_column_name = [self.data.columns[i] for i in self.categorical_indices]
 
-    def target_groupby(self) -> typing.Tuple[typing.Tuple, pd.DataFrame]:
-        for name, group in self.data.groupby(self.categorical_column_name):
-            yield name, self.expand_fill(group)
+    def groupby(self) -> typing.Tuple[typing.Tuple, pd.DataFrame]:
+        '''
+        '''
+        if self.categorical_column_name:
+            for name, group in self.data.groupby(self.categorical_column_name):
+                yield name, self.expand_fill(group)
+        else:
+            yield 'only_one_time_series', self.expand_fill(self.data)
 
     def expand_fill(self, data: pd.DataFrame) -> pd.DataFrame:
         # add datetime index
         data.index = self.time_indicator.get_datetimes(data)
 
-        targets = data.iloc[:, [self.target_index]]
+        targets = data.iloc[:, self.feature_indices + [self.target_index]]
 
         # redindex to add missing rows
-        index2 = self.time_indicator.get_date_range(data)
+        index2 = self.time_indicator.get_date_range(
+            self.time_indicator.get_datetime(data.iloc[0, :]),
+            self.time_indicator.get_datetime(data.iloc[-1, :]))
         targets = targets.reindex(index2, method='pad')
         return targets
+
+    def combine(self, prediction_groups: typing.Dict, inputs: container.DataFrame):
+        all_results = []
+
+        only_one = 'only_one_time_series' in prediction_groups
+        for i, row in inputs.iterrows():
+            # date = pd.Timestamp(et.time_indicator.get_datetime(row))
+            date = self.time_indicator.get_datetime(row)
+            if only_one:
+                key = 'only_one_time_series'
+            else:
+                key = []
+                for x in self.categorical_indices:
+                    key.append(row.iloc[x])
+                key = tuple(key)
+            predictions = prediction_groups[key]
+            all_results.append(predictions.loc[date, 0])
+        return np.array(all_results).T
+
+
+        # all_results = []
+        # for i, row in inputs.iterrows():
+        #     date = ti.get_datetime(row)
+        #     key = tuple(row.iloc[x] for x in [1,2])
+        #     predictions = results[key]
+        #     all_results.append(predictions[date])
 
 
 class MultiVariableTimeseries():
@@ -363,50 +402,3 @@ class MultiVariableTimeseries():
             col.reindex(complete_index)
             time_vectors.iloc[:, i] = col.iloc[:, 0]
         return time_vectors
-
-# def is_year_month_format(column, threshold=0.05) -> bool:
-#     if len(column) > 50:
-#         subset_index = np.random.choice(len(column), 50)
-#     else:
-#         subset_index = range(len(column))
-#     wrong_count = 0
-#     for index in subset_index:
-#         if isinstance(column[index], str):
-#             fields = list(column[index].split('-'))
-#             if len(fields) != 2:
-#                 # allow year-month-day format
-#                 wrong_count += 1
-#             else:
-#                 try:
-#                     year = int(fields[0])
-#                     month = int(fields[1])
-#                     if year > 1 or month > 1 or month > 12:
-#                         wrong_count += 1
-#                 except Exception:
-#                     wrong_count += 1
-#         else:
-#             wrong_count += 1
-#     return wrong_count/len(subset_index) < threshold
-
-
-# def year_month_to_int(column: typing.Sequence) -> typing.Sequence[int]:
-#     return [int(datetime.date(dt).strftime('%s'))
-#             if dt is not np.nan else np.nan
-#             for dt in year_month_to_datetime(column)]
-
-
-# def year_month_to_datetime(column: typing.Sequence) -> typing.Sequence[datetime]:
-#     result = []
-#     for date_str in column:
-#         try:
-#             fields = list(date_str.split('-'))
-#             year = int(fields[0])
-#             month = int(fields[1])
-#             if len(fields) > 2:
-#                 day = int(fields[2])
-#             else:
-#                 day = 1
-#             result.append(datetime.date(year, month, day))
-#         except Exception:
-#             result.append(np.nan)
-#     return result

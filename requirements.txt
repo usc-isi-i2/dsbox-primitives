@@ -10,6 +10,6 @@ wget
 Keras==2.2.4
 Pillow
 h5py
-pyramid-arima
+pmdarima==1.0.0
 datamart@git+https://github.com/usc-isi-i2/datamart.git@jun_test
 wikidata-wikifier@git+https://github.com/usc-isi-i2/wikidata-wikifier.git@master
