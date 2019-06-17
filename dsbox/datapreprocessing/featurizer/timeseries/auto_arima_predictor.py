@@ -14,7 +14,7 @@ from d3m.container import DataFrame
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m.primitive_interfaces.base import CallResult, DockerContainer
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
-
+import d3m.metadata.base as mbase
 import common_primitives.utils as common_utils
 
 from . import config
@@ -302,13 +302,17 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             n_periods = int(self._time_indicator.get_difference(last_training_time, last_produce_time))
             if n_periods <= 0:
                 _logger.error('Testing period is not after training period! last_training_time={last_training_time} last_produce_time={last_produce_time}')
-                n_periods = 1
+                return CallResult(DataFrame())
+                # n_periods = 1
             prediction = self._model[name].predict(n_periods=n_periods)
             if self.hyperparams['take_log']:
                 prediction = np.exp(prediction)
 
             # Need to pick out rows based on time
             start = self._time_indicator.get_next_time(last_training_time)
+            # in our ta2 system, we will meet this condition
+            if start > last_produce_time:
+                last_produce_time = start
             all_periods = pd.DataFrame(prediction, index=self._time_indicator.get_date_range(start, last_produce_time))
             result = []
             dates = []
