@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import typing
 import time
+import copy
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
@@ -211,7 +212,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         self._training_inputs = self._training_inputs.drop(useless_train_rows)
         self._training_outputs = self._training_outputs.drop(useless_train_rows)
-        
+
         self.logger.info("following rows are dropped beacuse the training data is None.")
         self.logger.info(str(useless_train_rows))
 
