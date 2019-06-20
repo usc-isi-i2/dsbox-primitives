@@ -136,7 +136,10 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-
+        import tensorflow as tf
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        session = tf.Session(config=config)
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = 0
@@ -249,6 +252,13 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             Then, count the number of the objects deteced in each box, we will treat only the objects amount number larger than the threshold
             to be the target that we need to detect in the test part.
         """
+        import tensorflow as tf
+        from keras.backend.tensorflow_backend import set_session
+        config = tf.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.5
+        config.gpu_options.visible_device_list = "0"
+        set_session(tf.Session(config=config))
+
         if self._training_inputs is None:
             raise ValueError('Missing training(fitting) data.')
 
