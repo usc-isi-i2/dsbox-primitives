@@ -217,8 +217,8 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self.logger.info(str(useless_train_rows))
 
         self._input_feature_column_name = input_column_names[0]
-        self._features = inputs[self._input_feature_column_name]
-        self._training_size = inputs.shape[0]
+        self._features = self._training_inputs[self._input_feature_column_name]
+        self._training_size = self._training_inputs.shape[0]
         target_column_names = self._training_outputs.columns.tolist()
         if 'd3mIndex' in target_column_names:
             target_column_names.remove('d3mIndex')
