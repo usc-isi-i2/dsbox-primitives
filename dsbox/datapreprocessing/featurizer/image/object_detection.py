@@ -200,7 +200,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
             each_image = cv2.imread(os.path.join(self._location_base_uris, each_image_name))
             ground_truth_box = self._training_outputs.iloc[i,0].split(",")
-            logger.debug("processing", each_image_name, "on", ground_truth_box)
+            logger.debug("processing", each_image_name, "on", str(ground_truth_box))
             # update 2019.5.9: cut the image into the bounding box area only
             each_image = self._cut_image(each_image, ground_truth_box)
             # Creates 4-dimensional blob from image.

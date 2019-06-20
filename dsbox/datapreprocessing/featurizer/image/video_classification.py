@@ -178,8 +178,8 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
 
-        self._training_inputs = inputs
-        self._training_outputs = outputs
+        self._training_inputs = copy.copy(inputs)
+        self._training_outputs = copy.copy(outputs)
 
         if self._training_inputs.shape[0] < self._training_outputs.shape[0]:
             if 'd3mIndex' in self._training_inputs.columns:
@@ -193,13 +193,27 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         # TODO: maybe use a better way to find the feature input columns
         input_column_names = []
-        for each_column in self._training_inputs.columns:
+        input_column_numbers = []
+        for i, each_column in enumerate(self._training_inputs.columns):
             if type(self._training_inputs[each_column][0]) is np.ndarray and len(self._training_inputs[each_column][0].shape) == 2:
                 input_column_names.append(each_column)
+                input_column_numbers.append(i)
         if len(input_column_names) < 1:
             raise ValueError("No extract feature attribute from input detected!")
         if len(input_column_names) > 1:
             logger.warn("More that 1 feature attribute detected! Will only use first one")
+
+        useless_train_rows = []
+        input_column_number = input_column_numbers[0]
+        for i in range(self._training_inputs.shape[0]):
+            if self._training_inputs.iloc[i, input_column_number] is None:
+                useless_train_rows.append(i)
+
+        self._training_inputs = self._training_inputs.drop(useless_train_rows)
+        self._training_outputs = self._training_outputs.drop(useless_train_rows)
+        
+        self.logger.info("following rows are dropped beacuse the training data is None.")
+        self.logger.info(str(useless_train_rows))
 
         self._input_feature_column_name = input_column_names[0]
         self._features = inputs[self._input_feature_column_name]

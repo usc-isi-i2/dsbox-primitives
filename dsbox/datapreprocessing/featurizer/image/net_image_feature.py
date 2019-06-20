@@ -635,7 +635,8 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             logger.info("Now processing No. " + str(i)+ " video.")
             frame_number = each_video.shape[0]
             if self._use_limitation and (frame_number > self._maximum_frame or frame_number < self._minimum_frame):
-                logger.info("skip No. ",i)# features.append(None)
+                logger.info("skip No. ",str(i))# 
+                features.append(None)
                 continue
             each_feature = self._process_one_video(each_video)
             features.append(each_feature)
