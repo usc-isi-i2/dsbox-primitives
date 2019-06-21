@@ -136,10 +136,20 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
+        # import tensorflow as tf
+        # config = tf.ConfigProto()
+        # config.gpu_options.allow_growth = True
+        # session = tf.Session(config=config)
+        import keras.backend.tensorflow_backend as KTF
         import tensorflow as tf
         config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        session = tf.Session(config=config)
+        config.gpu_options.allow_growth=True   
+        config.gpu_options.per_process_gpu_memory_fraction = 0.5
+        sess = tf.Session(config=config)
+        from keras.backend.tensorflow_backend import set_session
+        set_session(tf.Session(config=config))
+        KTF.set_session(sess)
+
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = 0
@@ -165,7 +175,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
     def get_params(self) -> Params:
         param = Params(
-            keras_model={'model': self._model},
+            keras_model=self._model.get_config(),
             class_name_to_number=self._class_name_to_number,
             target_column_name=self._target_column_name,
             feature_shape=self._feature_shape,
@@ -174,7 +184,10 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         return param
 
     def set_params(self, *, params: Params) -> None:
-        self._model = params["keras_model"]["model"]
+        from keras.models import Model
+        # self._model = self._lazy_init_lstm()
+        config_lstm = params['keras_model']
+        self._model = Model.from_config(config_lstm)
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
@@ -252,13 +265,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             Then, count the number of the objects deteced in each box, we will treat only the objects amount number larger than the threshold
             to be the target that we need to detect in the test part.
         """
-        import tensorflow as tf
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.5
-        config.gpu_options.visible_device_list = "0"
-        set_session(tf.Session(config=config))
-
         if self._training_inputs is None:
             raise ValueError('Missing training(fitting) data.')
 
