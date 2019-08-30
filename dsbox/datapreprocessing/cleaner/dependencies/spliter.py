@@ -4,7 +4,8 @@ import re
 import numpy as np
 import pandas as pd
 import d3m.metadata.base as mbase
-
+import logging
+_logger = logging.getLogger(__name__)
 from common_primitives import utils
 from d3m.container import DataFrame as d3m_DataFrame
 from dsbox.datapreprocessing.cleaner.dependencies.helper_funcs import HelperFunction
@@ -259,7 +260,7 @@ class NumAlphaParser:
                 result = result[:columns_perform["split_to"][i]]
             elif len(result) < columns_perform["split_to"][i]:
                 for j in range(columns_perform["split_to"][i] - len(result)):
-                    result.append([np.nan] * len(result[0]))
+                    result = np.append(result, [[np.nan for _ in range(len(result[0]))]], axis=0)
             count = 0
             for one in result:
                 try:
