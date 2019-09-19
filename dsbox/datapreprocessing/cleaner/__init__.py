@@ -22,32 +22,38 @@ from .voter import Voter, VoterHyperparameter
 
 from .to_numeric import ToNumeric
 from .splitter import Splitter, SplitterHyperparameter
-from .wikifier import Wikifier,WikifierHyperparams
+
+# kyao:remove wikifier primitive 9/16/2019
+# from .wikifier import Wikifier,WikifierHyperparams
+
 # __all__ = ['Encoder', 'GreedyImputation', 'IterativeRegressionImputation',
 # 			'MICE', 'KNNImputation', 'MeanImputation', 'KnnHyperparameter',
 #                         'UEncHyperparameter','EncHyperparameter']
 
 __all__ = ['Encoder', 'EncHyperparameter',
            'UnaryEncoder', 'UEncHyperparameter',
-        #    'KNNImputation',  'KnnHyperparameter',
+           # 'KNNImputation',  'KnnHyperparameter',
            'MeanImputation', 'MeanHyperparameter',
-        #    'MICE', 'MiceHyperparameter',
+           # 'MICE', 'MiceHyperparameter',
            'IterativeRegressionImputation', 'IterativeRegressionHyperparameter',
            'GreedyImputation', 'GreedyHyperparameter',
-           'IQRScaler','IQRHyperparams',
-           'Labler','LablerHyperparams',
-           'CleaningFeaturizer','CleaningFeaturizerHyperparameter',
-           'Denormalize','DenormalizeHyperparams',
+           'IQRScaler', 'IQRHyperparams',
+           'Labler', 'LablerHyperparams',
+           'CleaningFeaturizer', 'CleaningFeaturizerHyperparameter',
+           'Denormalize', 'DenormalizeHyperparams',
            'Profiler', 'ProfilerHyperparams',
            'FoldColumns', 'FoldHyperparameter',
            'Voter', 'VoterHyperparameter',
-           'Splitter','SplitterHyperparameter',
-        #    'QueryFromDataframe', 'DatamartAugmentation',
-        #    'DatamartJoin',
+           'Splitter', 'SplitterHyperparameter',
+           # 'QueryFromDataframe', 'DatamartAugmentation',
+           # 'DatamartJoin',
            # kyao: remove datamart primitives 5/29/2019
-           # 'DatamartDownload','DatamartDownloadHyperparams',
-           # 'DatamartAugmentation','DatamartAugmentationHyperparams',
-           'Wikifier', 'WikifierHyperparams',
+           # 'DatamartDownload', 'DatamartDownloadHyperparams',
+           # 'DatamartAugmentation', 'DatamartAugmentationHyperparams',
+
+           # kyao:remove wikifier primitive 9/16/2019
+           # 'Wikifier', 'WikifierHyperparams',
+
            'ToNumeric'
 ]
 

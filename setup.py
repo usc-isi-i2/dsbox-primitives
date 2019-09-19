@@ -35,7 +35,6 @@ setup(name='dsbox-primitives',
           'd3m.primitives': [
               'classification.ensemble_voting.DSBOX = dsbox.datapostprocessing:EnsembleVoting',
               'classification.lstm.DSBOX = dsbox.datapreprocessing.featurizer.image:LSTM',
-              'data_augmentation.wikifier.DSBOX = dsbox.datapreprocessing.cleaner:Wikifier',
               'data_cleaning.cleaning_featurizer.DSBOX = dsbox.datapreprocessing.cleaner:CleaningFeaturizer',
               'data_cleaning.column_fold.DSBOX = dsbox.datapreprocessing.cleaner:FoldColumns',
               'data_cleaning.label_encoder.DSBOX = dsbox.datapreprocessing.cleaner:Labler',

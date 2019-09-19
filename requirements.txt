@@ -11,4 +11,3 @@ Keras==2.2.4
 Pillow
 h5py
 pmdarima==1.0.0
-wikidata-wikifier@git+https://github.com/usc-isi-i2/wikidata-wikifier.git@master
