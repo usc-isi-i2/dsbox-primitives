@@ -199,7 +199,6 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
 
         # Get rid of false SettingWithCopyWarning
         data_encode.is_copy = None
-
         res = []
         for column_name in self._cat_columns:
             feature = data_encode[column_name].copy()
@@ -207,7 +206,9 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
             nan_ = lambda x: x if x else np.nan
             feature.loc[feature.notnull()] = feature[feature.notnull()].apply(other_)
             feature = feature.apply(nan_)
-            new_column_names = ['{}_{}'.format(column_name, i) for i in self._mapping[column_name] + ['nan']]
+            if 'nan' not in self._mapping[column_name]:
+                self._mapping[column_name].append('nan')
+            new_column_names = ['{}_{}'.format(column_name, i) for i in self._mapping[column_name]]
             encoded = pd.get_dummies(feature, dummy_na=True, prefix=column_name)
             missed = [name for name in new_column_names if name not in list(encoded.columns)]
             for m in missed:

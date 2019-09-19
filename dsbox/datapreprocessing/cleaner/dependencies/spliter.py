@@ -143,7 +143,7 @@ class PunctuationParser:
                 result = result[:columns_perform["split_to"][i]]
             elif len(result) < columns_perform["split_to"][i]:
                 for j in range(columns_perform["split_to"][i] - len(result)):
-                    extra_column = np.reshape(np.asarray([np.nan] * len(result[0])), (1, len(result[0])))
+                    extra_column = np.reshape(np.asarray([""] * len(result[0])), (1, len(result[0])))
                     result = np.append(result, extra_column, axis=0)
             count = 0
             for one in result:
@@ -189,9 +189,10 @@ class PunctuationParser:
             new_rows.append(new_row)
 
         row_count = 0
+
         while row_count < len(rows):
             if len(new_rows[row_count]) < max_column_num:
-                new_rows[row_count].extend([np.nan] * (max_column_num - len(new_rows[row_count])))
+                new_rows[row_count].extend([""] * (max_column_num - len(new_rows[row_count])))
             row_count += 1
         new_rows = np.array(new_rows).T
         return new_rows
@@ -260,7 +261,7 @@ class NumAlphaParser:
                 result = result[:columns_perform["split_to"][i]]
             elif len(result) < columns_perform["split_to"][i]:
                 for j in range(columns_perform["split_to"][i] - len(result)):
-                    result = np.append(result, [[np.nan for _ in range(len(result[0]))]], axis=0)
+                    result = np.append(result, [["" for _ in range(len(result[0]))]], axis=0)
             count = 0
             for one in result:
                 try:
@@ -283,12 +284,12 @@ class NumAlphaParser:
                 max_column_num = max(max_column_num, len(new_row))
                 new_rows.append(new_row)
             else:
-                new_rows.append([np.nan])
+                new_rows.append([""])
                 max_column_num = max(max_column_num, 1)
         row_count = 0
         while row_count < len(rows):
             if len(new_rows[row_count]) < max_column_num:
-                new_rows[row_count] = [np.nan] * max_column_num
+                new_rows[row_count] = [""] * max_column_num
             row_count += 1
         new_rows = np.array(new_rows).T
         return new_rows
