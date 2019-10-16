@@ -3,6 +3,7 @@ import numpy as np  # type: ignore
 from dsbox.datapreprocessing.cleaner.dependencies import helper_funcs as hf
 from collections import Counter
 from builtins import filter
+from collections import defaultdict
 
 def ordered_dict2(column, k):
     unique,counts = np.unique(column, return_counts=True)
@@ -149,10 +150,21 @@ def compute_common_tokens(column, feature, k, feature_list):
     if (("most_common_tokens" in feature_list) or
         ("number_of_tokens_containing_numeric_char" in feature_list) or
         ("ratio_of_tokens_containing_numeric_char" in feature_list)):
-
-        token = np.asarray([token for lst in column.str.split().dropna() for token in lst])
-        if token.size:
-            feature["most_common_tokens"] = ordered_dict2(token, k)
+        # updated v2019.10.16: using np.asarray may cause numpy raise "Memory error" if the input is very large
+        # So here we updated to use dict to make the count
+        tokens_counter = defaultdict(int)
+        # token = np.asarray([token for lst in column.str.split().dropna() for token in lst])
+        token = column.str.split().dropna()
+        for lst in token:
+            for each in lst:
+                tokens_counter[each] += 1
+        if tokens_counter:
+            # feature["most_common_tokens"] = ordered_dict2(token, k)
+            dlist = []
+            for key,val in Counter(tokens_counter).most_common(k):
+                e = {'name':key, 'count':val}
+                dlist.append(e)
+            feature["most_common_tokens"] = dlist
             cnt = sum([any(char.isdigit() for char in c) for c in token])
             if cnt > 0:
                 feature["number_of_tokens_containing_numeric_char"] = cnt
