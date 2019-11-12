@@ -1,5 +1,6 @@
 import logging
 import typing
+import re
 
 import frozendict  # type: ignore
 import numpy as np  # type: ignore
@@ -114,6 +115,12 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
                 topn.append('other_')
         topn = [x for x in topn if x]
         return feature.name, topn
+    
+    def _remove_trailing_zeros(self, col_names):
+        """
+        Removes '.0' from the end of each column name in `col_names`. 
+        """
+        return [re.sub('.0$', '', col_name) for col_name in col_names]
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
 
@@ -201,6 +208,8 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         data_encode.is_copy = None
         res = []
         for column_name in self._cat_columns:
+            column_i = self._input_data_copy.metadata.get_column_index_from_column_name(column_name)
+            is_str_col = self._input_data_copy.metadata.query((mbase.ALL_ELEMENTS, column_i)).get('structural_type', ()) == str
             feature = data_encode[column_name].copy()
             other_ = lambda x: 'Other' if (x and x not in self._mapping[column_name]) else x
             nan_ = lambda x: x if x else np.nan
@@ -209,7 +218,15 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
             if 'nan' not in self._mapping[column_name]:
                 self._mapping[column_name].append('nan')
             new_column_names = ['{}_{}'.format(column_name, i) for i in self._mapping[column_name]]
+            if not is_str_col:
+                # TODO: Column name post-processing no longer needed once
+                # https://github.com/pandas-dev/pandas/issues/20693 is resolved.
+                new_column_names = self._remove_trailing_zeros(new_column_names)
             encoded = pd.get_dummies(feature, dummy_na=True, prefix=column_name)
+            if not is_str_col:
+                # TODO: Column name post-processing no longer needed once
+                # https://github.com/pandas-dev/pandas/issues/20693 is resolved.
+                encoded.columns = self._remove_trailing_zeros(encoded.columns)
             missed = [name for name in new_column_names if name not in list(encoded.columns)]
             for m in missed:
                 # print('missing', m)
