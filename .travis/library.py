@@ -73,7 +73,7 @@ class DefaultTimeseriesCollectionTemplate(DSBoxTemplate):
                 {
                     "name": "pre_extract_target_step",
                     "primitives": [{
-                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.DataFrameCommon",
+                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
                         "hyperparameters":
                             {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TrueTarget',),
                              'use_columns': (),
