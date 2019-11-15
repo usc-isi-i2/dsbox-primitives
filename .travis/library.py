@@ -1,4 +1,4 @@
-from d3m.metadata.problem import TaskType, TaskSubtype
+from d3m.metadata.problem import TaskKeyword
 from template import DSBoxTemplate
 from template_steps import TemplateSteps
 
@@ -8,12 +8,9 @@ class DefaultClassificationTemplate(DSBoxTemplate):
         DSBoxTemplate.__init__(self)
         self.template = {
             "name": "default_classification_template",
-            "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
-            "taskType": TaskType.CLASSIFICATION.name,
+            "taskSubtype": {TaskKeyword.BINARY.name, TaskKeyword.MULTICLASS.name},
+            "taskType": TaskKeyword.CLASSIFICATION.name,
             "runType": "classification",
-            # See TaskType, range include 'CLASSIFICATION', 'CLUSTERING', 'COLLABORATIVE_FILTERING',
-            # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
-            # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'
             "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
             "output": "model_step",  # Name of the final step generating the prediction
             "target": "extract_target_step",  # Name of the step generating the ground truth
@@ -54,11 +51,8 @@ class DefaultTimeseriesCollectionTemplate(DSBoxTemplate):
         DSBoxTemplate.__init__(self)
         self.template = {
             "name": "Default_timeseries_collection_template",
-            "taskType": TaskType.CLASSIFICATION.name,
-            # See TaskType, range include 'CLASSIFICATION', 'CLUSTERING', 'COLLABORATIVE_FILTERING',
-            # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
-            # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'
-            "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
+            "taskType": TaskKeyword.CLASSIFICATION.name,
+            "taskSubtype": {TaskKeyword.BINARY.name, TaskKeyword.MULTICLASS.name},
             "runType": "timeseries",
             "inputType": {"timeseries", "table"},  # See SEMANTIC_TYPES.keys() for range of values
             "output": "random_forest_step",  # Name of the final step generating the prediction
@@ -146,12 +140,9 @@ class DefaultRegressionTemplate(DSBoxTemplate):
         DSBoxTemplate.__init__(self)
         self.template = {
             "name": "default_regression_template",
-            "taskSubtype": {TaskSubtype.UNIVARIATE.name, TaskSubtype.MULTIVARIATE.name},
-            "taskType": TaskType.REGRESSION.name,
+            "taskSubtype": {TaskKeyword.UNIVARIATE.name, TaskKeyword.MULTIVARIATE.name},
+            "taskType": TaskKeyword.REGRESSION.name,
             "runType": "regression",
-            # See TaskType, range include 'CLASSIFICATION', 'CLUSTERING', 'COLLABORATIVE_FILTERING',
-            # 'COMMUNITY_DETECTION', 'GRAPH_CLUSTERING', 'GRAPH_MATCHING', 'LINK_PREDICTION',
-            # 'REGRESSION', 'TIME_SERIES_FORECASTING', 'VERTEX_NOMINATION'
             "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
             "output": "model_step",  # Name of the final step generating the prediction
             "target": "extract_target_step",  # Name of the step generating the ground truth
@@ -219,8 +210,8 @@ class VotingTemplate(DSBoxTemplate):
         DSBoxTemplate.__init__(self)
         self.template = {
             "name": "default_classification_template",
-            "taskSubtype": {TaskSubtype.BINARY.name, TaskSubtype.MULTICLASS.name},
-            "taskType": TaskType.CLASSIFICATION.name,
+            "taskSubtype": {TaskKeyword.BINARY.name, TaskKeyword.MULTICLASS.name},
+            "taskType": TaskKeyword.CLASSIFICATION.name,
             "runType": "classification",
             "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
             "output": "model_step",  # Name of the final step generating the prediction
