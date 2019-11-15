@@ -1,4 +1,4 @@
-d3m==v2019.10.11
+d3m==v2019.11.10
 scipy==1.2.1
 langdetect>=1.0.7
 python-dateutil>=2.5.2
