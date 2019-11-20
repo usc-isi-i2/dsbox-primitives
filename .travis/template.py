@@ -416,7 +416,8 @@ class simple_config:
 DATASET_MAPPER = {
             'classification': "38_sick",
             'regression': "196_autoMpg",
-            'timeseries': "uu1_datasmash"
+            'timeseries': "uu1_datasmash",
+            'image_regression': '22_handgeometry',
         }
 
 

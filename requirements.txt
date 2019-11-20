@@ -1,5 +1,4 @@
 d3m==v2019.11.10
-scipy==1.2.1
 langdetect>=1.0.7
 python-dateutil>=2.5.2
 six>=1.10.0
@@ -9,3 +8,4 @@ Keras==2.2.4
 Pillow
 h5py
 pmdarima==1.0.0
+scikit-image

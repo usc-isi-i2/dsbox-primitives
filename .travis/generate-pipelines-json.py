@@ -8,7 +8,7 @@ import traceback
 import gzip
 
 from template import DATASET_MAPPER
-from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate, VotingTemplate  # import testing template
+from library import *  # import testing template
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
 
 TEMPLATE_LIST = []
@@ -17,6 +17,7 @@ TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
 TEMPLATE_LIST.append(VotingTemplate())
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
 # ends
 
 def execute_shell_code(shell_command):
@@ -82,7 +83,7 @@ def generate_pipelines(template, config: dict, meta_json):
                 json.dump(pipeline_json, f, separators=(',', ':'),indent=4)
 
             # copy pipeline_run files
-            file_count = len(os.listdir("output_pipeline_runs_dir"))
+            file_count = len(os.listdir(output_pipeline_runs_dir))
             pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gzip".format(str(file_count + 1)))
             with open("tmp/pipeline_runs.yaml", "rb") as f:
                 data = f.read()
