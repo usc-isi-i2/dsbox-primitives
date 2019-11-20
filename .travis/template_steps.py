@@ -517,7 +517,7 @@ class TemplateSteps:
                 *TemplateSteps.default_dataparser(target_name=target_name),
                 {
                     "name": "column_parser_step",
-                    "primitives": ["d3m.primitives.data_transformation.column_parser.DataFrameCommon"],
+                    "primitives": ["d3m.primitives.data_transformation.column_parser.Common"],
                     "inputs": ["extract_attribute_step"]
                 },
                 {
@@ -566,7 +566,7 @@ class TemplateSteps:
                 # TODO the ColumnParser primitive is buggy as it generates arbitrary nan values
                 # {
                 #     "name": "encode_strings_step",
-                #     "primitives": ["d3m.primitives.data_transformation.column_parser.DataFrameCommon"],
+                #     "primitives": ["d3m.primitives.data_transformation.column_parser.Common"],
                 #     "inputs": [clean_name]
                 # },
                 {

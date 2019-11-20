@@ -6,5 +6,5 @@ pip uninstall -y tensorflow-gpu
 export LD_LIBRARY_PATH="$HOME/miniconda/envs/ta1-test-env/lib:$LD_LIBRARY_PATH"
 pip install tensorflow==1.12.0
 pip install -e . --progress-bar off
-pip install -e git+https://github.com/brekelma/dsbox_corex@master#egg=dsbox_corex --progress-bar off
+pip install -e git+https://github.com/brekelma/dsbox_corex@master#egg=d7c20ef26bda00b1c434a6c9da1a17073bc01b92 --progress-bar off
 pip list

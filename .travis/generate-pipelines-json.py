@@ -1,8 +1,10 @@
 import json
 import os
 import subprocess
+import d3m
 import pandas as pd
 import shutil
+import gzip
 
 from template import DATASET_MAPPER
 from library import DefaultClassificationTemplate, DefaultTimeseriesCollectionTemplate, DefaultRegressionTemplate, VotingTemplate  # import testing template
@@ -15,6 +17,10 @@ TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
 TEMPLATE_LIST.append(VotingTemplate())
 # ends
+
+def execute_shell_code(shell_command):
+    p = subprocess.Popen(shell_command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+    p.wait()
 
 
 def get_meta_json(dataset_name):
@@ -49,29 +55,45 @@ def get_primitive_hitted(config):
     return primitive_hitted
 
 
-def generate_pipeline(template, config: dict, meta_json):
+def generate_pipelines(template, config: dict, meta_json):
     """
         Generate sample pipelines and corresponding meta
     """
     primitive_hitted = get_primitive_hitted(config)
     for each_primitive in primitive_hitted:
-        outdir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+        output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
                               cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
-                              cleaner_config.VERSION, "pipelines")
-        os.makedirs(outdir, exist_ok=True)
+                              cleaner_config.VERSION)
+        output_pipeline_dir = os.path.join(output_dir, "pipelines")
+        output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
+        os.makedirs(output_pipeline_dir, exist_ok=True)
+        os.makedirs(output_pipeline_runs_dir, exist_ok=True)
         failed = []
         try:
             # generate the new pipeline
+            # updated for d3m v2019.11.10: .meta file not needed, an extra file pipeline_runs needed
             pipeline = template.to_pipeline(config)
             pipeline_json = pipeline.to_json_structure()
-            print("Generating at " + outdir +  "/" + pipeline_json['id'] + "...")
-            file_name = os.path.join(outdir, pipeline_json['id']+".json")
-            meta_name = os.path.join(outdir, pipeline_json['id']+".meta")
+            print("Generating at " + output_pipeline_dir +  "/" + pipeline_json['id'] + "...")
+            file_name = os.path.join(output_pipeline_dir, pipeline_json['id']+".json")
+            
             with open(file_name, "w") as f:
                 json.dump(pipeline_json, f, separators=(',', ':'),indent=4)
-            with open(meta_name, "w") as f:
-                json.dump(meta_json, f, separators=(',', ':'),indent=4)
+
+            # copy pipeline_run files
+            file_count = len(os.listdir("output_pipeline_runs_dir"))
+            pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gzip".format(str(file_count + 1)))
+            with open("tmp/pipeline_runs.yaml", "rb") as f:
+                data = f.read()
+            bindata = bytearray(data)
+            with gzip.open(pipeline_runs_file, "wb") as f:
+                f.write(bindata)
+            os.remove("tmp/pipeline_runs.yaml")
+            # meta_name = os.path.join(outdir, pipeline_json['id']+".meta")
+            # with open(meta_name, "w") as f:
+            #     json.dump(meta_json, f, separators=(',', ':'),indent=4)
             print("succeeded!")
+
         except Exception:
             failed.append(file_name)
             print("!!!!!!!")
@@ -80,12 +102,23 @@ def generate_pipeline(template, config: dict, meta_json):
     return failed
 
 
-def remove_temp_files():
+def remove_temp_files_generate_pipeline_runs():
     tmp_files = os.listdir("tmp")
     for each_file in tmp_files:
         file_path = os.path.join("tmp", each_file)
-        os.remove(file_path)
+        if each_file != "pipeline_runs.yaml":
+            os.remove(file_path)
 
+
+def prepare_for_runtime():
+    """
+    generate necessary files for runtime
+    """
+    # score pipeline
+    score_pipeline_path = os.path.join(str(d3m.__path__[0]), "contrib/pipelines/f596cd77-25f8-4d4c-a350-bb30ab1e58f6.yml")
+    d3m_runtime_command = "python3 -m d3m pipeline describe --not-standard-pipeline " + \
+    score_pipeline_path + " > normalizedScoringPipeline.json"
+    execute_shell_code(d3m_runtime_command)
 
 def test_pipeline(each_template, config, test_dataset_id):
     try:
@@ -95,47 +128,40 @@ def test_pipeline(each_template, config, test_dataset_id):
         temp_pipeline = os.path.join("tmp/test_pipeline.json")
         with open(temp_pipeline, "w") as f:
             json.dump(pipeline_json, f)
-        d3m_runtime_command = "python -m d3m runtime -d dsbox-unit-test-datasets fit-produce -p tmp/test_pipeline.json -r dsbox-unit-test-datasets/" + \
-                              test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json -i dsbox-unit-test-datasets/" + \
-                              test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json -t dsbox-unit-test-datasets/" + \
-                              test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json -o tmp/produced_output.csv"
-
-
-        p = subprocess.Popen(d3m_runtime_command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-        p.wait()
+        d3m_runtime_command = """
+        python -m d3m runtime \
+          fit-score \
+          --scoring-pipeline normalizedScoringPipeline.json \
+          --pipeline tmp/test_pipeline.json \
+          --problem {problem_doc} \
+          --input {train_dataset_doc} \
+          --test-input {test_dataset_doc} \
+          --score-input {score_dataset_doc} \
+          --output-run {pipeline_runs_yaml_doc} \
+          --output {prediction_csv} \
+          --scores {score_csv}""".format(
+        problem_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json",
+        train_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json",
+        test_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json",
+        score_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/SCORE/dataset_SCORE/datasetDoc.json",
+        pipeline_runs_yaml_doc = "tmp/pipeline_runs.yaml",
+        prediction_csv = "tmp/predictions.csv",
+        score_csv = "tmp/score.csv",
+        )
+        execute_shell_code(d3m_runtime_command)
         try:
-            # load prediction file
-            predictions = pd.read_csv("tmp/produced_output.csv")
+            # check score file
+            predictions = pd.read_csv("tmp/score.csv")
+            print("unit test pipeline for " + test_dataset_id)
+            print(predictions)
         except Exception:
             print("predictions file load failed, please check the pipeline.")
             return False
 
-        # load ground truth file
-        ground_truth = pd.read_csv("dsbox-unit-test-datasets/"+test_dataset_id+"/mitll_predictions.csv")
-
-        if predictions.columns.all() != ground_truth.columns.all():
-            print("prediction columns are:")
-            print(predictions.columns)
-            print("ground truth columns are:")
-            print(ground_truth.columns)
-            print("The predictions columns and ground truth columns are not same.")
-            return False
-
-        if set(predictions['d3mIndex']) != set(ground_truth['d3mIndex']):
-            temp1 = list(set(predictions['d3mIndex']))
-            temp1.sort()
-            print("prediction indexes are:")
-            print(temp1)
-            temp2 = list(set(ground_truth['d3mIndex']))
-            temp2.sort()
-            print("ground truth indexes are:")
-            print(temp2)
-            print("The prediction d3mIndex and ground truth d3mIndex are not same.")
-            return False
-
+        # if everything OK
         return True
     except Exception:
-        raise ValueError("Running train-test with config" + each_template +"failed!")
+        raise ValueError("Running train-test with config" + each_template + "failed!")
         return False
 
 
@@ -149,6 +175,7 @@ def main():
     # config_list = os.listdir("pipeline_configs")
     # config_list = list(map(lambda x: x.generate_pipeline_direct().config, TEMPLATE_LIST))
     # generate pipelines for each configuration
+    prepare_for_runtime()
     for each_template in TEMPLATE_LIST:
         config = each_template.generate_pipeline_direct().config
         datasetID = DATASET_MAPPER[each_template.template['runType'].lower()]
@@ -157,11 +184,11 @@ def main():
                                config,
                                datasetID)
 
-        remove_temp_files()
+        remove_temp_files_generate_pipeline_runs()
         # only generate the pipelines with it pass the test
         if result:
             print("Test pipeline passed! Now generating the pipeline json files...")
-            failed = generate_pipeline(each_template, config, meta_json)
+            failed = generate_pipelines(each_template, config, meta_json)
         else:
             print("Test pipeline not passed! Please check the detail errors")
             raise ValueError("Auto generating pipelines failed")
