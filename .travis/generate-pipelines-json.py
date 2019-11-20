@@ -4,6 +4,7 @@ import subprocess
 import d3m
 import pandas as pd
 import shutil
+import traceback
 import gzip
 
 from template import DATASET_MAPPER
@@ -88,17 +89,18 @@ def generate_pipelines(template, config: dict, meta_json):
             bindata = bytearray(data)
             with gzip.open(pipeline_runs_file, "wb") as f:
                 f.write(bindata)
-            os.remove("tmp/pipeline_runs.yaml")
             # meta_name = os.path.join(outdir, pipeline_json['id']+".meta")
             # with open(meta_name, "w") as f:
             #     json.dump(meta_json, f, separators=(',', ':'),indent=4)
             print("succeeded!")
 
-        except Exception:
+        except Exception as e:
             failed.append(file_name)
             print("!!!!!!!")
             print("failed!")
             print("!!!!!!!")
+            traceback.print_exc()
+
     return failed
 
 
@@ -152,8 +154,10 @@ def test_pipeline(each_template, config, test_dataset_id):
         try:
             # check score file
             predictions = pd.read_csv("tmp/score.csv")
-            print("unit test pipeline for " + test_dataset_id)
+            print("*"*100)
+            print("unit test pipeline's score for " + test_dataset_id)
             print(predictions)
+            print("*"*100)
         except Exception:
             print("predictions file load failed, please check the pipeline.")
             return False
@@ -189,6 +193,7 @@ def main():
         if result:
             print("Test pipeline passed! Now generating the pipeline json files...")
             failed = generate_pipelines(each_template, config, meta_json)
+            os.remove("tmp/pipeline_runs.yaml")
         else:
             print("Test pipeline not passed! Please check the detail errors")
             raise ValueError("Auto generating pipelines failed")
