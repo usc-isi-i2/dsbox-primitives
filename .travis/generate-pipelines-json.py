@@ -213,7 +213,7 @@ def main():
         if result:
             predictions = pd.read_csv("tmp/score.csv")
             print("*"*100)
-            print("unit test pipeline's score for " + test_dataset_id)
+            print("unit test pipeline's score for " + datasetID)
             print(predictions)
             print("*"*100)
             print("Test pipeline passed! Now generating the pipeline json files...")
