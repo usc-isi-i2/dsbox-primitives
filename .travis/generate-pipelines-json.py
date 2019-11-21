@@ -168,7 +168,7 @@ def test_pipeline(each_template, config, test_dataset_id):
           --output-run {pipeline_runs_yaml_doc} \
           --output {prediction_csv} \
           --scores {score_csv}""".format(
-        volume_dir = os.getcwd(),
+        volume_dir = os.path.abspath(os.path.join(os.getcwd(), "..")),
         problem_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json",
         train_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json",
         test_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json",
