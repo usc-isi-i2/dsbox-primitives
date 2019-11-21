@@ -122,6 +122,10 @@ def prepare_for_runtime():
     d3m_runtime_command = "python3 -m d3m pipeline describe --not-standard-pipeline " + \
     score_pipeline_path + " > normalizedScoringPipeline.json"
     execute_shell_code(d3m_runtime_command)
+    import corex_text
+    corex_package_path = os.path.abspath(os.path.join(os.path.dirname( corex_text.__file__ ),'..', 'generate_primitive_json.py'))
+    generate_corex_primitive_json_files = "python3 " + corex_package_path + "dsbox-unit-test-datasets"
+    execute_shell_code(generate_corex_primitive_json_files)
 
 def test_pipeline(each_template, config, test_dataset_id):
     try:
@@ -131,6 +135,12 @@ def test_pipeline(each_template, config, test_dataset_id):
         temp_pipeline = os.path.join("tmp/test_pipeline.json")
         with open(temp_pipeline, "w") as f:
             json.dump(pipeline_json, f)
+
+        # for some condition, score part may have either `*_SCORE` or `*_TEST`
+        score_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/SCORE/dataset_SCORE/datasetDoc.json"
+        if not os.path.exists(score_dataset_doc):
+            score_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/SCORE/dataset_TEST/datasetDoc.json"
+
         d3m_runtime_command = """
         python -m d3m runtime \
           fit-score \
@@ -146,7 +156,7 @@ def test_pipeline(each_template, config, test_dataset_id):
         problem_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json",
         train_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json",
         test_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json",
-        score_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/SCORE/dataset_SCORE/datasetDoc.json",
+        score_dataset_doc = score_dataset_doc,
         pipeline_runs_yaml_doc = "tmp/pipeline_runs.yaml",
         prediction_csv = "tmp/predictions.csv",
         score_csv = "tmp/score.csv",
