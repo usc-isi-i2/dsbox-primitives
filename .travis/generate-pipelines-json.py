@@ -153,9 +153,9 @@ def test_pipeline(each_template, config, test_dataset_id):
             score_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/SCORE/dataset_TEST/datasetDoc.json"
 
         d3m_runtime_command = """
-        python -m d3m runtime \
-          fit-score \
+        python3 -m d3m runtime \
           --volumes {volume_dir} \
+          fit-score \
           --scoring-pipeline normalizedScoringPipeline.json \
           --pipeline tmp/test_pipeline.json \
           --problem {problem_doc} \
@@ -209,14 +209,14 @@ def main():
         result = test_pipeline(each_template,
                                config,
                                datasetID)
-        predictions = pd.read_csv("tmp/score.csv")
-        print("*"*100)
-        print("unit test pipeline's score for " + test_dataset_id)
-        print(predictions)
-        print("*"*100)
         remove_temp_files_generate_pipeline_runs()
         # only generate the pipelines with it pass the test
         if result:
+            predictions = pd.read_csv("tmp/score.csv")
+            print("*"*100)
+            print("unit test pipeline's score for " + test_dataset_id)
+            print(predictions)
+            print("*"*100)
             print("Test pipeline passed! Now generating the pipeline json files...")
             failed = generate_pipelines(each_template, config, meta_json)
             os.remove("tmp/pipeline_runs.yaml")
