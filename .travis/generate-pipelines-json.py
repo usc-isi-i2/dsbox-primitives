@@ -21,8 +21,11 @@ TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
 # ends
 
 def execute_shell_code(shell_command):
+    print("excuting...")
+    print(shell_command)
     p = subprocess.Popen(shell_command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
     p.wait()
+    print("excuting finished!")
 
 
 def get_meta_json(dataset_name):
