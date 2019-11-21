@@ -12,7 +12,7 @@ import shutil
 import sys
 import typing
 import collections
-from skimage.transform import resize
+from skimage.transform import resize as imresize
 
 import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
