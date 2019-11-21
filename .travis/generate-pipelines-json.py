@@ -122,10 +122,17 @@ def prepare_for_runtime():
     d3m_runtime_command = "python3 -m d3m pipeline describe --not-standard-pipeline " + \
     score_pipeline_path + " > normalizedScoringPipeline.json"
     execute_shell_code(d3m_runtime_command)
+    if os.path.exists("normalizedScoringPipeline.json"):
+        print("generate scoring pipeline succeeded.")
+    else:
+        raise ValueError("Scoring pipeline not find!")
+
+    # corex primitive.json
     import corex_text
-    corex_package_path = os.path.abspath(os.path.join(os.path.dirname( corex_text.__file__ ),'..', 'generate_primitive_json.py'))
+    corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
     generate_corex_primitive_json_files = "python3 " + corex_package_path + "dsbox-unit-test-datasets"
     execute_shell_code(generate_corex_primitive_json_files)
+    print("Generate corex related primitive.json finished!")
 
 def test_pipeline(each_template, config, test_dataset_id):
     try:
