@@ -206,9 +206,7 @@ def main():
         config = each_template.generate_pipeline_direct().config
         datasetID = DATASET_MAPPER[each_template.template['runType'].lower()]
         meta_json = get_meta_json(datasetID)
-        result = test_pipeline(each_template,
-                               config,
-                               datasetID)
+        result = test_pipeline(each_template, config, datasetID)
         # only generate the pipelines with it pass the test
         if result:
             predictions = pd.read_csv("tmp/score.csv")
@@ -222,7 +220,7 @@ def main():
         else:
             print("Test pipeline not passed! Please check the detail errors")
             raise ValueError("Auto generating pipelines failed")
-            
+
         if len(failed) != 0:
             print("*"*100)
             print("*"*100)
@@ -230,7 +228,7 @@ def main():
             for each in failed:
                 print(each)
             return 1
-            
+
     
 
 if __name__ == "__main__":
