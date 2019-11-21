@@ -109,8 +109,8 @@ def remove_temp_files_generate_pipeline_runs():
     tmp_files = os.listdir("tmp")
     for each_file in tmp_files:
         file_path = os.path.join("tmp", each_file)
-        if each_file != "pipeline_runs.yaml":
-            os.remove(file_path)
+        # if each_file != "pipeline_runs.yaml":
+        os.remove(file_path)
 
 
 def prepare_for_runtime():
@@ -209,7 +209,6 @@ def main():
         result = test_pipeline(each_template,
                                config,
                                datasetID)
-        remove_temp_files_generate_pipeline_runs()
         # only generate the pipelines with it pass the test
         if result:
             predictions = pd.read_csv("tmp/score.csv")
@@ -219,11 +218,11 @@ def main():
             print("*"*100)
             print("Test pipeline passed! Now generating the pipeline json files...")
             failed = generate_pipelines(each_template, config, meta_json)
-            os.remove("tmp/pipeline_runs.yaml")
+            remove_temp_files_generate_pipeline_runs()
         else:
             print("Test pipeline not passed! Please check the detail errors")
             raise ValueError("Auto generating pipelines failed")
-
+            
         if len(failed) != 0:
             print("*"*100)
             print("*"*100)
@@ -231,7 +230,8 @@ def main():
             for each in failed:
                 print(each)
             return 1
-
+            
+    
 
 if __name__ == "__main__":
     main()
