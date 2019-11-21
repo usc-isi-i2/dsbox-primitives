@@ -118,6 +118,8 @@ def prepare_for_runtime():
     generate necessary files for runtime
     """
     # score pipeline
+    print("*" * 100)
+    print("preparing for running now...")
     score_pipeline_path = os.path.join(str(d3m.__path__[0]), "contrib/pipelines/f596cd77-25f8-4d4c-a350-bb30ab1e58f6.yml")
     d3m_runtime_command = "python3 -m d3m pipeline describe --not-standard-pipeline " + \
     score_pipeline_path + " > normalizedScoringPipeline.json"
@@ -130,9 +132,11 @@ def prepare_for_runtime():
     # corex primitive.json
     import corex_text
     corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
-    generate_corex_primitive_json_files = "python3 " + corex_package_path + "dsbox-unit-test-datasets"
+    generate_corex_primitive_json_files = "python3 " + corex_package_path + " dsbox-unit-test-datasets"
     execute_shell_code(generate_corex_primitive_json_files)
     print("Generate corex related primitive.json finished!")
+    print("*" * 100)
+    print("preparing finished!")
 
 def test_pipeline(each_template, config, test_dataset_id):
     try:
@@ -151,6 +155,7 @@ def test_pipeline(each_template, config, test_dataset_id):
         d3m_runtime_command = """
         python -m d3m runtime \
           fit-score \
+          --volumes {volume_dir} \
           --scoring-pipeline normalizedScoringPipeline.json \
           --pipeline tmp/test_pipeline.json \
           --problem {problem_doc} \
@@ -160,6 +165,7 @@ def test_pipeline(each_template, config, test_dataset_id):
           --output-run {pipeline_runs_yaml_doc} \
           --output {prediction_csv} \
           --scores {score_csv}""".format(
+        volume_dir = os.getcwd(),
         problem_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/problem_TRAIN/problemDoc.json",
         train_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TRAIN/dataset_TRAIN/datasetDoc.json",
         test_dataset_doc = "dsbox-unit-test-datasets/" + test_dataset_id + "/TEST/dataset_TEST/datasetDoc.json",
@@ -172,10 +178,6 @@ def test_pipeline(each_template, config, test_dataset_id):
         try:
             # check score file
             predictions = pd.read_csv("tmp/score.csv")
-            print("*"*100)
-            print("unit test pipeline's score for " + test_dataset_id)
-            print(predictions)
-            print("*"*100)
         except Exception:
             print("predictions file load failed, please check the pipeline.")
             return False
@@ -199,13 +201,19 @@ def main():
     # generate pipelines for each configuration
     prepare_for_runtime()
     for each_template in TEMPLATE_LIST:
+        print("*" * 100)
+        print("Now processing template", str(each_template))
         config = each_template.generate_pipeline_direct().config
         datasetID = DATASET_MAPPER[each_template.template['runType'].lower()]
         meta_json = get_meta_json(datasetID)
         result = test_pipeline(each_template,
                                config,
                                datasetID)
-
+        predictions = pd.read_csv("tmp/score.csv")
+        print("*"*100)
+        print("unit test pipeline's score for " + test_dataset_id)
+        print(predictions)
+        print("*"*100)
         remove_temp_files_generate_pipeline_runs()
         # only generate the pipelines with it pass the test
         if result:
