@@ -362,8 +362,9 @@ class DSBoxTemplate():
         config_dict = eval(str(self.generate_configuration_space()))
         config_dict = dict(map(lambda x: (x[0], x[1][0]), config_dict.items()))
 
-        problem = self.template['taskType'].lower()
-        config_class = simple_config(config=config_dict, pipeline_type=problem, test_dataset_id=DATASET_MAPPER[problem])
+        runType = self.template['runType'].lower()
+
+        config_class = simple_config(config=config_dict, pipeline_type=runType, test_dataset_id=DATASET_MAPPER[runType])
         return config_class
 
     def description_to_configuration(self, description):
@@ -415,9 +416,11 @@ class simple_config:
 
 DATASET_MAPPER = {
             'classification': "38_sick",
+            'voting_classification': '38_sick',
             'regression': "196_autoMpg",
             'timeseries': "uu1_datasmash",
             'image_regression': '22_handgeometry',
+            'time_series_forecasting': 'LL1_736_population_spawn_simpler',
         }
 
 

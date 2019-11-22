@@ -301,8 +301,18 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             last_produce_time = one_timeseries_df.index[-1]
             n_periods = int(self._time_indicator.get_difference(last_training_time, last_produce_time))
             if n_periods <= 0:
-                _logger.error('Testing period is not after training period! last_training_time={last_training_time} last_produce_time={last_produce_time}')
-                return CallResult(DataFrame())
+                # _logger.error("processing on " + str(name) + "failed!")
+                # _logger.error("last training time is" + str(last_training_time))
+                # _logger.error("last produce time is, " + str(last_produce_time))
+                # _logger.error(str(one_timeseries_df))
+                # _logger.error(str(inputs0))
+                # _
+                _logger.error(
+                    'Testing period is not after training period! last_training_time={last_training_time} last_produce_time={last_produce_time}'.format(
+                    last_training_time=str(last_training_time), 
+                    last_produce_time=str(last_produce_time))
+                )
+                return CallResult(inputs)
                 # n_periods = 1
             prediction = self._model[name].predict(n_periods=n_periods)
             if self.hyperparams['take_log']:
