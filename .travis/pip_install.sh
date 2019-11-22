@@ -10,4 +10,6 @@ pip install -e git+https://github.com/brekelma/dsbox_corex@master#egg=d7c20ef26b
 pip list
 wget https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels.h5 --no-verbose
 mv resnet50_weights_tf_dim_ordering_tf_kernels.h5 bdc6c9f787f9f51dffd50d895f86e469cc0eb8ba95fd61f0801b1a264acb4819
+wget https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5 --no-verbose
+mv vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5 bfe5187d0a272bed55ba430631598124cff8e880b98d38c9e56c8d66032abdc1
 ls -l

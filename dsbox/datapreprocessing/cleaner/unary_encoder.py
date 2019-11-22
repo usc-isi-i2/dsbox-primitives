@@ -1,6 +1,7 @@
 import copy
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
+import frozendict
 import typing
 
 from d3m import container
@@ -336,6 +337,13 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
             data_else[texts.columns] = le.transform_pd(texts)
         # transfer the encoded results to dataFrame
         encoded = d3m_DataFrame(pd.concat(res, axis=1))
+        # update dimensional information
+        encoded.metadata = encoded.metadata.update((), inputs.metadata.query(()))
+        columns_query = dict(inputs.metadata.query((mbase.ALL_ELEMENTS,)))
+        new_dimension_data = dict(columns_query['dimension'])
+        new_dimension_data['length'] = encoded.shape[1]
+        columns_query['dimension'] = frozendict.FrozenOrderedDict(new_dimension_data)
+        encoded.metadata = encoded.metadata.update((mbase.ALL_ELEMENTS,), frozendict.FrozenOrderedDict(columns_query))
 
         # update metadata for existing columns
         for index in range(len(encoded.columns)):

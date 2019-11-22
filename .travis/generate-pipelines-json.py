@@ -19,7 +19,7 @@ TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
 TEMPLATE_LIST.append(VotingTemplate())
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2)
 TEMPLATE_LIST.append(ARIMATemplate())
 # ends
 
@@ -138,7 +138,7 @@ def prepare_for_runtime():
     # corex primitive.json
     import corex_text
     corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
-    generate_corex_primitive_json_files = "python3 " + corex_package_path + " dsbox-unit-test-datasets"
+    generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
     execute_shell_code(generate_corex_primitive_json_files)
     print("Generate corex related primitive.json finished!")
     print("*" * 100)
