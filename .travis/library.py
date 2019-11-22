@@ -592,3 +592,65 @@ class ARIMATemplate(DSBoxTemplate):
                 },
             ]
         }
+
+
+class DefaultObjectDetectionTemplate(DSBoxTemplate):
+    def __init__(self):
+        DSBoxTemplate.__init__(self)
+        self.template = {
+            "name": "DefaultObjectDetectionTemplate",
+            "taskType": TaskKeyword.OBJECT_DETECTION.name,
+            "runType": "object_detection",
+            "taskSubtype": "NONE",
+            "inputType": {"table", "image"},  # See SEMANTIC_TYPES.keys() for range of values
+            "output": "model_step",  # Name of the final step generating the prediction
+            "target": "extract_target_step",  # Name of the step generating the ground truth
+            "steps": [
+                {
+                    "name": "to_dataframe_step",#step 1
+                    "primitives": ["d3m.primitives.data_transformation.dataset_to_dataframe.Common"],
+                    "inputs": ["template_input"]
+                },
+                # read X value
+                {
+                    "name": "extract_file_step",#step 2
+                    "primitives": [{
+                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+                        "hyperparameters":
+                            {
+                                'semantic_types': (
+                                    'https://metadata.datadrivendiscovery.org/types/PrimaryMultiKey',
+                                    'https://metadata.datadrivendiscovery.org/types/FileName',),
+                                'use_columns': (),
+                                'exclude_columns': ()
+                            }
+                    }],
+                    "inputs": ["to_dataframe_step"]
+                },
+                {
+                    "name": "extract_target_step",# step 3
+                    "primitives": [{
+                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+                        "hyperparameters":
+                            {
+                                'semantic_types': (
+                                    'https://metadata.datadrivendiscovery.org/types/TrueTarget',),
+                                'use_columns': (),
+                                'exclude_columns': ()
+                            }
+                    }],
+                    "inputs": ["to_dataframe_step"]
+                },
+                {
+                    "name": "model_step", # step 4
+                    "primitives": [
+                        {
+                            "primitive": "d3m.primitives.feature_extraction.yolo.DSBOX",
+                            "hyperparameters": {
+                            }
+                        }
+                    ],
+                    "inputs": ["extract_file_step", "extract_target_step"]
+                },
+            ]
+        }

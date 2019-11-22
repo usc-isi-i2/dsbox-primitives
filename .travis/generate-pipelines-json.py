@@ -4,6 +4,7 @@ import subprocess
 import d3m
 import pandas as pd
 import shutil
+import corex_text
 import traceback
 import gzip
 
@@ -19,8 +20,9 @@ TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
 TEMPLATE_LIST.append(VotingTemplate())
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2)
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
 TEMPLATE_LIST.append(ARIMATemplate())
+TEMPLATE_LIST.append(DefaultObjectDetectionTemplate())
 # ends
 
 def execute_shell_code(shell_command):
@@ -72,6 +74,11 @@ def generate_pipelines(template, config: dict, meta_json):
         output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
                               cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
                               cleaner_config.VERSION)
+        if "corex" in each_primitive:
+            output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+                              cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
+                              corex_text.cfg_.VERSION)
+
         output_pipeline_dir = os.path.join(output_dir, "pipelines")
         output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
         os.makedirs(output_pipeline_dir, exist_ok=True)
@@ -136,7 +143,6 @@ def prepare_for_runtime():
         raise ValueError("Scoring pipeline not find!")
 
     # corex primitive.json
-    import corex_text
     corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
     generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
     execute_shell_code(generate_corex_primitive_json_files)

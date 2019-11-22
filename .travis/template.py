@@ -421,6 +421,7 @@ DATASET_MAPPER = {
             'timeseries': "uu1_datasmash",
             'image_regression': '22_handgeometry',
             'time_series_forecasting': 'LL1_736_population_spawn_simpler',
+            'object_detection': 'LL1_penn_fudan_pedestrian',
         }
 
 
