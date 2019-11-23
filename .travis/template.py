@@ -363,8 +363,8 @@ class DSBoxTemplate():
         config_dict = dict(map(lambda x: (x[0], x[1][0]), config_dict.items()))
 
         runType = self.template['runType'].lower()
-
-        config_class = simple_config(config=config_dict, pipeline_type=runType, test_dataset_id=DATASET_MAPPER[runType])
+        test_dataset_id = DATASET_MAPPER.get(runType)
+        config_class = simple_config(config=config_dict, pipeline_type=runType, test_dataset_id=test_dataset_id)
         return config_class
 
     def description_to_configuration(self, description):
