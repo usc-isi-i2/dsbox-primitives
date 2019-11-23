@@ -98,7 +98,7 @@ def generate_pipelines(template, config: dict, meta_json):
 
             # copy pipeline_run files
             file_count = len(os.listdir(output_pipeline_runs_dir))
-            pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gzip".format(str(file_count + 1)))
+            pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gz".format(str(file_count + 1)))
             with open("tmp/pipeline_runs.yaml", "rb") as f:
                 data = f.read()
             bindata = bytearray(data)
