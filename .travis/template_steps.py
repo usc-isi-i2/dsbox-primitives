@@ -65,15 +65,15 @@ class TemplateSteps:
                 "primitives": ["d3m.primitives.data_preprocessing.unary_encoder.DSBOX"],
                 "inputs": ["clean_step"]
             },
-            {
-                "name": "corex_step",
-                "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
-                "inputs": ["encode_step"]
-            },
+            # {
+            #     "name": "corex_step",
+            #     "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
+            #     "inputs": ["encode_step"]
+            # },
             {
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
-                "inputs":["corex_step"],
+                "inputs":["encode_step"],
             },
             {
                 "name": "impute_step",
@@ -202,15 +202,15 @@ class TemplateSteps:
                 "primitives": ["d3m.primitives.data_preprocessing.encoder.DSBOX"],
                 "inputs": ["clean_step"]
             },
-            {
-                "name": "corex_step",
-                "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
-                "inputs": ["encode_step"]
-            },
+            # {
+            #     "name": "corex_step",
+            #     "primitives": ["d3m.primitives.feature_construction.corex_text.DSBOX"],
+            #     "inputs": ["encode_step"]
+            # },
             {
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
-                "inputs":["corex_step"],
+                "inputs":["clean_step"],
             },
             {
                 "name": "impute_step",
@@ -709,17 +709,17 @@ class TemplateSteps:
                 {
                     "name": "encode_text_step",
                     "primitives": [
-                        {
-                            "primitive": "d3m.primitives.feature_construction.corex_text.CorexText",
-                            "hyperparameters":
-                                {
-                                    'n_hidden': [(10)],
-                                    'threshold': [(0), (500)],
-                                    'n_grams': [(1), (5)],
-                                    'max_df': [(.9)],
-                                    'min_df': [(.02)],
-                                }
-                        },
+                        # {
+                        #     "primitive": "d3m.primitives.feature_construction.corex_text.CorexText",
+                        #     "hyperparameters":
+                        #         {
+                        #             'n_hidden': [(10)],
+                        #             'threshold': [(0), (500)],
+                        #             'n_grams': [(1), (5)],
+                        #             'max_df': [(.9)],
+                        #             'min_df': [(.02)],
+                        #         }
+                        # },
                         {"primitive": "d3m.primitives.data_preprocessing.do_nothing.DSBOX", },
                     ],
                     "inputs": [clean_name]
