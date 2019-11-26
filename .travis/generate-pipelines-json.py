@@ -99,15 +99,20 @@ class dsboxPrimitiveUnitTest:
         corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
         generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
         self.execute_shell_code(generate_corex_primitive_json_files)
-        self.corex_primitives = os.listdir(os.path.join("output", 
-                                                "v" + cleaner_config.D3M_API_VERSION,
-                                                cleaner_config.D3M_PERFORMER_TEAM))
-        if len(self.corex_primitives) == 0:
-            raise ValueError("corex primitives generate failed!")
+        corex_primitives_json_loc = os.path.join("output", "v" + cleaner_config.D3M_API_VERSION,
+                                                 cleaner_config.D3M_PERFORMER_TEAM)
+        corex_primitives_generate_failed = True
+        if os.path.exists(corex_primitives_json_loc):
+            self.corex_primitives = os.listdir(corex_primitives_json_loc)
+            if len(self.corex_primitives) != 0:
+                corex_primitives_generate_failed = True
 
         print("*" * 100)
-        print("following corex primitives found:")
-        print(str(self.corex_primitives))
+        if corex_primitives_generate_failed:
+            print("[WARNING]: corex primitives generate failed!")
+        else:
+            print("following corex primitives found:")
+            print(str(self.corex_primitives))
         print("preparing finished!")
 
     def get_primitive_hitted(self, config):
