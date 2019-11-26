@@ -209,10 +209,13 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             raise ValueError("The length of inputs is larger than outputs which is impossible.")
 
         # TODO: maybe use a better way to find the feature input columns
+        first_content_index = 0
         input_column_names = []
         input_column_numbers = []
         for i, each_column in enumerate(self._training_inputs.columns):
-            if type(self._training_inputs[each_column][0]) is np.ndarray and len(self._training_inputs[each_column][0].shape) == 2:
+            while isinstance(self._training_inputs[each_column][first_content_index], type(None)):
+                first_content_index += 1
+            if type(self._training_inputs[each_column][first_content_index]) is np.ndarray and len(self._training_inputs[each_column][first_content_index].shape) == 2:
                 input_column_names.append(each_column)
                 input_column_numbers.append(i)
         if len(input_column_names) < 1:
@@ -245,7 +248,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._target_column_name = target_column_names[0]
         class_names = set(self._training_outputs[self._target_column_name].tolist())
         self._number_of_classes = len(class_names)
-        self._feature_shape = list(self._features[0].shape)
+        self._feature_shape = list(self._features[first_content_index].shape)
         self._features_amount = self._training_inputs.shape[0]
         self._training_inputs_ndarry = np.empty((self._features_amount, self._feature_shape[0], self._feature_shape[1]))
         for i, each in enumerate(self._features):
