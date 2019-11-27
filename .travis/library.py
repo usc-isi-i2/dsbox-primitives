@@ -324,6 +324,108 @@ class VotingTemplate(DSBoxTemplate):
                       ])
         }
 
+class HorizontalVotingTemplate(DSBoxTemplate):
+    'Horizontal Voting Template'
+    def __init__(self):
+        DSBoxTemplate.__init__(self)
+        self.template = {
+            "name": "horizontal_voting_template",
+            "taskSubtype": {TaskKeyword.BINARY.name, TaskKeyword.MULTICLASS.name},
+            "taskType": TaskKeyword.CLASSIFICATION.name,
+            "runType": "voting_classification",
+            "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
+            "output": "model_step",  # Name of the final step generating the prediction
+            "target": "target",  # Name of the step generating the ground truth
+            "steps": (TemplateSteps.dsbox_generic_steps()
+                      + TemplateSteps.dsbox_feature_selector("classification", first_input='data', second_input='target')
+                      + [
+                          {
+                              "name": "model_substep_1",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.linear_discriminant_analysis.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "model_substep_2",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.nearest_centroid.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "model_substep_3",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.logistic_regression.SKlearn",
+                                      "hyperparameters": {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                      }
+                                  }],
+                              "inputs": ["feature_selector_step", "target"]
+                          },
+                          {
+                              "name": "horizontal_concat",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.data_preprocessing.horizontal_concat.DSBOX",
+                                      "hyperparameters": {}
+                                  }],
+                              "inputs": [["feature_selector_step", "model_substep_1", "model_substep_2", "model_substep_3"]]
+                          },
+                          {
+                              "name": "to_attribute",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.data_transformation.replace_semantic_types.Common",
+                                      "hyperparameters": {
+                                          'from_semantic_types': [[
+                                              "https://metadata.datadrivendiscovery.org/types/Target",
+                                              "https://metadata.datadrivendiscovery.org/types/PredictedTarget"
+                                          ]],
+                                          'to_semantic_types': [[
+                                              "https://metadata.datadrivendiscovery.org/types/Attribute"
+                                          ]],
+                                          'match_logic': ['any'],
+                                      }
+                                  }
+                              ],
+                              "inputs": ["horizontal_concat"]
+                          },
+                          {
+                              "name": "encode_new_columns",
+                              "primitives": ["d3m.primitives.data_preprocessing.encoder.DSBOX"],
+                              "inputs": ["to_attribute"]
+                          },
+                          {
+                              "name": "model_step",
+                              "primitives": [
+                                  {
+                                      "primitive": "d3m.primitives.classification.random_forest.SKlearn",
+                                      "hyperparameters": {
+                                          'add_index_columns': [True],
+                                          'use_semantic_types':[True],
+                                      }
+                                  }
+                              ],
+                              "inputs": ["encode_new_columns", "target"]
+                          }
+                      ])
+        }
 
 class TA1ImageProcessingRegressionTemplate(DSBoxTemplate):
     def __init__(self):

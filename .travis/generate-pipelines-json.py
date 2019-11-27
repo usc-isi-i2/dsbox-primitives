@@ -1,19 +1,22 @@
+''
+import gzip
 import json
 import os
-import subprocess
-import d3m
-import typing
-import pandas as pd
 import shutil
-import corex_text
+import subprocess
 import traceback
-import gzip
+import typing
 
 from collections import defaultdict
+
+import pandas as pd
+import d3m
+import corex_text
+
 from template import DATASET_MAPPER
+from template import DSBoxTemplate
 from library import *  # import testing template
 from dsbox.datapreprocessing.cleaner import config as cleaner_config
-from template import DSBoxTemplate
 
 TEMPLATE_LIST = []
 
@@ -27,10 +30,11 @@ TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
 TEMPLATE_LIST.append(ARIMATemplate())
 TEMPLATE_LIST.append(DefaultObjectDetectionTemplate())
+TEMPLATE_LIST.append(HorizontalVotingTemplate())
 # ends
 
 
-class dsboxPrimitiveUnitTest:
+class DsboxPrimitiveUnitTest:
     def __init__(self, templates_to_test: typing.List[DSBoxTemplate], include_corex_primitives: bool=True):
         self.templates_to_test = templates_to_test
         self.prepare_for_runtime()
@@ -120,9 +124,9 @@ class dsboxPrimitiveUnitTest:
             Return a list of DSBOX primitives that are found in the config file
             We should only add sample pipelines for our own primitives.
 
-            notice: for corex primitives, due to the reason that they are in 
-            different branch from ours, it has to be uploaded and merged to 
-            d3m `primitives` branch first, and then we can submit the sample 
+            notice: for corex primitives, due to the reason that they are in
+            different branch from ours, it has to be uploaded and merged to
+            d3m `primitives` branch first, and then we can submit the sample
             pipelines, otherwise the CI on d3m will failed.
         """
         primitive_hitted = []
@@ -240,7 +244,7 @@ class dsboxPrimitiveUnitTest:
             return True
 
         except Exception:
-            raise ValueError("Running train-test with config" + each_template + "failed!")
+            raise ValueError("Running train-test with config " + str(each_template) + " failed!")
             return False
 
     def start_test(self):
@@ -273,7 +277,7 @@ class dsboxPrimitiveUnitTest:
 
 
 def main():
-    test_unit = dsboxPrimitiveUnitTest(TEMPLATE_LIST)
+    test_unit = DsboxPrimitiveUnitTest(TEMPLATE_LIST)
     test_unit.start_test()
 
 
