@@ -136,19 +136,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-        # import tensorflow as tf
-        # config = tf.ConfigProto()
-        # config.gpu_options.allow_growth = True
-        # session = tf.Session(config=config)
-        import keras.backend.tensorflow_backend as KTF
-        import tensorflow as tf
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth=True   
-        config.gpu_options.per_process_gpu_memory_fraction = 0.5
-        sess = tf.Session(config=config)
-        from keras.backend.tensorflow_backend import set_session
-        set_session(tf.Session(config=config))
-        KTF.set_session(sess)
 
         # All other attributes must be private with leading underscore
         self._has_finished = False
