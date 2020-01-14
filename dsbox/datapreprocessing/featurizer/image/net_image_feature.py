@@ -113,8 +113,8 @@ class KerasPrimitive:
 
         # Lazy import modules as not to slow down d3m.index
         global keras_models, keras_backend, tf
-        keras_models = importlib.import_module('keras.models')
-        keras_backend = importlib.import_module('keras.backend')
+        keras_models = importlib.import_module('tensorflow.keras.models')
+        keras_backend = importlib.import_module('tensorflow.keras.backend')
         tf = importlib.import_module('tensorflow')
 
         self._initialized = True
@@ -564,7 +564,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
 
         # Lazy import modules as not to slow down d3m.index
         global inception_v3
-        inception_v3 = importlib.import_module('keras.applications.inception_v3')
+        inception_v3 = importlib.import_module('tensorflow.keras.applications.inception_v3')
 
         self._setup_weight_files()
 
@@ -681,6 +681,8 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             processed_input[count] = each_frame
         # run preprocess step
         processed_input = self._preprocess(processed_input)
+
+        # processed_input_tensor = tf.constant(processed_input, dtype = tf.float32)
         features = self._model.predict(processed_input)
         return features
 

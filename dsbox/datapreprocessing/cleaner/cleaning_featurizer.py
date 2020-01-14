@@ -31,6 +31,9 @@ Clean_operations = {
     "split_punctuation_column": True
 }
 
+TARGET_SEMANTIC_TYPES = ("https://metadata.datadrivendiscovery.org/types/TrueTarget",
+      "https://metadata.datadrivendiscovery.org/types/Target",
+      "https://metadata.datadrivendiscovery.org/types/SuggestedTarget")
 
 class CleaningFeaturizerParams(params.Params):
     mapping: Dict
@@ -310,7 +313,8 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
         if len(semantic_types) == 0:
             cls.logger.warning("No semantic types found in column metadata")
             return False
-        if "https://metadata.datadrivendiscovery.org/types/Attribute" in semantic_types:
+        if "https://metadata.datadrivendiscovery.org/types/Attribute" in semantic_types or \
+            len(set(semantic_types).itersection(TARGET_SEMANTIC_TYPES)) == 0:
             return True
 
         return False

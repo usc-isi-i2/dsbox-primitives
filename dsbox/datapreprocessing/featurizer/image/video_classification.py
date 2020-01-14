@@ -307,10 +307,14 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         logger.info("The model fitting finished with"+str(self._iterations_done)+"interation." )
         logger.info("The final result is:")
-        logger.info("train_loss      = " + str(result.history['loss']))
-        logger.info("train_acc       = " + str(result.history['acc']))
-        logger.info("validation_loss = " + str(result.history['val_loss']))
-        logger.info("validation_acc  = " + str(result.history['val_acc']))
+        try:
+            logger.info(str(result.history))
+            logger.info("train_loss      = " + str(result.history['loss']))
+            logger.info("train_acc       = " + str(result.history['acc']))
+            logger.info("validation_loss = " + str(result.history['val_loss']))
+            logger.info("validation_acc  = " + str(result.history['val_acc']))
+        except:
+            pass
         return CallResult(None)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
