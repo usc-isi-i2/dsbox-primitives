@@ -5,13 +5,15 @@
 
 import importlib
 import logging
-import numpy as np
-import pandas as pd
 import os
 import shutil
 import sys
 import typing
 import collections
+
+import numpy as np
+import pandas as pd
+
 from skimage.transform import resize as imresize
 
 import d3m.metadata.base as mbase
@@ -22,9 +24,14 @@ from d3m import container
 
 from . import config
 
+# If True use tensorflow.keras.* modules, instead of keras.*
+KERAS_MODULE = 'keras'
+TENSORFLOW_MODULE = 'tensorflow.keras'
+USE_MODULE = TENSORFLOW_MODULE
+
 logger = logging.getLogger(__name__)
 CONTAINER_SCHEMA_VERSION = 'https://metadata.datadrivendiscovery.org/schemas/v0/container.json'
-# Input image tensor has 4 dimensions: (num_images, 244, 244, 3)
+# Input image tensor has 4 dimensions: (num_images, 224, 224, 3)
 Inputs = container.List
 Inputs_inceptionV3 = container.DataFrame
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
@@ -113,8 +120,14 @@ class KerasPrimitive:
 
         # Lazy import modules as not to slow down d3m.index
         global keras_models, keras_backend, tf
-        keras_models = importlib.import_module('tensorflow.keras.models')
-        keras_backend = importlib.import_module('tensorflow.keras.backend')
+        if USE_MODULE == TENSORFLOW_MODULE:
+            logger.info('Using tensorflow.keras modules')
+            keras_models = importlib.import_module('tensorflow.keras.models')
+            keras_backend = importlib.import_module('tensorflow.keras.backend')
+        elif USE_MODULE == KERAS_MODULE:
+            logger.info('Using keras modules')
+            keras_models = importlib.import_module('keras.models')
+            keras_backend = importlib.import_module('keras.backend')
         tf = importlib.import_module('tensorflow')
 
         self._initialized = True
@@ -150,6 +163,8 @@ class KerasPrimitive:
         Copy weight files from volume to Keras cache directory
         """
         for file_info in self._weight_files:
+            if USE_MODULE not in file_info.package:
+                continue
             if file_info.name in self.volumes:
                 dest = os.path.join(file_info.data_dir, file_info.name)
                 if not os.path.exists(dest):
@@ -157,19 +172,30 @@ class KerasPrimitive:
             else:
                 logger.warning('Keras weight file not in volume: {}'.format(file_info.name))
 
+    def _get_weight_file(self, name):
+        file_info = [info for info in self._weight_files if info.name == name and USE_MODULE in info.package]
+        if not file_info:
+            print(self._weight_files)
+            raise ValueError(f'Cannot find weight file definition: {name}')
+        if len(file_info) > 1:
+            logger.warning('Found mulitple weight file definitions: %s', file_info)
+        file_info = file_info[0]
+        if file_info.name in self.volumes:
+            return self.volumes[file_info.name]
+        return ""
+
 
 class WeightFile(typing.NamedTuple):
     name: str
     uri: str
     digest: str
+    package: str = [KERAS_MODULE, TENSORFLOW_MODULE]
     data_dir: str = KerasPrimitive._get_keras_data_dir()
 
 
 class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, ResNet50Hyperparams], KerasPrimitive):
     """
-    Image Feature Generation using pretrained deep neural network Inception V3
-    Note that the input image format for this model is different than for the VGG16 and ResNet models 
-    (299x299 instead of 224x224)
+    Image Feature Generation using pretrained deep neural network ResNet50
 
     Parameters
     ----------
@@ -184,11 +210,16 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
     # Resnet50 weight files info is from here:
     # https://github.com/keras-team/keras-applications/blob/master/keras_applications/resnet50.py
     _weight_files = [
-        WeightFile('resnet50_weights_tf_dim_ordering_tf_kernels.h5',
+        WeightFile(KERAS_MODULE + ':resnet50_weights_tf_dim_ordering_tf_kernels.h5',
                    ('https://github.com/fchollet/deep-learning-models/'
                     'releases/download/v0.2/'
                     'resnet50_weights_tf_dim_ordering_tf_kernels.h5'),
-                   'bdc6c9f787f9f51dffd50d895f86e469cc0eb8ba95fd61f0801b1a264acb4819'),
+                   'bdc6c9f787f9f51dffd50d895f86e469cc0eb8ba95fd61f0801b1a264acb4819',
+                   'keras'),
+        WeightFile(TENSORFLOW_MODULE + ':resnet50_weights_tf_dim_ordering_tf_kernels.h5',
+                   'https://github.com/keras-team/keras-applications/releases/download/resnet/resnet50_weights_tf_dim_ordering_tf_kernels.h5',
+                   '7011d39ea4f61f4ddb8da99c4addf3fae4209bfda7828adb4698b16283258fbe',
+                   'tensorflow.keras'),
         # WeightFile('resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5',
         #            ('https://github.com/fchollet/deep-learning-models/'
         #             'releases/download/v0.2/'
@@ -199,8 +230,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
     metadata = hyperparams.base.PrimitiveMetadata({
         'id': 'dsbox-featurizer-image-resnet50',
         'version': config.VERSION,
-        'name': "DSBox Image Featurizer RestNet50",
-        'description': 'Generate image features using RestNet50',
+        'name': "DSBox Image Featurizer ResNet50",
+        'description': 'Generate image features using ResNet50',
         'python_path': 'd3m.primitives.feature_extraction.resnet50_image_feature.DSBOX',
         'primitive_family': "FEATURE_EXTRACTION",
         'algorithm_types': ["FEEDFORWARD_NEURAL_NETWORK"],
@@ -232,7 +263,6 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._layer_index = hyperparams['layer_index']
         self._preprocess_data = True
         self._resize_data = True
-        self._RESNET50_MODEL = None
         # ===========================================================
 
     def _lazy_init(self):
@@ -243,17 +273,25 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
 
         # Lazy import modules as not to slow down d3m.index
         global resnet50
-        resnet50 = importlib.import_module('keras.applications.resnet50')
+        if USE_MODULE == TENSORFLOW_MODULE:
+            resnet50 = importlib.import_module('tensorflow.keras.applications.resnet50')
+        else:
+            resnet50 = importlib.import_module('keras.applications.resnet50')
 
-        self._setup_weight_files()
+        # self._setup_weight_files()
+        weight_file = self._get_weight_file(USE_MODULE + ':resnet50_weights_tf_dim_ordering_tf_kernels.h5')
+        if not weight_file:
+            weight_file = 'imagenet'
+        logger.debug('Using weight file: %s', weight_file)
 
         keras_backend.clear_session()
 
-        if self._RESNET50_MODEL is None:
-            original = sys.stdout
-            sys.stdout = sys.stderr
-            self._RESNET50_MODEL = resnet50.ResNet50(weights='imagenet')
-            sys.stdout = original
+        # Always create a new model
+        original = sys.stdout
+        sys.stdout = sys.stderr
+        self._org_model = resnet50.ResNet50(weights=weight_file)
+        sys.stdout = original
+
         self._layer_numbers = [-2, -4, -8, -11, -14, -18, -21, -24, -30, -33, -36]
         if self._layer_index < 0:
             self._layer_index = 0
@@ -262,16 +300,17 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
 
         self._layer_number = self._layer_numbers[self._layer_index]
 
-        self._org_model = self._RESNET50_MODEL
         self._model = keras_models.Model(self._org_model.input,
                                          self._org_model.layers[self._layer_number].output)
-        self._graph = tf.get_default_graph()
+
+        # self._graph = tf.get_default_graph()
+        # self._graph = tf.compat.v1.get_default_graph()
 
         self._annotation = None
 
     def _preprocess(self, image_tensor):
         """Preprocess image data by modifying it directly"""
-        resnet50.preprocess_input(image_tensor)
+        return resnet50.preprocess_input(image_tensor)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         """Apply neural network-based feature extraction to image_tensor"""
@@ -286,7 +325,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
 
         resized = False
         if self._resize_data:
-            if not (image_tensor.shape[1] == 244 and image_tensor.shape[2] == 244):
+            if not (image_tensor.shape[1] == 224 and image_tensor.shape[2] == 224):
                 resized = True
                 y = np.empty((image_tensor.shape[0], 224, 224, 3))
                 for index in range(image_tensor.shape[0]):
@@ -300,12 +339,15 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
                 data = image_tensor
             else:
                 data = image_tensor.copy()
-            self._preprocess(data)
+            data = self._preprocess(data)
         else:
             data = image_tensor
-        # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
-        with self._graph.as_default():
-            output_ndarray = self._model.predict(data)
+
+        # # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
+        # with self._graph.as_default():
+        #    output_ndarray = self._model.predict(data)
+        output_ndarray = self._model.predict(data)
+
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
         output_dataFrame = container.DataFrame(output_ndarray)
 
@@ -400,7 +442,6 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         self._layer_index = self.hyperparams['layer_index']
         self._preprocess_data = True
         self._resize_data = True
-        self._VGG16_MODEL = None
         # ===========================================================
 
     def _lazy_init(self):
@@ -411,17 +452,20 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
 
         # Lazy import modules as not to slow down d3m.index
         global vgg16
-        vgg16 = importlib.import_module('keras.applications.vgg16')
+        if USE_MODULE == TENSORFLOW_MODULE:
+            vgg16 = importlib.import_module('tensorflow.keras.applications.vgg16')
+        else:
+            vgg16 = importlib.import_module('keras.applications.vgg16')
 
         self._setup_weight_files()
 
         keras_backend.clear_session()
 
-        if self._VGG16_MODEL is None:
-            original = sys.stdout
-            sys.stdout = sys.stderr
-            self._VGG16_MODEL = vgg16.VGG16(weights='imagenet', include_top=False)
-            sys.stdout = original
+        original = sys.stdout
+        sys.stdout = sys.stderr
+        self._org_model = vgg16.VGG16(weights='imagenet', include_top=False)
+        sys.stdout = original
+
         self._layer_numbers = [-1, -5, -9, -13, -16]
         if self._layer_index < 0:
             self._layer_index = 0
@@ -430,17 +474,17 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
 
         self._layer_number = self._layer_numbers[self._layer_index]
 
-        self._org_model = self._VGG16_MODEL
         self._model = keras_models.Model(self._org_model.input,
                                          self._org_model.layers[self._layer_number].output)
 
-        self._graph = tf.get_default_graph()
+        # self._graph = tf.get_default_graph()
+        self._graph = tf.compat.v1.get_default_graph()
 
         self._annotation = None
 
     def _preprocess(self, image_tensor):
         """Preprocess image data by modifying it directly"""
-        vgg16.preprocess_input(image_tensor)
+        return vgg16.preprocess_input(image_tensor)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         """Apply neural network-based feature extraction to image_tensor"""
@@ -469,12 +513,15 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
                 data = image_tensor
             else:
                 data = image_tensor.copy()
-            self._preprocess(data)
+            data = self._preprocess(data)
         else:
             data = image_tensor
+
         # BUG fix: add global variable to fix ta3 system if calling multiple times of this primitive
-        with self._graph.as_default():
-            output_ndarray = self._model.predict(data)
+        # with self._graph.as_default():
+        #     output_ndarray = self._model.predict(data)
+
+        output_ndarray = self._model.predict(data)
         output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
         output_dataFrame = container.DataFrame(output_ndarray)
 
@@ -505,7 +552,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
     """
     Image Feature Generation using pretrained deep neural network inception_V3.
     """
-    
+
     # inception_V3 weight files info is from here:
     # https://github.com/keras-team/keras-applications/blob/master/keras_applications/inception_v3.py
     _weight_files = [
@@ -564,12 +611,16 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
 
         # Lazy import modules as not to slow down d3m.index
         global inception_v3
-        inception_v3 = importlib.import_module('tensorflow.keras.applications.inception_v3')
+        if USE_MODULE == TENSORFLOW_MODULE:
+            inception_v3 = importlib.import_module('tensorflow.keras.applications.inception_v3')
+        else:
+            inception_v3 = importlib.import_module('keras.applications.inception_v3')
 
         self._setup_weight_files()
 
         keras_backend.clear_session()
 
+        self._model = None
         if self._model is None:
             original = sys.stdout
             sys.stdout = sys.stderr
@@ -578,10 +629,11 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
 
         self._org_model = self._model
         self._model = keras_models.Model(
-                inputs=self._org_model.input,
-                outputs=self._org_model.get_layer('avg_pool').output
-            )
+            inputs=self._org_model.input,
+            outputs=self._org_model.get_layer('avg_pool').output
+        )
         # self._graph = tf.get_default_graph()
+        # self._graph = tf.compat.v1.get_default_graph()
 
         self._annotation = None
 
@@ -635,7 +687,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             logger.info("Now processing No. " + str(i)+ " video.")
             frame_number = each_video.shape[0]
             if self._use_limitation and (frame_number > self._maximum_frame or frame_number < self._minimum_frame):
-                logger.info("skip No. ",str(i))# 
+                logger.info("skip No. %s", str(i))
                 features.append(None)
                 continue
             each_feature = self._process_one_video(each_video)
