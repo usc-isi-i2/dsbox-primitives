@@ -1,12 +1,13 @@
-d3m==v2019.11.10
+d3m>=v2019.11.10
 langdetect>=1.0.7
 python-dateutil>=2.5.2
 six>=1.10.0
 stopit==1.1.2
 wget
-Keras>=2.2.4
+Keras>=2.2.7
 Pillow
 scipy>=1.2.0
 h5py
 pmdarima==1.0.0
 scikit-image
+tensorflow>=2.0.0

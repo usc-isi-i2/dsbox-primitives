@@ -733,6 +733,8 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             processed_input[count] = each_frame
         # run preprocess step
         processed_input = self._preprocess(processed_input)
+
+        # processed_input_tensor = tf.constant(processed_input, dtype = tf.float32)
         features = self._model.predict(processed_input)
         return features
 
