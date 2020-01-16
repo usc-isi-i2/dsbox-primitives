@@ -100,7 +100,7 @@ class DsboxPrimitiveUnitTest:
             raise ValueError("Scoring pipeline not find!")
 
         # genereate corex primitive.json
-        corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corex_text.__file__ ), 'generate_primitive_json.py'))
+        corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corextext.__path__._path[0]),"..", 'generate_primitive_json.py'))
         generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
         self.execute_shell_code(generate_corex_primitive_json_files)
         corex_primitives_json_loc = os.path.join("output", "v" + cleaner_config.D3M_API_VERSION,
