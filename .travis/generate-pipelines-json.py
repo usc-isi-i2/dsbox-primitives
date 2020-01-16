@@ -23,6 +23,8 @@ TEMPLATE_LIST = []
 # add templates here
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultClassificationTemplate2())
+TEMPLATE_LIST.append(DefaultClassificationTemplate3())
+TEMPLATE_LIST.append(UU3TestTemplate())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
 TEMPLATE_LIST.append(DefaultRegressionTemplate())
 TEMPLATE_LIST.append(VotingTemplate())
