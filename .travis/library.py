@@ -90,6 +90,48 @@ class DefaultClassificationTemplate2(DSBoxTemplate):
 
 
 
+class DefaultClassificationTemplate3(DSBoxTemplate):
+    def __init__(self):
+        DSBoxTemplate.__init__(self)
+        self.template = {
+            "name": "default_classification_template3",
+            "taskSubtype": {TaskKeyword.BINARY.name, TaskKeyword.MULTICLASS.name},
+            "taskType": TaskKeyword.CLASSIFICATION.name,
+            "runType": "classification",
+            "inputType": "table",  # See SEMANTIC_TYPES.keys() for range of values
+            "output": "model_step",  # Name of the final step generating the prediction
+            "target": "extract_target_step",  # Name of the step generating the ground truth
+            "steps": (TemplateSteps.dsbox_generic_steps3()
+                      + TemplateSteps.dsbox_feature_selector("classification", first_input='data', second_input='target')
+                      + [
+                          {
+                              "name": "model_step",
+                              "runtime": {
+                                  "cross_validation": 10,
+                                  "stratified": True
+                              },
+                              "primitives": [
+                                  {
+                                      "primitive":
+                                      "d3m.primitives.classification.gradient_boosting.SKlearn",
+                                      "hyperparameters":
+                                      {
+                                          'use_semantic_types': [True],
+                                          'return_result': ['new'],
+                                          'add_index_columns': [True],
+                                          'max_depth': [5],
+                                          'learning_rate':[0.1],
+                                          'min_samples_leaf': [2],
+                                          'min_samples_split': [3],
+                                          'n_estimators': [50],
+                                         }
+                                  }
+                              ],
+                              "inputs": ["feature_selector_step", "target"]
+                          }
+                      ])
+        }
+
 
 class DefaultTimeseriesCollectionTemplate(DSBoxTemplate):
     def __init__(self):
@@ -846,5 +888,97 @@ class DefaultVideoClassificationTemplate(DSBoxTemplate):
                     ],
                     "inputs": ["video_feature_extract", "extract_target_step"]
                 },
+            ]
+        }
+
+
+class UU3TestTemplate(DSBoxTemplate):
+    def __init__(self):
+        DSBoxTemplate.__init__(self)
+        self.template = {
+            "name": "UU3_Test_Template",
+            "taskSubtype": {TaskKeyword.UNIVARIATE.name, TaskKeyword.MULTIVARIATE.name},
+            "taskType": TaskKeyword.REGRESSION.name,
+            "inputType": "table",
+            "runType": "multitable_dataset",
+            "output": "model_step",  # Name of the final step generating the prediction
+            "target": "extract_target_step",  # Name of the step generating the ground truth
+            "steps": [
+                {
+                    "name": "multi_table_processing_step",
+                    "primitives": ["d3m.primitives.feature_extraction.multitable_featurization.DSBOX"],
+                    "inputs": ["template_input"]
+                },
+                {
+                    "name": "to_dataframe_step",
+                    "primitives": ["d3m.primitives.data_transformation.dataset_to_dataframe.Common"],
+                    "inputs": ["multi_table_processing_step"]
+                },
+                {
+                    "name": "common_profiler_step",
+                    "primitives": ["d3m.primitives.schema_discovery.profiler.Common"],
+                    "inputs": ["to_dataframe_step"]
+                },
+                {
+                    "name": "extract_attribute_step",
+                    "primitives": [{
+                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+                        "hyperparameters":
+                            {
+                                'semantic_types': (
+                                    'https://metadata.datadrivendiscovery.org/types/PrimaryKey',
+                                    'https://metadata.datadrivendiscovery.org/types/Attribute',),
+                                'use_columns': (),
+                                'exclude_columns': ()
+                            }
+                    }],
+                    "inputs": ["common_profiler_step"]
+                },
+                {
+                    "name": "extract_target_step",
+                    "primitives": [{
+                        "primitive": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+                        "hyperparameters":
+                            {
+                                'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TrueTarget',),
+                                'use_columns': (),
+                                'exclude_columns': ()
+                            }
+                    }],
+                    "inputs": ["multi_table_processing_step"]
+                },
+                {
+                    "name": "encode1_step",
+                    "primitives": ["d3m.primitives.data_preprocessing.unary_encoder.DSBOX"],
+                    "inputs": ["extract_attribute_step"]
+                },
+                {
+                    "name": "encode2_step",
+                    "primitives": ["d3m.primitives.data_preprocessing.encoder.DSBOX"],
+                    "inputs": ["encode1_step"]
+                },
+                {
+                    "name": "to_numeric_step",
+                    "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
+                    "inputs":["encode2_step"],
+                },
+                {
+                    "name": "impute_step",
+                    "primitives": ["d3m.primitives.data_preprocessing.mean_imputation.DSBOX"],
+                    "inputs": ["to_numeric_step"]
+                },
+                {
+                    "name": "model_step",
+                    "primitives": [{
+                        "primitive": "d3m.primitives.regression.random_forest.SKlearn",
+                        "hyperparameters":
+                            {
+                                'add_index_columns': [True],
+                                'use_semantic_types':[True],
+                            }
+                    }
+                    ],
+                    "inputs": ["impute_step", "extract_target_step"]
+                }
             ]
         }

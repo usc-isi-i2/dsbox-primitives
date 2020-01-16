@@ -422,6 +422,7 @@ DATASET_MAPPER = {
             'image_regression': '22_handgeometry',
             'time_series_forecasting': 'LL1_736_population_spawn_simpler',
             'object_detection': 'LL1_penn_fudan_pedestrian',
+            'multitable_dataset': 'uu3_world_development_indicators'
         }
 
 

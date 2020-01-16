@@ -25,6 +25,9 @@ script:
 - echo "Generating primitive description json and pipelines"
 - cd .travis
 - git clone https://${GH_TOKEN}@github.com/usc-isi-i2/dsbox-unit-test-datasets.git
+- wget https://dsbox02.isi.edu:9005/upload/local_datasets/uu3_world_development_indicators.zip
+- upzip uu3_world_development_indicators.zip
+- mv ./data00/dsbox/dataset/datasets/seed_datasets_current/uu3_world_development_indicators ./dsbox-unit-test-datasets/
 - python generate-pipelines-json.py
 after_success:
 - echo "check succeed."
