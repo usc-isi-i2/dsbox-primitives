@@ -21,7 +21,7 @@ from dsbox.datapreprocessing.cleaner import config as cleaner_config
 TEMPLATE_LIST = []
 
 # add templates here
-TEMPLATE_LIST.append(UU3TestTemplate())
+# TEMPLATE_LIST.append(UU3TestTemplate()) # no enough memory for travis ci
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultClassificationTemplate2())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
@@ -277,11 +277,80 @@ class DsboxPrimitiveUnitTest:
                     print(each)
                 return 1
 
+def copy_one_pre_ran_pipeline(in_folder: str) -> None:
+    pp_path = None
+    pp_run_path = None
+    for each_ in os.listdir(in_folder):
+        # this is the pipeline.json file
+        if each_.endswith("json"):
+            pp_path = os.path.join(in_folder, each_)
+        elif each_.endswith("yaml"):
+            pp_run_path = os.path.join(in_folder, each_)
+    
+    if pp_run_path is None or pp_path is None:
+        raise ValueError("Failed to find pipeline or pipeline run files on folder {}".format(in_folder))
+
+    with open(pp_path, "r") as f:
+        pp_read = json.load(f)
+    pipeline_id = pp_read['id']
+    primitive_hitted = set()
+    for each_step in pp_read['steps']:
+        primitive_name = each_step['primitive']['python_path']
+        if primitive_name.endswith("DSBOX"):
+            primitive_hitted.add(primitive_name)
+
+    for each_primitive in primitive_hitted:
+        if each_primitive in self.corex_primitives:
+            output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+                              cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
+                              corex_text.cfg_.VERSION)
+        else:
+            output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+                              cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
+                              cleaner_config.VERSION)
+
+        output_pipeline_dir = os.path.join(output_dir, "pipelines")
+        output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
+        os.makedirs(output_pipeline_dir, exist_ok=True)
+        os.makedirs(output_pipeline_runs_dir, exist_ok=True)
+        new_location = os.path.join(output_pipeline_dir, pipeline_id + ".json")
+        shutil.copy(pp_path, new_location)
+        # copy pipeline_run files
+        file_count = len(os.listdir(output_pipeline_runs_dir))
+        pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gz".format(str(file_count + 1)))
+        with open(pp_run_path, "rb") as f:
+            data = f.read()
+        bindata = bytearray(data)
+        with gzip.open(pipeline_runs_file, "wb") as f:
+            f.write(bindata)
+
+def copy_pre_ran_pipeline():
+    """
+        Generate sample pipelines and corresponding meta
+    """
+    failed = []
+    for each_pre_pran_pp_folder in os.listdir("pre_ran_pipelines"):
+        full_path = os.path.join(os.getcwd(), each_pre_pran_pp_folder)
+        if os.path.isdir(full_path):
+            try:
+                copy_one_pre_ran_pipeline(full_path)
+                print("succeeded!")
+
+            except Exception as e:
+                failed.append(full_path)
+                print("!!!!!!!")
+                print("failed!")
+                print("!!!!!!!")
+                traceback.print_exc()
+
+    return failed
+
+
 
 def main():
     test_unit = DsboxPrimitiveUnitTest(TEMPLATE_LIST)
     test_unit.start_test()
-
+    copy_pre_ran_pipeline()
 
 if __name__ == "__main__":
     main()
