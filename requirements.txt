@@ -10,4 +10,3 @@ scipy>=1.2.0
 h5py
 pmdarima==1.0.0
 scikit-image
-tensorflow>=2.0.0
