@@ -284,7 +284,7 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         # this is the pipeline.json file
         if each_.endswith("json"):
             pp_path = os.path.join(in_folder, each_)
-        elif each_.endswith("yaml"):
+        elif each_.endswith("yaml.gz"):
             pp_run_path = os.path.join(in_folder, each_)
     
     if pp_run_path is None or pp_path is None:
@@ -357,4 +357,4 @@ def main():
     copy_pre_ran_pipeline()
 
 if __name__ == "__main__":
-    copy_pre_ran_pipeline()
+    main()
