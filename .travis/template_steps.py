@@ -60,7 +60,9 @@ class TemplateSteps:
             },
             {
                 "name": "encode_step",
-                "primitives": ["d3m.primitives.data_cleaning.label_encoder.DSBOX"],
+                "primitives": [
+                    "d3m.primitives.data_cleaning.label_encoder.DSBOX"
+                ],
                 "inputs": ["clean_step"]
             },
             # {
@@ -72,50 +74,6 @@ class TemplateSteps:
                 "name": "to_numeric_step",
                 "primitives": ["d3m.primitives.data_transformation.to_numeric.DSBOX"],
                 "inputs":["encode_step"],
-            },
-            {
-                "name": "impute_step",
-                "primitives": ["d3m.primitives.data_preprocessing.greedy_imputation.DSBOX"],
-                "inputs": ["to_numeric_step"]
-            },
-            {
-                "name": "scaler_step",
-                "primitives": [
-                    # {
-                    #     "primitive": "d3m.primitives.data_preprocessing.max_abs_scaler.SKlearn",
-                    #     "hyperparameters":
-                    #     {
-                    #         'use_semantic_types':[True],
-                    #         'return_result':['new'],
-                    #         'add_index_columns':[True],
-                    #     }
-                    # },
-                    {
-                        "primitive": "d3m.primitives.normalization.iqr_scaler.DSBOX",
-                        "hyperparameters": {}
-                    },
-                    "d3m.primitives.data_preprocessing.do_nothing.DSBOX",
-                ],
-                "inputs": ["impute_step"]
-            },
-            {
-                "name": data,
-                "primitives": [
-                    # 19 Feb 2019: Stop using PCA until issue is resolved
-                    # https://gitlab.com/datadrivendiscovery/sklearn-wrap/issues/154
-                    # {
-                    #     "primitive": "d3m.primitives.data_transformation.pca.SKlearn",
-                    #     "hyperparameters":
-                    #     {
-                    #         'use_semantic_types': [True],
-                    #         'add_index_columns': [True],
-                    #         'return_result': ['new'],
-                    #         'n_components': [10, 15, 25]
-                    #     }
-                    # },
-                    "d3m.primitives.data_preprocessing.do_nothing.DSBOX",
-                ],
-                "inputs": ["scaler_step"]
             },
             {
                 "name": "pre_"+target,
@@ -130,6 +88,11 @@ class TemplateSteps:
                         }
                 }],
                 "inputs": ["to_dataframe_step"]
+            },
+            {
+                "name": data,
+                "primitives": ["d3m.primitives.data_preprocessing.greedy_imputation.DSBOX"],
+                "inputs": ["to_numeric_step", "pre_" + target]
             },
             {
                 "name": target,
@@ -217,20 +180,10 @@ class TemplateSteps:
             {
                 "name": "scaler_step",
                 "primitives": [
-                    # {
-                    #     "primitive": "d3m.primitives.data_preprocessing.max_abs_scaler.SKlearn",
-                    #     "hyperparameters":
-                    #     {
-                    #         'use_semantic_types':[True],
-                    #         'return_result':['new'],
-                    #         'add_index_columns':[True],
-                    #     }
-                    # },
                     {
                         "primitive": "d3m.primitives.normalization.iqr_scaler.DSBOX",
                         "hyperparameters": {}
                     },
-                    "d3m.primitives.data_preprocessing.do_nothing.DSBOX",
                 ],
                 "inputs": ["impute_step"]
             },

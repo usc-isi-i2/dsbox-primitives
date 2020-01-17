@@ -11,6 +11,8 @@ from d3m.metadata import hyperparams
 from d3m import container
 from d3m.metadata import base as metadata_base
 
+from dsbox.datapreprocessing.featurizer.image.net_image_feature import generate_metadata_shape_part
+
 from .helper import Aggregator
 from . import config
 
@@ -68,7 +70,6 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         self._verbose = self.hyperparams['VERBOSE']
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
-
         if (timeout is None):
             big_table = self._core(inputs)
             self._has_finished = True
@@ -171,14 +172,29 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 break
         finish = time.clock()
         _logger.info("[INFO] Multi-table join finished, totally take ", finish-start, 'seconds.')
-        big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=True)
+        big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=False)
+
         # add back metadata
+        metadata_shape_part_dict = generate_metadata_shape_part(value=big_table, selector=())
+        for each_selector, each_metadata in metadata_shape_part_dict.items():
+            big_table.metadata = big_table.metadata.update(selector=each_selector, metadata=each_metadata)
         for index in range(len(big_table.columns)):
             old_metadata = all_metadata[big_table.columns[index]]
-            big_table.metadata = big_table.metadata.update((metadata_base.ALL_ELEMENTS, index), old_metadata)
+            # _logger.error("current column name is {}".format(str(big_table.columns[index])))
+            # change index column name to original name
+            if index == 0 and "d3mIndex" in big_table.columns[0]:
+                big_table = big_table.rename(columns={big_table.columns[0]: "d3mIndex"})
+            # change target column name to original name
+            if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in old_metadata["semantic_types"] or 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'in old_metadata["semantic_types"]:
+                original_target_col_name = old_metadata["name"]
+                big_table = big_table.rename(columns={big_table.columns[index]: original_target_col_name})
 
-        # import pdb
-        # pdb.set_trace()
+            if big_table.columns[index] != old_metadata["name"]:
+                old_metadata = dict(old_metadata)
+                old_metadata["name"] = big_table.columns[index]
+            big_table.metadata = big_table.metadata.update((metadata_base.ALL_ELEMENTS, index), old_metadata)
+            # _logger.error("updating {} with {}".format(str((metadata_base.ALL_ELEMENTS, index)), str(old_metadata)))
+        _logger.error("output shape or input is " + str(big_table.shape))
         return big_table
 
     def _relations_correction(self, relations):
