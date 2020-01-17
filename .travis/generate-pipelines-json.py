@@ -327,7 +327,7 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         # with gzip.open(pipeline_runs_file, "wb") as f:
         #     f.write(bindata)
 
-def copy_pre_ran_pipeline():
+def copy_pre_ran_pipelines():
     """
         Generate sample pipelines and corresponding meta
     """
@@ -354,7 +354,7 @@ def copy_pre_ran_pipeline():
 def main():
     test_unit = DsboxPrimitiveUnitTest(TEMPLATE_LIST)
     test_unit.start_test()
-    copy_pre_ran_pipeline()
+    copy_pre_ran_pipelines()
 
 if __name__ == "__main__":
     main()
