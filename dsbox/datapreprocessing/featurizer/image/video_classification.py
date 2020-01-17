@@ -12,7 +12,7 @@ from d3m import container
 
 # lazy init
 # import keras
-# from keras.engine.sequential import Sequential
+# from tensorflow.keras.engine.sequential import Sequential
 
 from . import config
 
@@ -98,7 +98,7 @@ class LSTMHyperparams(hyperparams.Hyperparams):
 class Params(params.Params):
     target_column_name: str
     class_name_to_number: typing.Dict[str, int]
-    keras_model: typing.Dict  # keras.engine.Sequential, cannot use because of lazy init
+    keras_model: typing.Dict  # tensorflow.keras.engine.Sequential, cannot use because of lazy init
     feature_shape: typing.List[int]
     input_feature_column_name: str
 
@@ -171,7 +171,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         return param
 
     def set_params(self, *, params: Params) -> None:
-        from keras.models import Model
+        from tensorflow.keras.models import Model
         # self._model = self._lazy_init_lstm()
         config_lstm = params['keras_model']
         self._model = Model.from_config(config_lstm)
@@ -352,14 +352,14 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._iterations_done = True
         return CallResult(output_dataframe, self._has_finished, self._iterations_done)
 
-    def _lazy_init_lstm(self):  # -> "keras.models"
+    def _lazy_init_lstm(self):  # -> "tensorflow.keras.models"
         """
             a lazy init function which initialize the LSTM model only when the primitive's fit/ produce method is called
         """
-        keras_models = importlib.import_module('keras.models')
-        keras_recurrent = importlib.import_module('keras.layers.recurrent')
-        keras_layers = importlib.import_module('keras.layers')
-        keras_optimizers = importlib.import_module('keras.optimizers')
+        keras_models = importlib.import_module('tensorflow.keras.models')
+        keras_recurrent = importlib.import_module('tensorflow.keras.layers.recurrent')
+        keras_layers = importlib.import_module('tensorflow.keras.layers')
+        keras_optimizers = importlib.import_module('tensorflow.keras.optimizers')
         model = keras_models.Sequential()
         # TODO: following parameters could also be hyperparameters for tuning
         model.add(keras_recurrent.LSTM(self._LSTM_units, return_sequences=False,
@@ -407,7 +407,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __getstate__(self):
         model_str = ""
         with tempfile.NamedTemporaryFile(suffix='.hdf5', delete=True) as fd:
-            keras.models.save_model(self, fd.name, overwrite=True)
+            tensorflow.keras.models.save_model(self, fd.name, overwrite=True)
             model_str = fd.read()
         d = { 'model_str': model_str }
         return d
@@ -416,7 +416,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         with tempfile.NamedTemporaryFile(suffix='.hdf5', delete=True) as fd:
             fd.write(state['model_str'])
             fd.flush()
-            model = keras.models.load_model(fd.name)
+            model = tensorflow.keras.models.load_model(fd.name)
         self.__dict__ = model.__dict__
 
 

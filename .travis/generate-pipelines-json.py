@@ -289,6 +289,8 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
     
     if pp_run_path is None or pp_path is None:
         raise ValueError("Failed to find pipeline or pipeline run files on folder {}".format(in_folder))
+    print("Found pipeline file at {}".format(pp_path))
+    print("Found pipeline-run file at {}".format(pp_run_path))
 
     with open(pp_path, "r") as f:
         pp_read = json.load(f)
@@ -300,14 +302,14 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
             primitive_hitted.add(primitive_name)
 
     for each_primitive in primitive_hitted:
-        if each_primitive in self.corex_primitives:
-            output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
-                              cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
-                              corex_text.cfg_.VERSION)
-        else:
-            output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
-                              cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
-                              cleaner_config.VERSION)
+        # if each_primitive in self.corex_primitives:
+        #     output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+        #                       cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
+        #                       corex_text.cfg_.VERSION)
+        # else:
+        output_dir = os.path.join("output", 'v' + cleaner_config.D3M_API_VERSION,
+                          cleaner_config.D3M_PERFORMER_TEAM, each_primitive,
+                          cleaner_config.VERSION)
 
         output_pipeline_dir = os.path.join(output_dir, "pipelines")
         output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
@@ -318,31 +320,33 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         # copy pipeline_run files
         file_count = len(os.listdir(output_pipeline_runs_dir))
         pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gz".format(str(file_count + 1)))
-        with open(pp_run_path, "rb") as f:
-            data = f.read()
-        bindata = bytearray(data)
-        with gzip.open(pipeline_runs_file, "wb") as f:
-            f.write(bindata)
+        shutil.copy(pp_run_path, pipeline_runs_file)
+        # with open(pp_run_path, "rb") as f:
+        #     data = f.read()
+        # bindata = bytearray(data)
+        # with gzip.open(pipeline_runs_file, "wb") as f:
+        #     f.write(bindata)
 
 def copy_pre_ran_pipeline():
     """
         Generate sample pipelines and corresponding meta
     """
     failed = []
+    print("*" * 100)
+    print("Start copying pre ran pipelines")
     for each_pre_pran_pp_folder in os.listdir("pre_ran_pipelines"):
-        full_path = os.path.join(os.getcwd(), each_pre_pran_pp_folder)
+        full_path = os.path.join(os.getcwd(), "pre_ran_pipelines" ,each_pre_pran_pp_folder)
         if os.path.isdir(full_path):
+            print("Searching on {}".format(full_path))
             try:
                 copy_one_pre_ran_pipeline(full_path)
                 print("succeeded!")
-
             except Exception as e:
                 failed.append(full_path)
                 print("!!!!!!!")
                 print("failed!")
                 print("!!!!!!!")
                 traceback.print_exc()
-
     return failed
 
 
@@ -353,4 +357,4 @@ def main():
     copy_pre_ran_pipeline()
 
 if __name__ == "__main__":
-    main()
+    copy_pre_ran_pipeline()
