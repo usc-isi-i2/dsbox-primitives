@@ -124,6 +124,8 @@ class Params(params.Params):
     target_class_id: typing.List[int]
     output_layer: typing.List[str]
     target_column_name: str
+    input_image_column_name: str
+    dump_model_path: str
 
 
 class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperparams]):
@@ -190,6 +192,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self.total_steps = None
         self._loaded_dataset = None
         self._dump_model_path = None
+        self._current_phase = None
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         """
@@ -488,7 +491,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
             a lazy init function which initialize the model only when the primitive's fit/ produce method is called
         """
-        if self._inited:
+        if self._inited and self._current_phase == phase:
             return
         self._yolo_dataset_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.dataset')
         self._yolov3_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.yolov3')
@@ -511,6 +514,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             self._model = self._create_model(phase)
             self.optimizer = tf.keras.optimizers.Adam()
 
+        self._current_phase = phase
         self._inited = True
 
     def _get_output_layers(self, net) -> typing.List[str]:
@@ -591,7 +595,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         if phase == "test":
             if self._dump_model_path is None:
                 self._dump_model_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3")
-            if not os.path.exists(self._dump_model_path):
+            if not os.path.exists(self._dump_model_path + ".index"):
                 raise ValueError("Yolo trained weight file not exist at {}".format(str(self._dump_model_path)))
             model.load_weights(self._dump_model_path)
         return model
@@ -646,13 +650,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     (1 + tf.cos((self.global_steps - self.warmup_steps) / (self.total_steps - self.warmup_steps) * np.pi))
                 )
             self.optimizer.lr.assign(lr.numpy())
-
-            # logging summary data
-            logger.info("loss/loss rate is : {}".format(str(self.optimizer.lr)))
-            logger.info("loss/total_loss is: {}".format(str(total_loss)))
-            logger.info("loss/giou_loss is : {}".format(str(giou_loss)))
-            logger.info("loss/conf_loss is : {}".format(str(conf_loss)))
-            logger.info("loss/prob_loss is : {}".format(str(prob_loss)))
 
     def _load_dataset(self, phase="train", input_df: container.DataFrame=None, output_df: container.DataFrame=None):
         """
