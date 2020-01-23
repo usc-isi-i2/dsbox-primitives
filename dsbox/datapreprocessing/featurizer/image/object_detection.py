@@ -11,10 +11,12 @@ import copy
 import pandas as pd
 import tensorflow as tf
 import collections
+from datetime import datetime
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m import container
+from net_image_feature import generate_metadata_shape_part
 
 from . import config
 
@@ -359,30 +361,36 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         # for each in image_names_list:
         #     object_count_in_each_image[each] += 1
 
-        output_dataFrame = container.DataFrame(columns = ["d3mIndex", self._target_column_name, "confidence"])
-
         if self.hyperparams["use_fitted_weight"]:
-            output_dataFrame = self._produce_for_fitted_weight(input_copy, output_dataFrame)
+            output_dataFrame = self._produce_for_fitted_weight(input_copy)
         else:
-            output_dataFrame = self._produce_for_retrain_weights(input_copy, output_dataFrame)
+            output_dataFrame = self._produce_for_retrain_weights(input_copy)
+
+        output_dataFrame = container.DataFrame(output_dataFrame, generate_metadata=False)
         import pdb
         pdb.set_trace()
         # add metadata
         metadata_selector = (metadata_base.ALL_ELEMENTS, 0)
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=input_copy.metadata.query(metadata_selector), selector=metadata_selector)
+        
         # add prediction column's metadata
         for each_column in range(1, output_dataFrame.shape[1]):
             metadata_selector = (metadata_base.ALL_ELEMENTS, each_column)
             metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/PredictedTarget',)}
             output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
 
+        # add shape metadata
+        metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+        for each_selector, each_metadata in metadata_shape_part_dict.items():
+            output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
         self._has_finished = True
         self._iterations_done = True
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
-    def _produce_for_fitted_weight(self, input_df, output_dataFrame):
+    def _produce_for_fitted_weight(self, input_df):
         bbox_count = 0
         memo = set()
+        output_df_dict = {}
         for i, each_row in input_df.iterrows():
             each_image_name = each_row[self._input_image_column_name]
             if each_image_name in memo:
@@ -447,17 +455,20 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     box_result = [str(x), str(y), str(x), str(y+h), str(x+w), str(y+h), str(x+w), str(y)]
                     box_result = ",".join(box_result) # remove "[" and "]"
                     # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
-                    output_dataFrame = output_dataFrame.append({"d3mIndex":dict_image_name_to_d3mIndex[each_image_name], self._target_column_name: box_result, "confidence":confidences[i]}, ignore_index=True)
+                    output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}
                     # if need to check the bound boxes's output, draw the bounding boxes on the output image
                     if self.hyperparams['output_to_tmp_dir']:
                         each_image = self._draw_bounding_box(each_image, round(x), round(y), round(x+w), round(y+h))
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
-        return output_dataFrame
 
-    def _produce_for_retrain_weights(self, input_df, output_dataFrame):
+        output_df = pd.DataFrame.from_dict(output_df_dict, orient='index')
+        return output_df
+
+    def _produce_for_retrain_weights(self, input_df):
         bbox_count = 0
         memo = set()
+        output_df_dict = {}
         for i, each_row in input_df.iterrows():
             each_image_name = each_row[self._input_image_column_name]
             if each_image_name in memo:
@@ -466,11 +477,11 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 memo.add(each_image_name)
             logger.debug("Predicting on {}".format(each_image_name))
             image_path = os.path.join(self._location_base_uris, each_image_name)
-            image = cv2.imread(image_path)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            each_image = cv2.imread(image_path)
+            each_image = cv2.cvtColor(each_image, cv2.COLOR_BGR2RGB)
             # Predict Process
-            image_size = image.shape[:2]
-            image_data = self._yolo_utils.image_preporcess(np.copy(image), [self.hyperparams["blob_output_shape_x"], self.hyperparams["blob_output_shape_y"]])
+            image_size = each_image.shape[:2]
+            image_data = self._yolo_utils.image_preporcess(np.copy(each_image), [self.hyperparams["blob_output_shape_x"], self.hyperparams["blob_output_shape_y"]])
             image_data = image_data[np.newaxis, ...].astype(np.float32)
             pred_bbox = self._model.predict(image_data)
             if len(pred_bbox) == 6:
@@ -480,7 +491,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             bboxes = self._yolo_utils.postprocess_boxes(pred_bbox, image_size, self.hyperparams["blob_output_shape_x"], self.hyperparams["confidences_threshold"])
             bboxes = self._yolo_utils.nms(bboxes, self.hyperparams["nms_threshold"], method='nms')
             
-            if len(bboxes) > 1:
+            if len(bboxes) > 0:
                 for bbox in bboxes:
                     bbox_count += 1
                     coor = np.array(bbox[:4], dtype=np.int32)
@@ -491,10 +502,15 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     box_result = [str(xmin), str(ymin), str(xmin), str(ymax), str(xmax), str(ymax), str(xmax), str(ymin)]
                     box_result = ",".join(box_result) # remove "[" and "]"
                     # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
-                    output_dataFrame_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}
+                    output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}
+                    # if need to check the bound boxes's output, draw the bounding boxes on the output image
+                    if self.hyperparams['output_to_tmp_dir']:
+                        each_image = self._draw_bounding_box(each_image, xmin, ymin, xmax, ymax)
+            if self.hyperparams['output_to_tmp_dir']:
+                self._output_image(each_image, each_image_name)
         
-        output_df = pd.DataFrame.from_dict(output_dataFrame_df_dict, orient='index')
-        return output_dataFrame
+        output_df = pd.DataFrame.from_dict(output_df_dict, orient='index')
+        return output_df
 
     def _load_object_names(self) -> None:
         """
@@ -613,6 +629,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 self._dump_model_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3")
             if not os.path.exists(self._dump_model_path + ".index"):
                 raise ValueError("Yolo trained weight file not exist at {}".format(str(self._dump_model_path)))
+            logger.info("Loading weights from {}".format(self._dump_model_path))
             model.load_weights(self._dump_model_path)
         return model
 
@@ -629,7 +646,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 self._train_step(image_data, target)
 
         # save the retrained model weights after fit
-        save_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3")
+        now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        save_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3_" + now)
         self._dump_model_path = save_path
         self._model.save_weights(save_path)
 
