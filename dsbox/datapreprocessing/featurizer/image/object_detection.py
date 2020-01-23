@@ -362,10 +362,11 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         output_dataFrame = container.DataFrame(columns = ["d3mIndex", self._target_column_name, "confidence"])
 
         if self.hyperparams["use_fitted_weight"]:
-            self._produce_for_fitted_weight(input_copy, output_dataFrame)
+            output_dataFrame = self._produce_for_fitted_weight(input_copy, output_dataFrame)
         else:
-            self._produce_for_retrain_weights(input_copy, output_dataFrame)
-
+            output_dataFrame = self._produce_for_retrain_weights(input_copy, output_dataFrame)
+        import pdb
+        pdb.set_trace()
         # add metadata
         metadata_selector = (metadata_base.ALL_ELEMENTS, 0)
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=input_copy.metadata.query(metadata_selector), selector=metadata_selector)
@@ -445,7 +446,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                         each_image = self._draw_bounding_box(each_image, round(x), round(y), round(x+w), round(y+h))
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
-
+        return output_dataFrame
 
     def _produce_for_retrain_weights(self, input_df, output_dataFrame):
         for i, each_row in input_df.iterrows():
@@ -456,8 +457,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             image_size = image.shape[:2]
             image_data = self._yolo_utils.image_preporcess(np.copy(image), [self.hyperparams["blob_output_shape_x"], self.hyperparams["blob_output_shape_y"]])
             image_data = image_data[np.newaxis, ...].astype(np.float32)
-            import pdb
-            pdb.set_trace()
             pred_bbox = self._model.predict(image_data)
             if len(pred_bbox) == 6:
                 pred_bbox = pred_bbox[1::2]
@@ -467,8 +466,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             bboxes = self._yolo_utils.nms(bboxes, self.hyperparams["nms_threshold"], method='nms')
             
             if len(bboxes) > 1:
-                import pdb
-                pdb.set_trace()
             for bbox in bboxes:
                 coor = np.array(bbox[:4], dtype=np.int32)
                 score = bbox[4]
@@ -479,6 +476,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 box_result = ",".join(box_result) # remove "[" and "]"
                 # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
                 output_dataFrame = output_dataFrame.append({"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}, ignore_index=True)
+        
+        return output_dataFrame
 
     def _load_object_names(self) -> None:
         """
@@ -692,7 +691,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 bbox_y = [int(val) for val in bbox[1::2]]
                 memo[each_img].append(",".join([str(min(bbox_x)), str(min(bbox_y)), str(max(bbox_x)), str(max(bbox_y)), "0"]))
             for k, v in memo.items():
-                res.append(" ".join([k] + v) + "\n")
+                res.append(" ".join([k] + v))
 
         # for test, only append each image's path
         elif phase == "test":
@@ -700,6 +699,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 each_img = os.path.join(self._location_base_uris, each_row[self._input_image_column_name])
                 res.append(each_img)
 
+        # random shuffle the results for better diversity
+        np.random.shuffle(res)
         return res
 
     def _cut_image(self, image:np.ndarray, input_shape:typing.List[typing.Union[int, str]]) -> np.ndarray:
