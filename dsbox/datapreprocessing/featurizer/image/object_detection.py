@@ -377,7 +377,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
     def _produce_for_fitted_weight(self, input_df, output_dataFrame):
-        for each_image_name in image_only_series:
+        for i, each_row in input_df.iterrows():
+            each_image_name = each_row[self._input_image_column_name]
             image_path = os.path.join(self._location_base_uris, each_image_name)
             each_image = cv2.imread(image_path)
             if each_image is None:
@@ -444,7 +445,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
 
     def _produce_for_retrain_weights(self, input_df, output_dataFrame):
-        for i, each_row in input_copy.iterrows():
+        for i, each_row in input_df.iterrows():
             image_path = os.path.join(self._location_base_uris, each_row[self._input_image_column_name])
             image = cv2.imread(image_path)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -471,10 +472,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 score = '%.4f' % score
                 class_ind = int(bbox[5])
                 xmin, ymin, xmax, ymax = list(coor)
-                    box_result = [str(xmin), str(ymin), str(xmin), str(ymax), str(xmax), str(ymax), str(xmax), str(ymin)]
-                    box_result = ",".join(box_result) # remove "[" and "]"
-                    # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
-                    output_dataFrame = output_dataFrame.append({"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}, ignore_index=True)
+                box_result = [str(xmin), str(ymin), str(xmin), str(ymax), str(xmax), str(ymax), str(xmax), str(ymin)]
+                box_result = ",".join(box_result) # remove "[" and "]"
+                # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
+                output_dataFrame = output_dataFrame.append({"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}, ignore_index=True)
 
     def _load_object_names(self) -> None:
         """
@@ -591,7 +592,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             if self._dump_model_path is None:
                 self._dump_model_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3")
             if not os.path.exists(self._dump_model_path):
-                raise ValueError("Yolo trained weight file not exist!")
+                raise ValueError("Yolo trained weight file not exist at {}".format(str(self._dump_model_path)))
             model.load_weights(self._dump_model_path)
         return model
 
@@ -602,7 +603,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         if self._loaded_dataset is None:
             self._load_dataset("train", self._training_inputs, self._training_outputs)
 
-        for _ in range(self.hyperparams["epochs"]):
+        for i in range(self.hyperparams["epochs"]):
+            logger.info("Running on No.{} epoch.".format(str(i)))
             for image_data, target in self._loaded_dataset:
                 self._train_step(image_data, target)
 
@@ -646,11 +648,11 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             self.optimizer.lr.assign(lr.numpy())
 
             # logging summary data
-            logger.info("loss/loss rate is : {} at step {}".format(str(self.optimizer.lr), str(self.global_steps)))
-            logger.info("loss/total_loss is: {} at step {}".format(str(total_loss), str(self.global_steps)))
-            logger.info("loss/giou_loss is : {} at step {}".format(str(giou_loss), str(self.global_steps)))
-            logger.info("loss/conf_loss is : {} at step {}".format(str(conf_loss), str(self.global_steps)))
-            logger.info("loss/prob_loss is : {} at step {}".format(str(prob_loss), str(self.global_steps)))
+            logger.info("loss/loss rate is : {}".format(str(self.optimizer.lr)))
+            logger.info("loss/total_loss is: {}".format(str(total_loss)))
+            logger.info("loss/giou_loss is : {}".format(str(giou_loss)))
+            logger.info("loss/conf_loss is : {}".format(str(conf_loss)))
+            logger.info("loss/prob_loss is : {}".format(str(prob_loss)))
 
     def _load_dataset(self, phase="train", input_df: container.DataFrame=None, output_df: container.DataFrame=None):
         """
