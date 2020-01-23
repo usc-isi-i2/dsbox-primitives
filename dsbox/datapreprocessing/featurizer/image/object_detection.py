@@ -381,8 +381,15 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
     def _produce_for_fitted_weight(self, input_df, output_dataFrame):
+        bbox_count = 0
+        memo = set()
         for i, each_row in input_df.iterrows():
             each_image_name = each_row[self._input_image_column_name]
+            if each_image_name in memo:
+                continue
+            else:
+                memo.add(each_image_name)
+            logger.debug("Predicting on {}".format(each_image_name))
             image_path = os.path.join(self._location_base_uris, each_image_name)
             each_image = cv2.imread(image_path)
             if each_image is None:
@@ -449,8 +456,16 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return output_dataFrame
 
     def _produce_for_retrain_weights(self, input_df, output_dataFrame):
+        bbox_count = 0
+        memo = set()
         for i, each_row in input_df.iterrows():
-            image_path = os.path.join(self._location_base_uris, each_row[self._input_image_column_name])
+            each_image_name = each_row[self._input_image_column_name]
+            if each_image_name in memo:
+                continue
+            else:
+                memo.add(each_image_name)
+            logger.debug("Predicting on {}".format(each_image_name))
+            image_path = os.path.join(self._location_base_uris, each_image_name)
             image = cv2.imread(image_path)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # Predict Process
@@ -466,17 +481,19 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             bboxes = self._yolo_utils.nms(bboxes, self.hyperparams["nms_threshold"], method='nms')
             
             if len(bboxes) > 1:
-            for bbox in bboxes:
-                coor = np.array(bbox[:4], dtype=np.int32)
-                score = bbox[4]
-                score = '%.4f' % score
-                class_ind = int(bbox[5])
-                xmin, ymin, xmax, ymax = list(coor)
-                box_result = [str(xmin), str(ymin), str(xmin), str(ymax), str(xmax), str(ymax), str(xmax), str(ymin)]
-                box_result = ",".join(box_result) # remove "[" and "]"
-                # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
-                output_dataFrame = output_dataFrame.append({"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}, ignore_index=True)
+                for bbox in bboxes:
+                    bbox_count += 1
+                    coor = np.array(bbox[:4], dtype=np.int32)
+                    score = bbox[4]
+                    score = '%.4f' % score
+                    class_ind = int(bbox[5])
+                    xmin, ymin, xmax, ymax = list(coor)
+                    box_result = [str(xmin), str(ymin), str(xmin), str(ymax), str(xmax), str(ymax), str(xmax), str(ymin)]
+                    box_result = ",".join(box_result) # remove "[" and "]"
+                    # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
+                    output_dataFrame_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}
         
+        output_df = pd.DataFrame.from_dict(output_dataFrame_df_dict, orient='index')
         return output_dataFrame
 
     def _load_object_names(self) -> None:
