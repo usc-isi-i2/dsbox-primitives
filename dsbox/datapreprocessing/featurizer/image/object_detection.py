@@ -224,8 +224,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
     def fit_on_pretrained_model(self) -> None:
         conf_threshold = self.hyperparams['confidences_threshold']
         class_count = [0 for i in range(len(self._object_names))]
-        import pdb
-        pdb.set_trace()
         memo = {}
         for i, each_image_name in enumerate(self._training_inputs[self._input_image_column_name]):
             if each_image_name in memo:
@@ -276,7 +274,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, self.hyperparams["nms_threshold"])
 
             if len(indices) > 0:
-                logger.error("Get!!! {}".format(str(indices)))
                 for each in indices:
                     i = each[0]
                     box = boxes[i]
@@ -286,7 +283,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
         # find the real target that we need to detect
         for i, each in enumerate(class_count):
-            if each >= conf_threshold * len(image_names_list):
+            if each >= conf_threshold * len(memo):
                 self._target_class_id.append(i)
         if len(self._target_class_id) < 1:
             logger.error("No corresponding target object detected in training set with pre-trained model")
@@ -370,8 +367,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             output_dataFrame = self._produce_for_retrain_weights(input_copy)
 
         output_dataFrame = container.DataFrame(output_dataFrame, generate_metadata=False)
-        import pdb
-        pdb.set_trace()
+
         # add metadata
         metadata_selector = (metadata_base.ALL_ELEMENTS, 0)
         output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=input_copy.metadata.query(metadata_selector), selector=metadata_selector)
@@ -449,25 +445,28 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
             # apply non-max suppression to combine duplicate bounding boxes
             indices = cv2.dnn.NMSBoxes(boxes, confidences, self.hyperparams["confidences_threshold"], self.hyperparams["nms_threshold"])
-
-            found_object_amount = 0
-
-            for each in indices:
-                i = each[0]
-                if class_ids[i] in self._target_class_id:
-                    box = boxes[i]
-                    found_object_amount += 1
-                    x = int(box[0])
-                    y = int(box[1])
-                    w = int(box[2])
-                    h = int(box[3])
-                    box_result = [str(x), str(y), str(x), str(y+h), str(x+w), str(y+h), str(x+w), str(y)]
-                    box_result = ",".join(box_result) # remove "[" and "]"
-                    # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
-                    output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":score}
-                    # if need to check the bound boxes's output, draw the bounding boxes on the output image
-                    if self.hyperparams['output_to_tmp_dir']:
-                        each_image = self._draw_bounding_box(each_image, round(x), round(y), round(x+w), round(y+h))
+            if len(indices) > 0:
+                for each in indices:
+                    i = each[0]
+                    if class_ids[i] in self._target_class_id:
+                        box = boxes[i]
+                        bbox_count += 1
+                        x = int(box[0])
+                        y = int(box[1])
+                        w = int(box[2])
+                        h = int(box[3])
+                        box_result = [str(x), str(y), str(x), str(y+h), str(x+w), str(y+h), str(x+w), str(y)]
+                        box_result = ",".join(box_result) # remove "[" and "]"
+                        # box_result = str(x)+","+str(y) + "," +str(x+w)+ ","+str(y+h)
+                        output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: box_result, "confidence":confidences[i]}
+                        # if need to check the bound boxes's output, draw the bounding boxes on the output image
+                        if self.hyperparams['output_to_tmp_dir']:
+                            each_image = self._draw_bounding_box(each_image, round(x), round(y), round(x+w), round(y+h))
+            else:
+                # if nothing detected, still need to output something
+                bbox_count += 1
+                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "", "confidence":0}
+                
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
 
@@ -518,6 +517,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     # if need to check the bound boxes's output, draw the bounding boxes on the output image
                     if self.hyperparams['output_to_tmp_dir']:
                         each_image = self._draw_bounding_box(each_image, xmin, ymin, xmax, ymax)
+            else:
+                # if nothing detected, still need to output something
+                bbox_count += 1
+                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "", "confidence":0}
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
         
@@ -548,6 +551,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             yolov3_cfg_file = os.path.join(os.path.dirname(__file__), 'yolov3.cfg')
             self._model = cv2.dnn.readNet(self.volumes['yolov3.weights'], yolov3_cfg_file)
             self._load_object_names()
+            self._output_layer = self._get_output_layers(self._model)
             logger.info("Model initialize finished.")
 
         else:
