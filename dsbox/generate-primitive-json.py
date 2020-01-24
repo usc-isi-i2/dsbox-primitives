@@ -24,6 +24,10 @@ while line:
     if "'d3m.primitives': [" in line:
         line = f.readline()
         while line and "]," not in line:
+            # skip commented primitives
+            if "#" in line:
+                line = f.readline()
+                continue
             try:
                 primitive_name = line.split("=")[0]
                 primitive_name = primitive_name.split("'")[1]

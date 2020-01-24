@@ -651,23 +651,41 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         if self._loaded_dataset is None:
             self._load_dataset("train", self._training_inputs, self._training_outputs)
 
+        now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        # create check point manager
+        ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.optimizer, net=self._model)
+        ckpt_store_loc = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "tf_checkpoints" + now)
+        manager = tf.train.CheckpointManager(ckpt, ckpt_store_loc, max_to_keep=3)
+
         for i in range(self.hyperparams["epochs"]):
             logger.info("Running on No.{} epoch.".format(str(i)))
             for image_data, target in self._loaded_dataset:
-                self._train_step(image_data, target)
+                loss = self._train_step(image_data, target)
+                if loss is np.nan:
+                    logger.warning("NaN value detected on loss! Roll back to last saved model weights and continue")
+                    ckpt.restore(manager.latest_checkpoint)
+                else:
+                    ckpt.step.assign_add(1)
+                if int(ckpt.step) % 10 == 0:
+                    save_path = manager.save()
+                    logger.debug("Saved checkpoint for step {}: {}".format(int(ckpt.step), save_path))
 
         # save the retrained model weights after fit
-        now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         save_path = os.path.join(os.environ.get("D3MLOCALDIR", "/tmp"), "yolov3_" + now)
         self._dump_model_path = save_path
         self._model.save_weights(save_path)
-
-    def _train_step(self, image_data, target):
+    
+    def _train_step(self, image_data, target) -> float:
         """
             each train epoch
         """
+        import pdb
+        pdb.set_trace()
+        from tensorflow.keras.callbacks import ModelCheckpoint
+        callbacks_list = [ModelCheckpoint("/tmp/check_point_model.h5", monitor='loss', verbose=1, save_best_only=True, mode='min')]
+
         with tf.GradientTape() as tape:
-            pred_result = self._model(image_data, training=True)
+            pred_result = self._model(image_data, training=True, callbacks=callbacks_list)
             giou_loss=conf_loss=prob_loss=0
 
             # optimizing process
@@ -679,7 +697,13 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 prob_loss += loss_items[2]
 
             total_loss = giou_loss + conf_loss + prob_loss
-
+            # if crashed, will it help?
+            import pdb
+            pdb.set_trace()
+            if (total_loss) is np.nan:
+                logger.error("Loss calculating failed! Model fit crashed!")
+                self._model = model_backup
+                return
             gradients = tape.gradient(total_loss, self._model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
             # set to warning for debug purpose
@@ -696,6 +720,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                     (1 + tf.cos((self.global_steps - self.warmup_steps) / (self.total_steps - self.warmup_steps) * np.pi))
                 )
             self.optimizer.lr.assign(lr.numpy())
+        return total_loss
 
     def _load_dataset(self, phase="train", input_df: container.DataFrame=None, output_df: container.DataFrame=None):
         """
