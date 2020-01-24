@@ -16,7 +16,7 @@ from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimit
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m import container
-from net_image_feature import generate_metadata_shape_part
+from .net_image_feature import generate_metadata_shape_part
 
 from . import config
 
@@ -213,7 +213,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self._lazy_init("train")
 
         if self.hyperparams['use_fitted_weight']:
-            self.train_on_pretrained_model()
+            self.fit_on_pretrained_model()
         else:
             self.retrain()
         
@@ -221,26 +221,28 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self._has_finished = True
         return CallResult(None, has_finished=self._has_finished, iterations_done=1)
 
-    def train_on_pretrained_model(self) -> None:
+    def fit_on_pretrained_model(self) -> None:
         conf_threshold = self.hyperparams['confidences_threshold']
         class_count = [0 for i in range(len(self._object_names))]
+        import pdb
+        pdb.set_trace()
+        memo = {}
+        for i, each_image_name in enumerate(self._training_inputs[self._input_image_column_name]):
+            if each_image_name in memo:
+                each_image = memo[each_image_name]
+            else:
+                each_image = cv2.imread(os.path.join(self._location_base_uris, each_image_name))
+                memo[each_image_name] = each_image        
 
-        # load images from input dataframe
-        image_only = self._training_inputs.drop(columns=['d3mIndex'])
-        if len(image_only.columns) > 1:
-            logger.warning("Detect multiple file columns inputs! Will only use the first columns as the input image column")
-        image_names_list = image_only[image_only.columns[0]].tolist()
-
-        for i, each_image_name in enumerate(image_names_list):
-
-            each_image = cv2.imread(os.path.join(self._location_base_uris, each_image_name))
-            ground_truth_box = self._training_outputs.iloc[i,0].split(",")
-            logger.debug("processing", each_image_name, "on", str(ground_truth_box))
+            ground_truth_box = self._training_outputs[self._target_column_name].iloc[i]#.split(",")
+            if isinstance(ground_truth_box, str):
+                ground_truth_box = ground_truth_box.split(",")
+            logger.debug("processing {} on {}".format(each_image_name,str(ground_truth_box)))
             # update 2019.5.9: cut the image into the bounding box area only
-            each_image = self._cut_image(each_image, ground_truth_box)
+            each_image_cutted = self._cut_image(each_image, ground_truth_box)
             # Creates 4-dimensional blob from image.
             # swapRB has to be True, otherwise the channel is not R,G,B style
-            blob = cv2.dnn.blobFromImage(each_image, scale, (blob_x, blob_y), (mean_R, mean_G, mean_B), True, crop=False)
+            blob = cv2.dnn.blobFromImage(each_image_cutted, self.hyperparams["blob_scale_factor"], (self.hyperparams["blob_output_shape_x"], self.hyperparams["blob_output_shape_y"]), (0, 0, 0), True, crop=False)
             # set input blob for the network
             self._model.setInput(blob)
             outs = self._model.forward(self._output_layer)
@@ -249,8 +251,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             class_ids = []
             confidences = []
             boxes = []
-            width = each_image.shape[1]
-            height = each_image.shape[0]
+            width = each_image_cutted.shape[1]
+            height = each_image_cutted.shape[0]
             # for each detection from each output layer
             # get the confidence, class id, bounding box params
             # and ignore weak detections
@@ -274,12 +276,13 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, self.hyperparams["nms_threshold"])
 
             if len(indices) > 0:
+                logger.error("Get!!! {}".format(str(indices)))
                 for each in indices:
                     i = each[0]
                     box = boxes[i]
                     class_count[class_ids[i]] += 1
             else:
-                logger.warning("No object detected on " + each_image_name + " on [" + self._training_outputs.iloc[i, 0] + "]")
+                logger.warning("No object detected on {} on [{}]".format(each_image_name, str(ground_truth_box)))
 
         # find the real target that we need to detect
         for i, each in enumerate(class_count):
@@ -388,6 +391,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
     def _produce_for_fitted_weight(self, input_df):
+        """
+            produce function for using the pretrained model weights
+        """
         bbox_count = 0
         memo = set()
         output_df_dict = {}
@@ -406,7 +412,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.debug("Now detecting objects in", each_image_name)
             # Creates 4-dimensional blob from image.
             # swapRB has to be True, otherwise the channel is not R,G,B style
-            blob = cv2.dnn.blobFromImage(each_image, scale, (blob_x, blob_y), (0, 0, 0), True, crop=False)
+            blob = cv2.dnn.blobFromImage(each_image, self.hyperparams["blob_scale_factor"], 
+                                         (self.hyperparams["blob_output_shape_x"], self.hyperparams["blob_output_shape_y"]), 
+                                         (0, 0, 0), True, crop=False
+                                        )
             # set input blob for the network
             self._model.setInput(blob)
             # run inference through the network
@@ -466,6 +475,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return output_df
 
     def _produce_for_retrain_weights(self, input_df):
+        """
+            produce function for retraining the model weights
+        """
         bbox_count = 0
         memo = set()
         output_df_dict = {}
@@ -525,9 +537,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
         if self._inited and self._current_phase == phase:
             return
-        self._yolo_dataset_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.dataset')
-        self._yolov3_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.yolov3')
-        self._yolo_utils = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.utils')
         if self.hyperparams['use_fitted_weight']:
             
             logger.info("Getting weights file and config file from static volumes ...")
@@ -542,6 +551,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.info("Model initialize finished.")
 
         else:
+            self._yolo_dataset_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.dataset')
+            self._yolov3_model = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.yolov3')
+            self._yolo_utils = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.utils')
             logger.info("Using customized model...")
             self._model = self._create_model(phase)
             self.optimizer = tf.keras.optimizers.Adam()
@@ -562,7 +574,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             function to draw the bounding box on given image
         """
         color = [0,0,255]
-        label = self._object_names[self._target_class_id[0]]
+        label = self._object_names[self._target_class_id[0]] if self.hyperparams["use_fitted_weight"] else "target"
         # draw rectangle and put text
         cv2.rectangle(img, (x,y), (x_plus_w,y_plus_h), color, 2)
         cv2.putText(img, label, (x-10,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -572,7 +584,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
             function to output the image on D3MLOCALDIR from environment
         """
-        output_loc = os.path.join(os.environ['D3MLOCALDIR'], image_name)
+        output_loc = os.path.join(os.environ.get('D3MLOCALDIR', "/tmp"), image_name)
         cv2.imwrite(output_loc, image)
 
     def _get_image_path(self, dataset_input) -> str:

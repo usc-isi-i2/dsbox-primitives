@@ -822,6 +822,8 @@ class DefaultObjectDetectionTemplate(DSBoxTemplate):
                         {
                             "primitive": "d3m.primitives.feature_extraction.yolo.DSBOX",
                             "hyperparameters": {
+                            # "use_fitted_weight": [(False)],
+                            # "epochs": [(30)]
                             }
                         }
                     ],
