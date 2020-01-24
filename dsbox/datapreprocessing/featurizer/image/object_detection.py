@@ -436,9 +436,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             # apply non-max suppression to combine duplicate bounding boxes
             indices = cv2.dnn.NMSBoxes(boxes, confidences, self.hyperparams["confidences_threshold"], self.hyperparams["nms_threshold"])
             if len(indices) > 0:
-                bbox_count += 1
-                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "0,0,0,0,0,0,0,0", "confidence":0}
-                continue
                 for each in indices:
                     i = each[0]
                     if class_ids[i] in self._target_class_id:
@@ -685,7 +682,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
 
             gradients = tape.gradient(total_loss, self._model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
-            logger.info("=> STEP %4d   lr: %.6f   giou_loss: %4.2f   conf_loss: %4.2f   "
+            # set to warning for debug purpose
+            logger.warning("=> STEP %4d   lr: %.6f   giou_loss: %4.2f   conf_loss: %4.2f   "
                      "prob_loss: %4.2f   total_loss: %4.2f" %(self.global_steps, self.optimizer.lr.numpy(),
                                                               giou_loss, conf_loss,
                                                               prob_loss, total_loss))
