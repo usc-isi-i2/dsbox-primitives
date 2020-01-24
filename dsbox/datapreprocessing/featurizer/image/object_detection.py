@@ -22,9 +22,8 @@ from . import config
 
 logger = logging.getLogger(__name__)
 
-# Input should from dataframe_to_tensor primitive
 Inputs = container.DataFrame
-Outputs = container.DataFrame  # results
+Outputs = container.DataFrame
 
 
 class YoloHyperparams(hyperparams.Hyperparams):
@@ -350,16 +349,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         blob_x = self.hyperparams['blob_output_shape_x']
         blob_y = self.hyperparams['blob_output_shape_y']
         self._lazy_init("test")
-        self._location_base_uris = self._get_image_path(inputs)
-        image_d3mIndex = input_copy['d3mIndex'].astype(int).tolist()
-        # image_names_list = image_only[image_only.columns[0]].tolist()
-        dict_image_name_to_d3mIndex = {}
-        for i, v in input_copy.iterrows():
-            dict_image_name_to_d3mIndex[v[self._input_image_column_name]] = v["d3mIndex"]
-
-        # object_count_in_each_image = collections.defaultdict(int)
-        # for each in image_names_list:
-        #     object_count_in_each_image[each] += 1
+        self._location_base_uris = self._get_image_path(input_copy)
 
         if self.hyperparams["use_fitted_weight"]:
             output_dataFrame = self._produce_for_fitted_weight(input_copy)
@@ -446,6 +436,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             # apply non-max suppression to combine duplicate bounding boxes
             indices = cv2.dnn.NMSBoxes(boxes, confidences, self.hyperparams["confidences_threshold"], self.hyperparams["nms_threshold"])
             if len(indices) > 0:
+                bbox_count += 1
+                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "0,0,0,0,0,0,0,0", "confidence":0}
+                continue
                 for each in indices:
                     i = each[0]
                     if class_ids[i] in self._target_class_id:
@@ -464,9 +457,10 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                             each_image = self._draw_bounding_box(each_image, round(x), round(y), round(x+w), round(y+h))
             else:
                 # if nothing detected, still need to output something
+                logger.warning("Nothing detected on produce image {}".format(each_image_name))
                 bbox_count += 1
                 output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "", "confidence":0}
-                
+
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
 
@@ -520,7 +514,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             else:
                 # if nothing detected, still need to output something
                 bbox_count += 1
-                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "", "confidence":0}
+                logger.warning("Nothing detected on produce image {}".format(each_image_name))
+                output_df_dict[bbox_count] = {"d3mIndex":each_row["d3mIndex"], self._target_column_name: "0,0,0,0,0,0,0,0", "confidence":0}
             if self.hyperparams['output_to_tmp_dir']:
                 self._output_image(each_image, each_image_name)
         
@@ -540,10 +535,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
         if self._inited and self._current_phase == phase:
             return
-        if self.hyperparams['use_fitted_weight']:
-            
-            logger.info("Getting weights file and config file from static volumes ...")
 
+        if self.hyperparams['use_fitted_weight']:
+            logger.info("Getting weights file and config file from static volumes ...")
             if "yolov3.weights" not in self.volumes:
                 raise ValueError("Can't get weights file!")
 
@@ -560,7 +554,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             self._yolo_utils = importlib.import_module('dsbox.datapreprocessing.featurizer.image.yolo_utils.core.utils')
             logger.info("Using customized model...")
             self._model = self._create_model(phase)
-            self.optimizer = tf.keras.optimizers.Adam()
 
         self._current_phase = phase
         self._inited = True
@@ -629,7 +622,12 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         return location_base_uris
 
     def _create_model(self, phase: str = "train"):
-        # Build Model
+        """
+            function to create the DNN model for training
+        """
+        if phase == "train":
+            self.optimizer = tf.keras.optimizers.Adam()
+
         input_layer  = tf.keras.layers.Input([self.hyperparams['blob_output_shape_x'], self.hyperparams['blob_output_shape_y'], 3])
         feature_maps = self._yolov3_model.YOLOv3(input_layer)
         output_tensors = []
