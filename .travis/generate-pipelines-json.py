@@ -22,6 +22,7 @@ TEMPLATE_LIST = []
 
 # add templates here
 # TEMPLATE_LIST.append(UU3TestTemplate()) # no enough memory for travis ci
+TEMPLATE_LIST.append(ARIMATemplate())
 TEMPLATE_LIST.append(DefaultClassificationTemplate())
 TEMPLATE_LIST.append(DefaultClassificationTemplate2())
 TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
@@ -30,7 +31,6 @@ TEMPLATE_LIST.append(DefaultRegressionTemplate2())
 TEMPLATE_LIST.append(VotingTemplate())
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
-TEMPLATE_LIST.append(ARIMATemplate())
 TEMPLATE_LIST.append(DefaultObjectDetectionTemplate())
 TEMPLATE_LIST.append(HorizontalVotingTemplate())
 # ends
