@@ -661,7 +661,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.info("Running on No.{} epoch.".format(str(i)))
             for image_data, target in self._loaded_dataset:
                 loss = self._train_step(image_data, target)
-                if loss is np.nan:
+                if loss.numpy() is np.nan:
                     logger.warning("NaN value detected on loss! Roll back to last saved model weights and continue")
                     ckpt.restore(manager.latest_checkpoint)
                 else:
@@ -679,13 +679,8 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         """
             each train epoch
         """
-        import pdb
-        pdb.set_trace()
-        from tensorflow.keras.callbacks import ModelCheckpoint
-        callbacks_list = [ModelCheckpoint("/tmp/check_point_model.h5", monitor='loss', verbose=1, save_best_only=True, mode='min')]
-
         with tf.GradientTape() as tape:
-            pred_result = self._model(image_data, training=True, callbacks=callbacks_list)
+            pred_result = self._model(image_data, training=True)
             giou_loss=conf_loss=prob_loss=0
 
             # optimizing process
@@ -697,13 +692,6 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
                 prob_loss += loss_items[2]
 
             total_loss = giou_loss + conf_loss + prob_loss
-            # if crashed, will it help?
-            import pdb
-            pdb.set_trace()
-            if (total_loss) is np.nan:
-                logger.error("Loss calculating failed! Model fit crashed!")
-                self._model = model_backup
-                return
             gradients = tape.gradient(total_loss, self._model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
             # set to warning for debug purpose
