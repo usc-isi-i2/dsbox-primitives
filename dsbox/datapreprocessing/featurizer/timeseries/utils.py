@@ -154,7 +154,7 @@ class TimeIndicator:
             second = self.get_datetime(training_data.iloc[1, :])
             step = second - first
             self.by_week = step.days == 7
-            _logger.debug('By week {step}: {self.by_week}')
+            _logger.debug(f'By week {step}: {self.by_week}')
 
 
     def get_datetime(self, row: pd.Series) -> typing.Union[int, datetime.date]:

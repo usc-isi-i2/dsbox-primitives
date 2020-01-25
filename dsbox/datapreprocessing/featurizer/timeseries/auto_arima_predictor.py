@@ -366,9 +366,13 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
 
                     result.append(temp)
             result_df = pd.DataFrame(result, index=dates)
-            results[name] = result_df
+            if isinstance(name, str):
+                key_tuple = tuple([name])
+            else:
+                key_tuple = tuple(name)
+            results[key_tuple] = result_df
 
-        prediction_vector = extract_timeseries.combine(results, inputs0)
+        prediction_vector = test_extract_timeseries.combine(results, inputs0)
         output_columns = [self._wrap_predictions(prediction_vector)]
         outputs = base_utils.combine_columns(inputs, [], output_columns, return_result='new', add_index_columns=True)
 
