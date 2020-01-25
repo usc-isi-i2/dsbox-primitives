@@ -39,6 +39,7 @@ class ArimaParams(params.Params):
     target_columns_metadata: typing.List[OrderedDict]
     target_columns_names: typing.List[str]
     time_indicator: TimeIndicator
+    input_data_processed: typing.Dict
 
 
 class ArimaHyperparams(hyperparams.Hyperparams):
@@ -226,6 +227,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         self._target_columns_names: typing.List[str] = None
         self._time_indicator: TimeIndicator = None
         self._extract_timeseries: ExtractTimeseries = None
+        self._input_data_processed = dict()
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         ########################################################
@@ -251,9 +253,21 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             return CallResult(None)
         if self._training_inputs is None:
             raise ValueError("Missing training data.")
+        
+        target_column_names = []
+        for i in range(self._training_inputs.shape[1]):
+            each_selector = (metadata_base.ALL_ELEMENTS, i)
+            each_column_meta = self._training_inputs.metadata.query(each_selector)
+            if "https://metadata.datadrivendiscovery.org/types/TrueTarget" in each_column_meta["semantic_types"]:
+                target_column_names.append(self._training_inputs.columns[i])
+
+        if len(target_column_names) > 1:
+            logger.warning("Multiple target detected!")
+        target_column_name = target_column_names[0]
 
         for name, one_timeseries_df in self._extract_timeseries.groupby():
             print('fitting', name, 'with', one_timeseries_df.shape)
+            self._input_data_processed[name] = one_timeseries_df[target_column_name]
             self._last_time[name] = one_timeseries_df.index[-1]
 
             # For now, just use the target
@@ -293,10 +307,10 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         inputs0 = copy.deepcopy(inputs)
-        extract_timeseries = ExtractTimeseries(inputs0, self._time_indicator)
+        test_extract_timeseries = ExtractTimeseries(inputs0, self._time_indicator)
 
         results: typing.Dict = {}
-        for name, one_timeseries_df in extract_timeseries.groupby():
+        for name, one_timeseries_df in test_extract_timeseries.groupby():
             last_training_time = self._last_time[name]
             last_produce_time = one_timeseries_df.index[-1]
             n_periods = int(self._time_indicator.get_difference(last_training_time, last_produce_time))
@@ -307,14 +321,16 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                 # _logger.error(str(one_timeseries_df))
                 # _logger.error(str(inputs0))
                 # _
-                _logger.error(
+                _logger.warning(
                     'Testing period is not after training period! last_training_time={last_training_time} last_produce_time={last_produce_time}'.format(
                     last_training_time=str(last_training_time), 
                     last_produce_time=str(last_produce_time))
                 )
-                return CallResult(inputs)
+                prediction = []
+                # return CallResult(inputs)
                 # n_periods = 1
-            prediction = self._model[name].predict(n_periods=n_periods)
+            else:
+                prediction = self._model[name].predict(n_periods=n_periods)
             if self.hyperparams['take_log']:
                 prediction = np.exp(prediction)
 
@@ -331,7 +347,24 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                     dates.append(date.to_pydatetime())
                 else:
                     dates.append(date)
-                result.append(all_periods.loc[date, 0])
+                if date in all_periods.index:
+                    # find result from prediction of arima
+                    result.append(all_periods.loc[date, 0])
+                else:
+                    # find results from training data
+                    if date in self._input_data_processed[name].index:
+                        temp = self._input_data_processed[name].loc[date]
+                    else:
+                        for i, each_index in enumerate(self._input_data_processed[name].index):
+                            if date > each_index:
+                                if i == 0:
+                                    temp = self._input_data_processed[name].loc[i]
+                                else:
+                                    temp_left = self._input_data_processed[name].loc[i-1]
+                                    temp_right = self._input_data_processed[name].loc[i]
+                                    temp = (temp_left + temp_right) / 2
+
+                    result.append(temp)
             result_df = pd.DataFrame(result, index=dates)
             results[name] = result_df
 
@@ -351,6 +384,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             target_columns_metadata=self._target_columns_metadata,
             target_columns_names=self._target_columns_names,
             time_indicator=self._time_indicator,
+            input_data_processed = self._input_data_processed,
         )
 
     def set_params(self, *, params: ArimaParams) -> None:
@@ -362,6 +396,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         self._target_columns_metadata = params['target_columns_metadata']
         self._target_columns_names = params['target_columns_names']
         self._time_indicator = params['time_indicator']
+        self._input_data_processed = params['input_data_processed']
 
 
     @classmethod
