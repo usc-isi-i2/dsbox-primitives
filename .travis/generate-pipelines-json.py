@@ -335,18 +335,19 @@ def copy_pre_ran_pipelines():
     print("*" * 100)
     print("Start copying pre ran pipelines")
     for each_pre_pran_pp_folder in os.listdir("pre_ran_pipelines"):
-        full_path = os.path.join(os.getcwd(), "pre_ran_pipelines" ,each_pre_pran_pp_folder)
-        if os.path.isdir(full_path):
-            print("Searching on {}".format(full_path))
-            try:
-                copy_one_pre_ran_pipeline(full_path)
-                print("succeeded!")
-            except Exception as e:
-                failed.append(full_path)
-                print("!!!!!!!")
-                print("failed!")
-                print("!!!!!!!")
-                traceback.print_exc()
+        if each_pre_pran_pp_folder != "not_used":
+            full_path = os.path.join(os.getcwd(), "pre_ran_pipelines" ,each_pre_pran_pp_folder)
+            if os.path.isdir(full_path):
+                print("Searching on {}".format(full_path))
+                try:
+                    copy_one_pre_ran_pipeline(full_path)
+                    print("succeeded!")
+                except Exception as e:
+                    failed.append(full_path)
+                    print("!!!!!!!")
+                    print("failed!")
+                    print("!!!!!!!")
+                    traceback.print_exc()
     return failed
 
 
