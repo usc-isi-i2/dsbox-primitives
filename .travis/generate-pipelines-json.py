@@ -235,7 +235,7 @@ class DsboxPrimitiveUnitTest:
                 # check score file
                 predictions = pd.read_csv("tmp/score.csv")
                 print("*"*100)
-                print("unit test pipeline's score for {} {}".format(str(each_template)), str(test_dataset_id))
+                print("unit test pipeline's score for {} {}".format(str(each_template), str(test_dataset_id)))
                 print(predictions)
                 print("*"*100)
             except Exception:
