@@ -5,7 +5,7 @@ import logging
 
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
-from dsbox.datapreprocessing.featurizer.image.net_image_feature import generate_metadata_shape_part
+from dsbox.datapreprocessing.featurizer.image.utils import image_utils
 import stopit
 import typing
 
@@ -268,7 +268,7 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
             self._iterations_done = False
         output_dataFrame = value
         # update v2020.1.16: update dataframe's shape metadatapart!
-        metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+        metadata_shape_part_dict = image_utils.generate_metadata_shape_part(value=output_dataFrame, selector=())
         for each_selector, each_metadata in metadata_shape_part_dict.items():
             output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
 

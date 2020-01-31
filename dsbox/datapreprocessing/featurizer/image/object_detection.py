@@ -16,8 +16,7 @@ from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimit
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata import hyperparams, params, base as metadata_base
 from d3m import container
-from .net_image_feature import generate_metadata_shape_part
-
+from .utils import image_utils
 from . import config
 
 logger = logging.getLogger(__name__)
@@ -335,7 +334,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             logger.warning("Multiple input image columns detected!")
         self._input_image_column_name = input_column_names[0]
 
-        self._location_base_uris = self._get_image_path(inputs)
+        self._location_base_uris = image_utils.get_image_path(inputs)
         self._fitted = False
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -349,7 +348,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         blob_x = self.hyperparams['blob_output_shape_x']
         blob_y = self.hyperparams['blob_output_shape_y']
         self._lazy_init("test")
-        self._location_base_uris = self._get_image_path(input_copy)
+        self._location_base_uris = image_utils.get_image_path(input_copy)
 
         if self.hyperparams["use_fitted_weight"]:
             output_dataFrame = self._produce_for_fitted_weight(input_copy)
@@ -369,7 +368,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             output_dataFrame.metadata = output_dataFrame.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
 
         # add shape metadata
-        metadata_shape_part_dict = generate_metadata_shape_part(value=output_dataFrame, selector=())
+        metadata_shape_part_dict = image_utils.generate_metadata_shape_part(value=output_dataFrame, selector=())
         for each_selector, each_metadata in metadata_shape_part_dict.items():
             output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
         self._has_finished = True
@@ -581,42 +580,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         output_loc = os.path.join(os.environ.get('D3MLOCALDIR', "/tmp"), image_name)
         cv2.imwrite(output_loc, image)
 
-    def _get_image_path(self, dataset_input) -> str:
-        """
-            function used to get the abs path of input images
-        """
-        target_index = []
-        location_base_uris = []
-        elements_amount = dataset_input.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
-        for selector_index in range(elements_amount):
-            each_selector = dataset_input.metadata.query((metadata_base.ALL_ELEMENTS, selector_index))
-            mime_types_found = False
-            # here we assume only one column shows the location of the target attribute
-            #print(each_selector)
-            if 'mime_types' in each_selector:
-                mime_types = (each_selector['mime_types'])
-                mime_types_found = True
-            elif 'media_types' in each_selector:
-                mime_types = (each_selector['media_types'])
-                mime_types_found = True
-            # do following step only when mime type attriubte found
-            if mime_types_found:
-                for each_type in mime_types:
-                    if ('image' in each_type):
-                        target_index.append(selector_index)
-                        location_base_uris.append(each_selector['location_base_uris'][0])
-                        # column_name = each_selector['name']
-                        break
-        # if no 'image' related mime_types found, return a ndarray with each dimension's length equal to 0
-        if (len(target_index) == 0):
-            # raise exceptions.InvalidArgumentValueError("no image related metadata found!")
-            logger.error("[ERROR] No image related column found!")
-        elif len(target_index) > 1:
-            logger.info("[INFO] Multiple image columns found in the input, this primitive can only handle one column.")
-        location_base_uris = location_base_uris[0]
-        if location_base_uris[0:7] == 'file://':
-            location_base_uris = location_base_uris[7:]
-        return location_base_uris
+
 
     def _create_model(self, phase: str = "train"):
         """

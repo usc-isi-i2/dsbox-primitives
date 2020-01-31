@@ -11,7 +11,7 @@ from d3m.metadata import hyperparams
 from d3m import container
 from d3m.metadata import base as metadata_base
 
-from dsbox.datapreprocessing.featurizer.image.net_image_feature import generate_metadata_shape_part
+from dsbox.datapreprocessing.featurizer.image.utils import image_utils
 
 from .helper import Aggregator
 from . import config
@@ -175,7 +175,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=False)
 
         # add back metadata
-        metadata_shape_part_dict = generate_metadata_shape_part(value=big_table, selector=())
+        metadata_shape_part_dict = image_utils.generate_metadata_shape_part(value=big_table, selector=())
         for each_selector, each_metadata in metadata_shape_part_dict.items():
             big_table.metadata = big_table.metadata.update(selector=each_selector, metadata=each_metadata)
         for index in range(len(big_table.columns)):
