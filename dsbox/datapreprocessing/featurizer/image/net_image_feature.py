@@ -158,19 +158,22 @@ class KerasPrimitive:
              'file_digest': weight_file.digest}
             for weight_file in weight_files]
 
-    def _setup_weight_files(self):
+    def _setup_weight_files(self) -> str:
         """
-        Copy weight files from volume to Keras cache directory
+        return the weight file location for model to load
         """
         for file_info in self._weight_files:
             if USE_MODULE not in file_info.package:
                 continue
             if file_info.name in self.volumes:
-                dest = os.path.join(file_info.data_dir, file_info.name)
-                if not os.path.exists(dest):
-                    shutil.copy2(self.volumes[file_info.name], dest)
+                return self.volumes[file_info.name]
+                # dest = os.path.join(file_info.data_dir, file_info.name)
+                # if not os.path.exists(dest):
+                    # shutil.copy2(self.volumes[file_info.name], dest)
             else:
+                # can only try to let keras load by itself
                 logger.warning('Keras weight file not in volume: {}'.format(file_info.name))
+                return "imagenet"
 
     def _get_weight_file(self, name):
         file_info = [info for info in self._weight_files if info.name == name and USE_MODULE in info.package]
@@ -457,13 +460,13 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         else:
             vgg16 = importlib.import_module('keras.applications.vgg16')
 
-        self._setup_weight_files()
+        weights_loc = self._setup_weight_files()
 
         keras_backend.clear_session()
 
         original = sys.stdout
         sys.stdout = sys.stderr
-        self._org_model = vgg16.VGG16(weights='imagenet', include_top=False)
+        self._org_model = vgg16.VGG16(weights=weights_loc, include_top=False)
         sys.stdout = original
 
         self._layer_numbers = [-1, -5, -9, -13, -16]
@@ -616,7 +619,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         else:
             inception_v3 = importlib.import_module('keras.applications.inception_v3')
 
-        self._setup_weight_files()
+        weights_loc = self._setup_weight_files()
 
         keras_backend.clear_session()
 
@@ -624,7 +627,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         if self._model is None:
             original = sys.stdout
             sys.stdout = sys.stderr
-            self._model = inception_v3.InceptionV3(weights='imagenet', include_top=True)
+            self._model = inception_v3.InceptionV3(weights=weights_loc, include_top=True)
             sys.stdout = original
 
         self._org_model = self._model

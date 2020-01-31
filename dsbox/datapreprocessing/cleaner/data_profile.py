@@ -398,7 +398,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 memo_name = each_memo["metadata"]['name']
                 original_metadata = dict(inputs.metadata.query(each_selector))
                 if "name" not in original_metadata or memo_name != original_metadata['name']:
-                    raise ValueError("The input name is different from fit procedue at selector {}".format(str(each_selector)))
+                    _logger.warning("The input name is different from fit procedue at selector {}".format(str(each_selector)))
 
                 if original_metadata['semantic_types'] != each_updated_semantic_types:
                     _logger.debug("Update semantic type from {} to {}".format(str(original_metadata['semantic_types']), str(each_updated_semantic_types)))
