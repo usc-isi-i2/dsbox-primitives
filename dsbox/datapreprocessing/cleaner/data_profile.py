@@ -78,7 +78,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 
 class ProfilerParams(params.Params):
-    mapping: typing.Dict
+    mapping: typing.List
 
 
 class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, Hyperparams]):
