@@ -78,7 +78,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 
 class ProfilerParams(params.Params):
-    mapping: typing.List
+    mapping: str
 
 
 class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, Hyperparams]):
@@ -127,7 +127,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
         self._specified_features = hyperparams["metafeatures"] if hyperparams else default_metafeatures
         self._input_data = None
         self._fitted = False
-        self._mapping = {}
+        self._mapping = ""
 
     def get_params(self) -> ProfilerParams:
         if not self._fitted:
@@ -310,7 +310,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
 
         inputs = self._relabel_categorical(inputs)
         # remember these mapping results
-        self._mapping = inputs.metadata.to_json_structure()
+        self._mapping = json.dumps(inputs.metadata.to_json_structure())
         self._fitted = True
         return CallResult(None, has_finished=True, iterations_done=1)
 
@@ -391,7 +391,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
         """
             function that used fitted metadata record to add back the metadata
         """
-        for each_memo in self._mapping:
+        for each_memo in json.loads(self._mapping):
             each_selector = each_memo["selector"]
             if 'semantic_types' in each_memo["metadata"] and "name" in each_memo["metadata"]:
                 each_updated_semantic_types = tuple(each_memo["metadata"]['semantic_types'])
