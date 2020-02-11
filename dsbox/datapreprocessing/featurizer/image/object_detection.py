@@ -125,7 +125,7 @@ class Params(params.Params):
     output_layer: typing.List[str]
     target_column_name: str
     input_image_column_name: str
-    dump_model_path: str
+    dump_model_path: typing.Optional[str]
 
 
 class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperparams]):
@@ -191,7 +191,7 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
         self.warmup_steps = None
         self.total_steps = None
         self._loaded_dataset = None
-        self._dump_model_path = None
+        self._dump_model_path = ""
         self._current_phase = None
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
@@ -392,9 +392,9 @@ class Yolo(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, YoloHyperpara
             image_path = os.path.join(self._location_base_uris, each_image_name)
             each_image = cv2.imread(image_path)
             if each_image is None:
-                logger.error("loading image from " + image_path + " failed!")
+                logger.error("loading image from {} failed!".format(str(image_path)))
                 continue
-            logger.debug("Now detecting objects in", each_image_name)
+            logger.debug("Now detecting objects in {}".format(each_image_name))
             # Creates 4-dimensional blob from image.
             # swapRB has to be True, otherwise the channel is not R,G,B style
             blob = cv2.dnn.blobFromImage(each_image, self.hyperparams["blob_scale_factor"], 
