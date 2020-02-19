@@ -2,6 +2,7 @@ import json
 
 from collections import defaultdict
 
+import typing
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import pytypes  # type: ignore
@@ -9,11 +10,11 @@ import logging
 import traceback
 
 from d3m import container, types
-from d3m.metadata import hyperparams
+from d3m.metadata import hyperparams, params
 from d3m.metadata.base import DataMetadata, PrimitiveFamily, PrimitiveAlgorithmType, Selector, ALL_ELEMENTS
 import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.base import CallResult
-from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
+from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 
 from dsbox.datapreprocessing.cleaner.dependencies.date_featurizer_org import DateFeaturizerOrg
 from dsbox.datapreprocessing.cleaner.dependencies.spliter import PhoneParser, PunctuationParser, NumAlphaParser
@@ -76,7 +77,11 @@ class Hyperparams(hyperparams.Hyperparams):
         semantic_types=['https://metadata.datadrivendiscovery.org/types/MetafeatureParameter'])
 
 
-class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
+class ProfilerParams(params.Params):
+    mapping: str
+
+
+class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, Hyperparams]):
     """
     Generate a profile of the given dataset. The profiler is capable of detecting if column values consists of compound
     values, date values, phone number values, alphanumeric token values and categorical values.
@@ -120,17 +125,33 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
         self._DateFeaturizer: DateFeaturizerOrg = None
         # list of specified features to compute
         self._specified_features = hyperparams["metafeatures"] if hyperparams else default_metafeatures
+        self._input_data = None
+        self._fitted = False
+        self._mapping = ""
 
-    def produce(self, *, inputs: Input, timeout: float = None, iterations: int = None) -> CallResult[Output]:
-        """
-        generate features for the input.
-        Input:
-            typing.Union[container.Dataset, container.DataFrame, container.ndarray, container.matrix, container.List]
-        Output:
-            typing.Union[container.Dataset, container.DataFrame, container.ndarray, container.matrix, container.List]
-        """
-        # Wrap as container, if needed
-        inputs = inputs.copy()
+    def get_params(self) -> ProfilerParams:
+        if not self._fitted:
+            raise ValueError("Fit not performed.")
+        return ProfilerParams(
+            mapping=self._mapping)
+
+    def set_params(self, *, params: ProfilerParams) -> None:
+        self._fitted = True
+        self._mapping = params['mapping']
+
+    def set_training_data(self, *, inputs: Input) -> None:
+        self._input_data = inputs
+        self._fitted = False
+
+    def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
+        if self._fitted:
+            return
+
+        if self._input_data is None:
+            raise ValueError('Missing training(fitting) data.')
+
+        inputs = self._input_data.copy()
+        
         if not pytypes.is_of_type(inputs, types.Container):
             if isinstance(inputs, pd.DataFrame):
                 inputs = container.DataFrame(inputs)
@@ -141,17 +162,7 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
             elif isinstance(inputs, list):
                 inputs = container.List(inputs)
             else:
-                # Inputs is not a container, and cannot be converted to a container.
-                # Nothing to do, since cannot store the computed metadata.
-                return CallResult(inputs)
-
-        # calling the utility to detect integer and float datatype columns
-        # inputs = dtype_detector.detector(inputs)
-
-        # calling the utility to categorical datatype columns
-        metadata = self._produce(inputs, inputs.metadata, [])
-        # I guess there are updating the metdata here
-        inputs.metadata = metadata
+                raise ValueError("Unsupport input type")
 
         if inputs.shape[0] > 100:
             self._sample_df = inputs.dropna().iloc[0:100, :]
@@ -159,7 +170,6 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
             self._sample_df = inputs
 
         # calling date detector
-
         self._DateFeaturizer = DateFeaturizerOrg(inputs)
         try:
             cols = self._DateFeaturizer.detect_date_columns(self._sample_df)
@@ -299,6 +309,46 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
                 inputs.metadata = inputs.metadata.update((mbase.ALL_ELEMENTS, i), old_metadata)
 
         inputs = self._relabel_categorical(inputs)
+        # remember these mapping results
+        self._mapping = json.dumps(inputs.metadata.to_json_structure())
+        self._fitted = True
+        return CallResult(None, has_finished=True, iterations_done=1)
+
+    def produce(self, *, inputs: Input, timeout: float = None, iterations: int = None) -> CallResult[Output]:
+        """
+        generate features for the input.
+        Input:
+            typing.Union[container.Dataset, container.DataFrame, container.ndarray, container.matrix, container.List]
+        Output:
+            typing.Union[container.Dataset, container.DataFrame, container.ndarray, container.matrix, container.List]
+        """
+        # Wrap as container, if needed
+        inputs = inputs.copy()
+        if not pytypes.is_of_type(inputs, types.Container):
+            if isinstance(inputs, pd.DataFrame):
+                inputs = container.DataFrame(inputs)
+            elif isinstance(inputs, np.matrix):
+                inputs = container.matrix(inputs)
+            elif isinstance(inputs, np.ndarray):
+                inputs = container.ndarray(inputs)
+            elif isinstance(inputs, list):
+                inputs = container.List(inputs)
+            else:
+                # Inputs is not a container, and cannot be converted to a container.
+                # Nothing to do, since cannot store the computed metadata.
+                return CallResult(inputs)
+
+        # calling the utility to detect integer and float datatype columns
+        # inputs = dtype_detector.detector(inputs)
+
+        # calling the utility to categorical datatype columns
+        metadata = self._produce(inputs, inputs.metadata, [])
+        # I guess there are updating the metdata here
+        inputs.metadata = metadata
+
+        # updated v2020.1.28: now update the semantic types here directly from fit procedures
+        inputs = self._update_semantic_types(inputs)
+
         return CallResult(inputs)
 
     @staticmethod
@@ -337,6 +387,25 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
 
         return inputs
 
+    def _update_semantic_types(self, inputs: Input) -> Input:
+        """
+            function that used fitted metadata record to add back the metadata
+        """
+        for each_memo in json.loads(self._mapping):
+            each_selector = each_memo["selector"]
+            if 'semantic_types' in each_memo["metadata"] and "name" in each_memo["metadata"]:
+                each_updated_semantic_types = tuple(each_memo["metadata"]['semantic_types'])
+                memo_name = each_memo["metadata"]['name']
+                original_metadata = dict(inputs.metadata.query(each_selector))
+                if "name" not in original_metadata or memo_name != original_metadata['name']:
+                    _logger.warning("The input name is different from fit procedue at selector {}".format(str(each_selector)))
+
+                if original_metadata['semantic_types'] != each_updated_semantic_types:
+                    _logger.debug("Update semantic type from {} to {}".format(str(original_metadata['semantic_types']), str(each_updated_semantic_types)))
+                    original_metadata['semantic_types'] = each_updated_semantic_types
+                inputs.metadata = inputs.metadata.update(each_selector, original_metadata)
+        return inputs
+
     def _produce(self, inputs: Input, metadata: DataMetadata = None, prefix: Selector = None) -> DataMetadata:
         """
         Parameters:
@@ -349,6 +418,9 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
             Selector prefix into metadata
 
         """
+        if not self._fitted:
+            raise ValueError("Primitive not fitted! Please run fit first!")
+
         if isinstance(inputs, container.Dataset):
             for table_id, resource in inputs.items():
                 prefix = prefix + [table_id]
@@ -505,7 +577,6 @@ class Profiler(TransformerPrimitiveBase[Input, Output, Hyperparams]):
                 fc_hih.compute_common_tokens_by_puncs(col, each_res, self._topk, self._specified_features)
 
             # update metadata for a specific column
-
             metadata = metadata.update(prefix + [ALL_ELEMENTS, column_counter], each_res)
 
             # _logger.info(

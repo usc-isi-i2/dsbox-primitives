@@ -357,12 +357,11 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             a lazy init function which initialize the LSTM model only when the primitive's fit/ produce method is called
         """
         keras_models = importlib.import_module('tensorflow.keras.models')
-        keras_recurrent = importlib.import_module('tensorflow.keras.layers.recurrent')
         keras_layers = importlib.import_module('tensorflow.keras.layers')
         keras_optimizers = importlib.import_module('tensorflow.keras.optimizers')
         model = keras_models.Sequential()
         # TODO: following parameters could also be hyperparameters for tuning
-        model.add(keras_recurrent.LSTM(self._LSTM_units, return_sequences=False,
+        model.add(keras_layers.LSTM(self._LSTM_units, return_sequences=False,
                                        input_shape=self._feature_shape,
                                        dropout=self._dropout_rate))
         model.add(keras_layers.Dense(512, activation='relu'))

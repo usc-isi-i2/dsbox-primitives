@@ -822,8 +822,9 @@ class DefaultObjectDetectionTemplate(DSBoxTemplate):
                         {
                             "primitive": "d3m.primitives.feature_extraction.yolo.DSBOX",
                             "hyperparameters": {
-                            # "use_fitted_weight": [(False)],
-                            # "epochs": [(30)]
+                            "use_fitted_weight": [(True)],
+                            # "confidences_threshold": [(0.8)],
+                            # "nms_threshold": [0.6],
                             }
                         }
                     ],
@@ -909,8 +910,8 @@ class DefaultVideoClassificationTemplate(DSBoxTemplate):
                         {
                             "primitive": "d3m.primitives.classification.lstm.DSBOX",
                             "hyperparameters": {
-                                "LSTM_units":[512],
-                                "epochs":[50],
+                                "LSTM_units":[2048],
+                                "epochs":[50, 500, 1000],
                             }
                         }
                     ],

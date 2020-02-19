@@ -416,13 +416,13 @@ class simple_config:
 
 
 DATASET_MAPPER = {
-            'classification': "38_sick",
-            'voting_classification': '38_sick',
-            'regression': "196_autoMpg",
-            'timeseries': "uu1_datasmash",
-            'image_regression': '22_handgeometry',
-            'time_series_forecasting': 'LL1_736_stock_market',
-            'object_detection': 'LL1_penn_fudan_pedestrian',
+            'classification': "38_sick_MIN_METADATA",
+            'voting_classification': '38_sick_MIN_METADATA',
+            'regression': "196_autoMpg_MIN_METADATA",
+            'timeseries': "66_chlorineConcentration_MIN_METADATA",
+            'image_regression': '22_handgeometry_MIN_METADATA',
+            'time_series_forecasting': 'LL1_736_population_spawn_MIN_METADATA',
+            'object_detection': 'LL1_penn_fudan_pedestrian_MIN_METADATA',
             'multitable_dataset': 'uu3_world_development_indicators'
         }
 
