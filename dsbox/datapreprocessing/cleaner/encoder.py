@@ -115,10 +115,10 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
                 topn.append('other_')
         topn = [x for x in topn if x]
         return feature.name, topn
-    
+
     def _remove_trailing_zeros(self, col_names):
         """
-        Removes '.0' from the end of each column name in `col_names`. 
+        Removes '.0' from the end of each column name in `col_names`.
         """
         return [re.sub('.0$', '', col_name) for col_name in col_names]
 
@@ -258,8 +258,10 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         encoded_df = container.DataFrame(pd.concat(res, axis=1))
 
         # update metadata for existing columns
-        for index in range(len(encoded_df.columns)):
+        for index, col_name in enumerate(encoded_df.columns):
             old_metadata = dict(encoded_df.metadata.query((mbase.ALL_ELEMENTS, index)))
+            if 'name' not in old_metadata:
+                old_metadata['name'] = col_name
             old_metadata["structural_type"] = int
             old_metadata["semantic_types"] = (
                 'http://schema.org/Integer', 'https://metadata.datadrivendiscovery.org/types/Attribute')

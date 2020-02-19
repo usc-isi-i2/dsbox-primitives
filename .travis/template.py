@@ -291,7 +291,7 @@ class DSBoxTemplate():
                         name=hyperName, argument_type=self.argmentsmapper["value"],
                         data=hyper[hyperName])
 
-            if self.need_add_reference and primitive_name == 'd3m.primitives.data_transformation.construct_predictions.DataFrameCommon':
+            if primitive_name == "d3m.primitives.data_transformation.construct_predictions.Common":
                 primitive_step.add_argument("reference",metadata_base.ArgumentType.CONTAINER,"steps.0.produce")
 
             # first we need to extract the types of the primtive's input and
@@ -307,6 +307,7 @@ class DSBoxTemplate():
                 else:
                     argument = outputs[parameter]
                 step_arguments.append(argument)
+
             self.bind_primitive_IO(primitive_step, step_arguments)
             pipeline.add_step(primitive_step)
             # pre v2019.1.21
@@ -362,8 +363,9 @@ class DSBoxTemplate():
         config_dict = eval(str(self.generate_configuration_space()))
         config_dict = dict(map(lambda x: (x[0], x[1][0]), config_dict.items()))
 
-        problem = self.template['taskType'].lower()
-        config_class = simple_config(config=config_dict, pipeline_type=problem, test_dataset_id=DATASET_MAPPER[problem])
+        runType = self.template['runType'].lower()
+        test_dataset_id = DATASET_MAPPER.get(runType)
+        config_class = simple_config(config=config_dict, pipeline_type=runType, test_dataset_id=test_dataset_id)
         return config_class
 
     def description_to_configuration(self, description):
@@ -414,9 +416,14 @@ class simple_config:
 
 
 DATASET_MAPPER = {
-            'classification': "38_sick",
-            'regression': "196_autoMpg",
-            'timeseries': "uu1_datasmash"
+            'classification': "38_sick_MIN_METADATA",
+            'voting_classification': '38_sick_MIN_METADATA',
+            'regression': "196_autoMpg_MIN_METADATA",
+            'timeseries': "66_chlorineConcentration_MIN_METADATA",
+            'image_regression': '22_handgeometry_MIN_METADATA',
+            'time_series_forecasting': 'LL1_736_population_spawn_MIN_METADATA',
+            'object_detection': 'LL1_penn_fudan_pedestrian_MIN_METADATA',
+            'multitable_dataset': 'uu3_world_development_indicators'
         }
 
 

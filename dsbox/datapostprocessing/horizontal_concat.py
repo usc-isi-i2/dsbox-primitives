@@ -1,6 +1,7 @@
 '''
 Horizontal concatenation of multiple dataframes
 '''
+import logging
 import typing
 
 import pandas as pd
@@ -15,6 +16,7 @@ from dsbox.datapreprocessing.cleaner import config
 
 __all__ = ('HorizontalConcat',)
 
+_logger = logging.getLogger(__name__)
 
 Inputs = container.List
 Outputs = container.DataFrame
@@ -85,15 +87,26 @@ class HorizontalConcat(TransformerPrimitiveBase[Inputs, Outputs, HorizontalConca
 
         first_indices = first.metadata.get_index_columns()
         column_names = set(first.columns)
-        for other in inputs[1:]:
+        _logger.debug(f'Column names from first dataframe: {column_names}')
+        for index, other in enumerate(inputs[1:]):
             if auto_rename_columns:
                 rename = {}
-                for name in  other.columns:
+                _logger.debug(f'Column names from dataframe {index+1}: {set(other.columns)}')
+                for name in other.columns:
+                    if name == 'd3mIndex':
+                        continue
                     if name in column_names:
                         new_name = self._new_name(name, column_names)
                         rename[name] = new_name
                         column_names.add(new_name)
-                other = self._rename_columns(other, rename)
+                    else:
+                        column_names.add(name)
+                if rename:
+                    _logger.debug(f'Renaming dataframe number {index+1}:')
+                    if _logger.getEffectiveLevel() <= 10:
+                        for key, value in rename.items():
+                            _logger.debug(f'  {key} -> {value}')
+                    other = self._rename_columns(other, rename)
             other_indices = other.metadata.get_index_columns()
             if first_indices and other_indices:
                 if use_index:
@@ -114,12 +127,12 @@ class HorizontalConcat(TransformerPrimitiveBase[Inputs, Outputs, HorizontalConca
     def _rename_columns(dataframe: container.DataFrame, mapping: typing.Dict[str, str]) -> container.DataFrame:
         '''Rename DataFrame column names, and corresponding metadata column names'''
         dataframe = dataframe.rename(columns=mapping)
-        for c in range(dataframe.metadata.query((ALL_ELEMENTS,))['dimension']['length']):
-            column_metadata = dataframe.metadata.query((ALL_ELEMENTS, c))
+        for index in range(dataframe.metadata.query((ALL_ELEMENTS,))['dimension']['length']):
+            column_metadata = dataframe.metadata.query((ALL_ELEMENTS, index))
             if column_metadata['name'] in mapping:
                 column_metadata = dict(column_metadata)
                 column_metadata['name'] = mapping[column_metadata['name']]
-                dataframe.metadata = dataframe.metadata.update((ALL_ELEMENTS, c), column_metadata)
+                dataframe.metadata = dataframe.metadata.update((ALL_ELEMENTS, index), column_metadata)
         return dataframe
 
     @staticmethod
@@ -193,7 +206,7 @@ class HorizontalConcat(TransformerPrimitiveBase[Inputs, Outputs, HorizontalConca
             # We know the length is larger than 1 because otherwise the first case would match.
             assert len(indices) > 1
 
-            # logger.warning("Primary indices both on left and right not have same names, but they do match in number.")
+            _logger.warning("Primary indices both on left and right not have same names, but they do match in number.")
 
             # TODO: Handle the case when not all index values exist and "reindex" fills values in: we should fill with NA relevant to the column type.
             return right.set_index(right_index_series).reindex(index_series).reset_index(drop=True)

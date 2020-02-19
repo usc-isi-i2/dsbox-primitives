@@ -5,6 +5,7 @@ import logging
 
 from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
+from dsbox.datapreprocessing.featurizer.image.utils import image_utils
 import stopit
 import typing
 
@@ -210,7 +211,6 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
         1. add evaluation part for __simpleImpute()
 
         """
-
         if (not self._is_fitted):
             # todo: specify a NotFittedError, like in sklearn
             raise ValueError("Calling produce before fitting.")
@@ -248,20 +248,31 @@ class GreedyImputation(SupervisedLearnerPrimitiveBase[Input, Output, Params, Gre
                 start_index = 1
                 value = container.DataFrame(pd.concat([pd.DataFrame(d3mIndex, columns=["d3mIndex"]), value], axis=1))
                 index_metadata_selector = (mbase.ALL_ELEMENTS, 0)
-                index_metadata = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
+                index_metadata = {
+                'structural_type': int,
+                'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/PrimaryKey')}
                 value.metadata = value.metadata.update(metadata=index_metadata, selector=index_metadata_selector)
             for each_column in range(start_index, value.shape[1]):
                 metadata_selector = (mbase.ALL_ELEMENTS, each_column)
-                metadata_each_column = {'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')}
+                metadata_each_column = {
+                'name': value.columns[each_column],
+                'structural_type': float,
+                'semantic_types': ('https://metadata.datadrivendiscovery.org/types/TabularColumn', 'https://metadata.datadrivendiscovery.org/types/Attribute')
+                }
                 value.metadata = value.metadata.update(metadata=metadata_each_column, selector=metadata_selector)
-
 
         elif to_ctx_mrg.state == to_ctx_mrg.TIMED_OUT:
             _logger.info("Timed Out...")
             self._is_fitted = False
             self._has_finished = False
             self._iterations_done = False
-        return CallResult(value, self._has_finished, self._iterations_done)
+        output_dataFrame = value
+        # update v2020.1.16: update dataframe's shape metadatapart!
+        metadata_shape_part_dict = image_utils.generate_metadata_shape_part(value=output_dataFrame, selector=())
+        for each_selector, each_metadata in metadata_shape_part_dict.items():
+            output_dataFrame.metadata = output_dataFrame.metadata.update(selector=each_selector, metadata=each_metadata)
+
+        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
 
     @classmethod
     def _get_columns_to_fit(cls, inputs: Input, hyperparams: GreedyHyperparameter):

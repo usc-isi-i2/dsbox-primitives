@@ -23,6 +23,8 @@ class TimeIndicatorType(enum.Enum):
     YEAR = 2
     YEAR_MONTH = 3
     MONTH_DAY = 4
+    YEAR_MONTH_DAY = 5
+    MONTH_DAY_YEAR = 6
 
 # TimeIndicatorType.YEAR
 # dateTime
@@ -33,6 +35,7 @@ class TimeIndicatorType(enum.Enum):
 # 4,1822,3.7,353.0,6.3
 # 5,1823,2.7,302.0,2.2
 
+# from 56_sunspots
 # TimeIndicatorType.YEAR_MONTH
 # dateTime
 # 0,1749-01,96.7
@@ -51,6 +54,18 @@ class TimeIndicatorType(enum.Enum):
 # 4,cas9_VBBA,S_3102,10,28480
 # 5,cas9_VBBA,S_3102,11,28695
 
+# LL1_terra_canopy_height
+# TimeIndicatorType.INTEGER
+# integer
+# d3mIndex,cultivar,sitename,day,canopy_height
+# 0,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,12,10
+# 1,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,13,10
+# 2,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,14,10
+# 3,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,15,10
+# 4,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,16,10
+# 5,PI145619,MAC Field Scanner Season 4 Range 27 Column 11,17,10
+
+
 # TimeIndicatorType.MONTH_DAY
 # d3mIndex,Company,Year,Date,Close
 # 0,abbv,2013,01-04,28.81
@@ -60,13 +75,30 @@ class TimeIndicatorType(enum.Enum):
 # 4,abbv,2013,01-10,28.480999999999998
 # 5,abbv,2013,01-11,28.695
 
+# New date format: LL1_736_stock_market
+# d3mIndex,Company,Date,Close
+# 0,abbv,1/4/2013,28.81
+# 1,abbv,1/7/2013,28.869
+# 2,abbv,1/8/2013,28.242
+# 3,abbv,1/9/2013,28.399
+# 4,abbv,1/10/2013,28.481
+# 5,abbv,1/11/2013,28.695
+
+# LL1_PHEM
+# d3mIndex,RegionName,ZoneName,WoredaName,dateTime,Malnutrition_total Cases
+# 0,Addis Ababa,Addis Ketema,Addis Ketema,2017-01-31,8
+# 1,Addis Ababa,Addis Ketema,Addis Ketema,2017-02-28,5
+# 2,Addis Ababa,Addis Ketema,Addis Ketema,2017-03-31,11
+# 3,Addis Ababa,Addis Ketema,Addis Ketema,2017-04-30,16
+# 4,Addis Ababa,Addis Ketema,Addis Ketema,2017-05-31,15
+# 5,Addis Ababa,Addis Ketema,Addis Ketema,2017-06-30,19
 
 TIME_TYPE = 'https://metadata.datadrivendiscovery.org/types/Time'
 INTEGER_TYPE = 'http://schema.org/Integer'
 FLOAT_TYPE = 'http://schema.org/Float'
 CATEGORICAL_TYPE = 'https://metadata.datadrivendiscovery.org/types/CategoricalData'
 TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/TrueTarget'
-# SUGGESTED_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
+SUGGESTED_GROUPING_KEY = "https://metadata.datadrivendiscovery.org/types/SuggestedGroupingKey"
 
 
 def next_month(value: datetime.datetime) -> datetime.datetime:
@@ -95,6 +127,13 @@ def next_day(value: datetime.datetime) -> datetime.datetime:
     return value
 
 
+def next_week(value: datetime.datetime) -> datetime.datetime:
+    '''Increment by one week'''
+    for i in range(7):
+        value = next_day(value)
+    return value
+
+
 class TimeIndicator:
     '''
     Given d3m dataframe, detect is time indicator column style (TimeIndicatorType).
@@ -104,11 +143,19 @@ class TimeIndicator:
         if len(time_indicator_index) > 1:
             _logger.warn(f'More than one time indicator columns. Using first one: {time_indicator_index}')
         self.time_indicator_index: int = time_indicator_index[0]
-        self.indicator_style = self._deduce_style(training_data, self.time_indicator_index)
+        self.indicator_style, self.separator = self._deduce_style(training_data, self.time_indicator_index)
 
         self.year_index = -1
         if self.indicator_style == TimeIndicatorType.MONTH_DAY:
             self.year_index = self._find_year_index(training_data)
+
+        if self.indicator_style in [TimeIndicatorType.YEAR_MONTH_DAY, TimeIndicatorType.MONTH_DAY_YEAR]:
+            first = self.get_datetime(training_data.iloc[0, :])
+            second = self.get_datetime(training_data.iloc[1, :])
+            step = second - first
+            self.by_week = step.days == 7
+            _logger.debug(f'By week {step}: {self.by_week}')
+
 
     def get_datetime(self, row: pd.Series) -> typing.Union[int, datetime.date]:
         '''
@@ -120,12 +167,20 @@ class TimeIndicator:
             return int(value)
         if self.indicator_style == TimeIndicatorType.YEAR:
             return datetime.date(int(value), 1, 1)
-        fields = [int(x) for x in value.split('-')]
+        fields = [int(x) for x in value.split(self.separator)]
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
             return datetime.date(fields[0], fields[1], 1)
         if self.indicator_style == TimeIndicatorType.MONTH_DAY:
-            year = int(row_list[self.year_index])
+            if self.year_index == -1:
+                # No year, just pick a leap year
+                year = 2000
+            else:
+                year = int(row_list[self.year_index])
             return datetime.date(year, fields[0], fields[1])
+        if self.indicator_style == TimeIndicatorType.YEAR_MONTH_DAY:
+            return datetime.date(fields[0], fields[1], fields[2])
+        if self.indicator_style == TimeIndicatorType.MONTH_DAY_YEAR:
+            return datetime.date(fields[2], fields[0], fields[1])
         return None
 
     def get_datetimes(self, data: container.DataFrame) -> typing.List[typing.Union[int, datetime.date]]:
@@ -144,9 +199,13 @@ class TimeIndicator:
             return date.replace(year=date.year+1)
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
             return next_month(date)
-        if self.indicator_style == TimeIndicatorType.MONTH_DAY:
-            return next_day(date)
-        return None
+        if self.indicator_style in [TimeIndicatorType.MONTH_DAY, TimeIndicatorType.YEAR_MONTH_DAY, TimeIndicatorType.MONTH_DAY_YEAR]:
+            if self.by_week:
+                return next_week(date)
+            else:
+                return next_day(date)
+
+        return next_day(date)
 
     def get_difference(self, start, end) -> int:  # start, end: typing.Union[int, datetime.date]
         '''
@@ -159,15 +218,16 @@ class TimeIndicator:
         delta = end - start
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
             return round(delta.days/30.4375)
-        if self.indicator_style == TimeIndicatorType.MONTH_DAY:
+        if self.indicator_style in [TimeIndicatorType.MONTH_DAY, TimeIndicatorType.YEAR_MONTH_DAY, TimeIndicatorType.MONTH_DAY_YEAR]:
             return delta.days
-        return None
+        return delta.days
 
     def get_date_range(self, first, last) -> pd.Index:
         '''
         Range between two dates based on time indicator style.
         '''
         # first = self.get_datetime(data.iloc[0, :])
+        # second = self.get_datetime(data.iloc[1, :])
         # last = self.get_datetime(data.iloc[-1, :])
         if self.indicator_style == TimeIndicatorType.INTEGER:
             return pd.Index(list(range(first, last+1)))
@@ -177,13 +237,16 @@ class TimeIndicator:
             return pd.date_range(first, periods=periods, freq='YS')
         if self.indicator_style == TimeIndicatorType.YEAR_MONTH:
             return pd.date_range(first, periods=periods, freq='MS')
-        if self.indicator_style == TimeIndicatorType.MONTH_DAY:
+
+        if self.by_week:
+            return pd.date_range(first, periods=periods, freq='W')
+        else:
             return pd.date_range(first, periods=periods, freq='D')
 
-    def _deduce_style(self, training_data: container.DataFrame, time_indicator_index: int) -> TimeIndicatorType:
+    def _deduce_style(self, training_data: container.DataFrame, time_indicator_index: int) -> typing.Tuple[TimeIndicatorType, str]:
         metadata = training_data.metadata.query([mbase.ALL_ELEMENTS, time_indicator_index])
         if INTEGER_TYPE in metadata['semantic_types']:
-            return TimeIndicatorType.INTEGER
+            return TimeIndicatorType.INTEGER, ''
 
         column = training_data.iloc[:, time_indicator_index]
         if len(column) > 50:
@@ -191,23 +254,40 @@ class TimeIndicator:
         else:
             subset_index = range(len(column))
         values = column.iloc[subset_index]
+        values = [value for value in values if isinstance(value, str)]
+
+        # Detect separator
+        possible_chars = ['-', '/']
+        counts = []
+        for char in possible_chars:
+            counts.append(sum([value.count(char) for value in values]))
+        separator = possible_chars[counts.index(max(counts))]
+
         # Need to check for str, missing value is np.nan (float)
-        fields = [value.split('-') for value in values if isinstance(value, str)]
+        fields = [value.split(separator) for value in values if isinstance(value, str)]
 
         field_counts = np.array([len(field) for field in fields])
         if np.all(field_counts == 1):
-            # No divider '-' in any fields, i.e. one field
-            return TimeIndicatorType.YEAR
-        elif np.all(field_counts != 2):
-            # More than two filelds
-            return TimeIndicatorType.OTHER
+            # No sepataor in any fields, i.e. one field
+            return TimeIndicatorType.YEAR, separator
 
-        field0 = np.array([int(x[0]) for x in fields])
+        if np.all(field_counts == 2):
 
-        if np.any(field0 > 12):
-            return TimeIndicatorType.YEAR_MONTH
-        else:
-            return TimeIndicatorType.MONTH_DAY
+            field0 = np.array([int(x[0]) for x in fields])
+
+            if np.any(field0 > 12):
+                return TimeIndicatorType.YEAR_MONTH, separator
+            else:
+                return TimeIndicatorType.MONTH_DAY, separator
+
+        if np.all(field_counts == 3):
+            if separator == '/':
+                return TimeIndicatorType.MONTH_DAY_YEAR, separator
+            else:
+                return TimeIndicatorType.YEAR_MONTH_DAY, separator
+
+        return TimeIndicatorType.OTHER, separator
+
 
     def _find_year_index(self, training_data: container.DataFrame) -> int:
         categorical_indices = training_data.metadata.get_columns_with_semantic_type(CATEGORICAL_TYPE)
@@ -259,9 +339,11 @@ class ExtractTimeseries():
         # Assume only on target
         self.target_index = data.metadata.get_columns_with_semantic_type(TRUE_TARGET_TYPE)[0]
         self.feature_indices = data.metadata.list_columns_with_semantic_types([FLOAT_TYPE, INTEGER_TYPE])
-        self.feature_indices.remove(self.target_index)
 
-        self.categorical_indices = data.metadata.get_columns_with_semantic_type(CATEGORICAL_TYPE)
+        if self.target_index in self.feature_indices:
+            self.feature_indices.remove(self.target_index)
+
+        self.categorical_indices = data.metadata.get_columns_with_semantic_type(SUGGESTED_GROUPING_KEY)
         # if time_indicator.year_index > -1:
         #     self.categorical_indices.remove(time_indicator.year_index)
         #     self.categorical_indices.append(time_indicator.year_index)
@@ -280,12 +362,22 @@ class ExtractTimeseries():
         # add datetime index
         data.index = self.time_indicator.get_datetimes(data)
 
+        # Remove duplicate dates
+        duplicated = data.index.duplicated()
+        if duplicated.sum() > 0:
+            _logger.warning('Timeseries has duplicate dates: ' + str(data.head()))
+            data = data[data.index.duplicated() == False]
+
+        # Make sure dates are in order
+        data = data.loc[data.index.sort_values()]
+
         targets = data.iloc[:, self.feature_indices + [self.target_index]]
 
         # redindex to add missing rows
         index2 = self.time_indicator.get_date_range(
             self.time_indicator.get_datetime(data.iloc[0, :]),
             self.time_indicator.get_datetime(data.iloc[-1, :]))
+
         targets = targets.reindex(index2, method='pad')
         return targets
 

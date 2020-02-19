@@ -1,15 +1,15 @@
 dist: xenial
 sudo: required
 language: python
-cache: pip
 python:
-- 3.6.6
+- 3.6.8
 before_install:
 - echo -e "machine github.com\n  login $GH_TOKEN" > ~/.netrc
 install:
 - echo "Installing dependencies"
 - sudo apt-get update
-- wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+- sudo apt-get install unzip
+- wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh --no-verbose
 - bash miniconda.sh -b -p $HOME/miniconda
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r

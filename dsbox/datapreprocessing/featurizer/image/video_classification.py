@@ -12,7 +12,7 @@ from d3m import container
 
 # lazy init
 # import keras
-# from keras.engine.sequential import Sequential
+# from tensorflow.keras.engine.sequential import Sequential
 
 from . import config
 
@@ -98,7 +98,7 @@ class LSTMHyperparams(hyperparams.Hyperparams):
 class Params(params.Params):
     target_column_name: str
     class_name_to_number: typing.Dict[str, int]
-    keras_model: typing.Dict  # keras.engine.Sequential, cannot use because of lazy init
+    keras_model: typing.Dict  # tensorflow.keras.engine.Sequential, cannot use because of lazy init
     feature_shape: typing.List[int]
     input_feature_column_name: str
 
@@ -136,19 +136,6 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __init__(self, *, hyperparams: LSTMHyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         self.hyperparams = hyperparams
-        # import tensorflow as tf
-        # config = tf.ConfigProto()
-        # config.gpu_options.allow_growth = True
-        # session = tf.Session(config=config)
-        import keras.backend.tensorflow_backend as KTF
-        import tensorflow as tf
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth=True   
-        config.gpu_options.per_process_gpu_memory_fraction = 0.5
-        sess = tf.Session(config=config)
-        from keras.backend.tensorflow_backend import set_session
-        set_session(tf.Session(config=config))
-        KTF.set_session(sess)
 
         # All other attributes must be private with leading underscore
         self._has_finished = False
@@ -184,7 +171,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         return param
 
     def set_params(self, *, params: Params) -> None:
-        from keras.models import Model
+        from tensorflow.keras.models import Model
         # self._model = self._lazy_init_lstm()
         config_lstm = params['keras_model']
         self._model = Model.from_config(config_lstm)
@@ -209,10 +196,13 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
             raise ValueError("The length of inputs is larger than outputs which is impossible.")
 
         # TODO: maybe use a better way to find the feature input columns
+        first_content_index = 0
         input_column_names = []
         input_column_numbers = []
         for i, each_column in enumerate(self._training_inputs.columns):
-            if type(self._training_inputs[each_column][0]) is np.ndarray and len(self._training_inputs[each_column][0].shape) == 2:
+            while isinstance(self._training_inputs[each_column][first_content_index], type(None)):
+                first_content_index += 1
+            if type(self._training_inputs[each_column][first_content_index]) is np.ndarray and len(self._training_inputs[each_column][first_content_index].shape) == 2:
                 input_column_names.append(each_column)
                 input_column_numbers.append(i)
         if len(input_column_names) < 1:
@@ -245,7 +235,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._target_column_name = target_column_names[0]
         class_names = set(self._training_outputs[self._target_column_name].tolist())
         self._number_of_classes = len(class_names)
-        self._feature_shape = list(self._features[0].shape)
+        self._feature_shape = list(self._features[first_content_index].shape)
         self._features_amount = self._training_inputs.shape[0]
         self._training_inputs_ndarry = np.empty((self._features_amount, self._feature_shape[0], self._feature_shape[1]))
         for i, each in enumerate(self._features):
@@ -317,10 +307,14 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
 
         logger.info("The model fitting finished with"+str(self._iterations_done)+"interation." )
         logger.info("The final result is:")
-        logger.info("train_loss      = " + str(result.history['loss']))
-        logger.info("train_acc       = " + str(result.history['acc']))
-        logger.info("validation_loss = " + str(result.history['val_loss']))
-        logger.info("validation_acc  = " + str(result.history['val_acc']))
+        try:
+            logger.info(str(result.history))
+            logger.info("train_loss      = " + str(result.history['loss']))
+            logger.info("train_acc       = " + str(result.history['acc']))
+            logger.info("validation_loss = " + str(result.history['val_loss']))
+            logger.info("validation_acc  = " + str(result.history['val_acc']))
+        except:
+            pass
         return CallResult(None)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
@@ -358,17 +352,16 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         self._iterations_done = True
         return CallResult(output_dataframe, self._has_finished, self._iterations_done)
 
-    def _lazy_init_lstm(self):  # -> "keras.models"
+    def _lazy_init_lstm(self):  # -> "tensorflow.keras.models"
         """
             a lazy init function which initialize the LSTM model only when the primitive's fit/ produce method is called
         """
-        keras_models = importlib.import_module('keras.models')
-        keras_recurrent = importlib.import_module('keras.layers.recurrent')
-        keras_layers = importlib.import_module('keras.layers')
-        keras_optimizers = importlib.import_module('keras.optimizers')
+        keras_models = importlib.import_module('tensorflow.keras.models')
+        keras_layers = importlib.import_module('tensorflow.keras.layers')
+        keras_optimizers = importlib.import_module('tensorflow.keras.optimizers')
         model = keras_models.Sequential()
         # TODO: following parameters could also be hyperparameters for tuning
-        model.add(keras_recurrent.LSTM(self._LSTM_units, return_sequences=False,
+        model.add(keras_layers.LSTM(self._LSTM_units, return_sequences=False,
                                        input_shape=self._feature_shape,
                                        dropout=self._dropout_rate))
         model.add(keras_layers.Dense(512, activation='relu'))
@@ -413,7 +406,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
     def __getstate__(self):
         model_str = ""
         with tempfile.NamedTemporaryFile(suffix='.hdf5', delete=True) as fd:
-            keras.models.save_model(self, fd.name, overwrite=True)
+            tensorflow.keras.models.save_model(self, fd.name, overwrite=True)
             model_str = fd.read()
         d = { 'model_str': model_str }
         return d
@@ -422,7 +415,7 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         with tempfile.NamedTemporaryFile(suffix='.hdf5', delete=True) as fd:
             fd.write(state['model_str'])
             fd.flush()
-            model = keras.models.load_model(fd.name)
+            model = tensorflow.keras.models.load_model(fd.name)
         self.__dict__ = model.__dict__
 
 
