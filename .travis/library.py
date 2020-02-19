@@ -575,7 +575,7 @@ class TA1ImageProcessingRegressionTemplate(DSBoxTemplate):
                     "name": "regressor_step",
                     "primitives": [
                         {
-                            "primitive": "d3m.primitives.regression.random_forest.SKlearn",
+                            "primitive": "d3m.primitives.regression.ridge.SKlearn",
                             "hyperparameters": {
                                 'add_index_columns': [True],
                             }
@@ -667,7 +667,7 @@ class TA1ImageProcessingRegressionTemplate2(DSBoxTemplate):
                     "name": "regressor_step",
                     "primitives": [
                         {
-                            "primitive": "d3m.primitives.regression.random_forest.SKlearn",
+                            "primitive": "d3m.primitives.regression.ridge.SKlearn",
                             "hyperparameters": {
                                 'add_index_columns': [True],
                             }
@@ -1022,3 +1022,87 @@ class UU3TestTemplate(DSBoxTemplate):
                 }
             ]
         }
+
+
+    @staticmethod
+    def dsbox_feature_selector(ptype, first_input='impute_step', second_input='extract_target_step'):
+        '''
+        dsbox feature selection steps for classification and regression, lead to feature selector steps
+        '''
+        if ptype == "regression":
+            return [
+                {
+                    "name": "feature_selector_step",
+                    "primitives": [
+                        {
+                            "primitive": "d3m.primitives.feature_selection.select_fwe.SKlearn",
+                            "hyperparameters": {
+                                'use_semantic_types': [True],
+                                'add_index_columns': [True],
+                                'return_result': ['new'],
+                                'add_index_columns': [True],
+                                "alpha": [float(x) for x in np.logspace(-4, -1, 6)]
+                            }
+                        },
+                        {
+                            "primitive": "d3m.primitives.feature_selection.generic_univariate_select.SKlearn",
+                            "hyperparameters": {
+                                'use_semantic_types': [True],
+                                'add_index_columns': [True],
+                                'return_result': ['new'],
+                                'add_index_columns': [True],
+                                "score_func": ["f_regression"],
+                                "mode": ["percentile"],
+                                "param": [5, 7, 10, 15, 30, 50, 75],
+                            }
+                        },
+                        {
+                            "primitive": "d3m.primitives.feature_selection.joint_mutual_information.AutoRPI",
+                            "hyperparameters": {
+                                #'method': ["counting", "pseudoBayesian", "fullBayesian"],
+                                'nbins': [2, 5, 10, 13, 20]
+                                }
+                        },
+                        "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+                    ],
+                    "inputs":[first_input, second_input]
+                },
+            ]
+        else:
+            return [
+                {
+                    "name": "feature_selector_step",
+                    "primitives": [
+                        {
+                            "primitive": "d3m.primitives.feature_selection.select_fwe.SKlearn",
+                            "hyperparameters": {
+                                'use_semantic_types': [True],
+                                'return_result': ['new'],
+                                'add_index_columns': [True],
+                                "alpha": [float(x) for x in np.logspace(-4, -1, 6)]
+                            }
+                        },
+                        {
+                            "primitive": "d3m.primitives.feature_selection.generic_univariate_select.SKlearn",
+                            "hyperparameters": {
+                                'use_semantic_types': [True],
+                                'return_result': ['new'],
+                                'add_index_columns': [True],
+                                "mode": ["percentile"],
+                                "param": [5, 7, 10, 15, 30, 50, 75],
+                            }
+                        },
+                        {
+                            "primitive": "d3m.primitives.feature_selection.joint_mutual_information.AutoRPI",
+                            "hyperparameters": {
+                                #'method': ["counting", "pseudoBayesian", "fullBayesian"],
+                                'nbins': [2, 5, 10, 13, 20]
+                                }
+                        },
+                        "d3m.primitives.feature_selection.simultaneous_markov_blanket.AutoRPI",
+                        "d3m.primitives.data_preprocessing.do_nothing.DSBOX"
+
+                    ],
+                    "inputs":[first_input, second_input]
+                },
+            ]

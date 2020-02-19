@@ -4,7 +4,7 @@ from d3m.metadata import hyperparams
 from dsbox.datapreprocessing.cleaner import config
 from d3m.primitive_interfaces.base import CallResult
 from d3m.metadata.base import ALL_ELEMENTS
-import warnings
+import logging
 
 __all__ = ('EnsembleVoting',)
 
@@ -47,18 +47,19 @@ class EnsembleVoting(TransformerPrimitiveBase[Inputs, Outputs, EnsembleVotingHyp
     def __init__(self, *, hyperparams: EnsembleVotingHyperparams) -> None:
         super().__init__(hyperparams=hyperparams)
         self.hyperparams = hyperparams
+        self._logger = logging.getLogger(__name__)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         index_col = inputs.metadata.list_columns_with_semantic_types(
             semantic_types=["https://metadata.datadrivendiscovery.org/types/PrimaryKey"])
         if not index_col:
-            warnings.warn("Did not find primary key column. Can not vote, output origin")
+            self._logger.warning("Did not find primary key column. Can not vote, output origin")
             return CallResult(inputs)
 
         predict_target_col = inputs.metadata.list_columns_with_semantic_types(
             semantic_types=["https://metadata.datadrivendiscovery.org/types/PredictedTarget"])
         if not index_col:
-            warnings.warn("Did not find PredictedTarget column. Can not vote, output origin")
+            self._logger.warning("Did not find PredictedTarget column. Can not vote, output origin")
             return CallResult(inputs)
 
         df = inputs.copy()

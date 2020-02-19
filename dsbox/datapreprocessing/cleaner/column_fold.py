@@ -21,7 +21,6 @@ special_characters = ['-', '_', ' ']
 
 Input = container.DataFrame
 Output = container.DataFrame
-_logger = logging.getLogger(__name__)
 
 class FoldParams(params.Params):
     mapping: Dict
@@ -71,7 +70,8 @@ class FoldColumns(UnsupervisedLearnerPrimitiveBase[Input, Output, FoldParams, Fo
         self._ignore_list = list()
         self._mapping: Dict = {}
         self._fitted = False
-
+        self._logger = logging.getLogger(__name__)
+        
     def set_training_data(self, *, inputs: Input) -> None:
         self._df = inputs
         self._fitted = False

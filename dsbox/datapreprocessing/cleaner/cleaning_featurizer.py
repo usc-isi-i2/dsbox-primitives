@@ -17,8 +17,6 @@ from dsbox.datapreprocessing.cleaner.dependencies.helper_funcs import HelperFunc
 
 from . import config
 
-_logger = logging.getLogger(__name__)
-
 Input = container.DataFrame
 Output = container.DataFrame
 
@@ -150,7 +148,7 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
         self._input_data_copy = None
         self._fitted = False
         self._col_index = None
-
+        self._logger = logging.getLogger(__name__)
         self._clean_operations = Clean_operations
 
     def get_params(self) -> CleaningFeaturizerParams:
@@ -223,7 +221,7 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
             df = dfo.featurize_date_columns(date_cols)
             current_cols = self._get_cols(df["df"])
 
-            _logger.info(
+            self._logger.info(
                 "Date Featurizer. 'created_columns': '%(created_columns)s'.",
                 {
                     'created_columns': str(list(set(current_cols).difference(original_cols))),
@@ -239,7 +237,7 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
             df = PhoneParser.perform(df=self._input_data_copy, columns_perform=phone_cols)
             current_cols = self._get_cols(df)
 
-            _logger.info(
+            self._logger.info(
                 "Phone Featurizer. 'created_columns': '%(created_columns)s'.",
                 {
                     'created_columns': str(list(set(current_cols).difference(original_cols))),
@@ -255,7 +253,7 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
             df = NumAlphaParser.perform(df=self._input_data_copy, columns_perform=an_cols)
             current_cols = self._get_cols(df)
 
-            _logger.info(
+            self._logger.info(
                 "NumAlpha Featurizer. 'created_columns': '%(created_columns)s'.",
                 {
                     'created_columns': str(list(set(current_cols).difference(original_cols))),
@@ -271,7 +269,7 @@ class CleaningFeaturizer(UnsupervisedLearnerPrimitiveBase[Input, Output, Cleanin
             df = PunctuationParser.perform(df=self._input_data_copy, columns_perform=punc_cols)
             current_cols = self._get_cols(df)
 
-            _logger.info(
+            self._logger.info(
                 "Punctuation Featurizer. 'created_columns': '%(created_columns)s'.",
                 {
                     'created_columns': str(list(set(current_cols).difference(original_cols))),
