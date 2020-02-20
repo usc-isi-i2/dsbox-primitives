@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import pandas as pd
 import d3m
-from dsbox_corex import corextext
+# from dsbox_corex import corextext
 
 from template import DATASET_MAPPER
 from template import DSBoxTemplate
