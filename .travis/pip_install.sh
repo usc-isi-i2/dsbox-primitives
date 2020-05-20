@@ -1,10 +1,10 @@
 #!/bin/bash
-pip install -e git+https://gitlab.com/datadrivendiscovery/d3m@be853095932d4a94bea45da61192a926bfcb1dbd#egg=d3m --progress-bar off
-pip install -e git+https://gitlab.com/datadrivendiscovery/common-primitives.git@15e84bff9b310068c071d79b255f3314df183466#egg=common_primitives --progress-bar off
-pip install -e git+https://gitlab.com/datadrivendiscovery/sklearn-wrap@4a2cfd1dc749bb13ce807b2bf2436a45cd49c695#egg=sklearn-wrap --progress-bar off
+pip install -e git+https://gitlab.com/datadrivendiscovery/d3m@a375bcd90a94f21d420b863753f3e31b3485c42d#egg=d3m --progress-bar off
+pip install -e git+https://gitlab.com/datadrivendiscovery/common-primitives.git@master#egg=common_primitives --progress-bar off
+pip install -e git+https://gitlab.com/datadrivendiscovery/sklearn-wrap@dev-dist#egg=sklearn-wrap --progress-bar off
 pip uninstall -y tensorflow-gpu
 export LD_LIBRARY_PATH="$HOME/miniconda/envs/ta1-test-env/lib:$LD_LIBRARY_PATH"
-pip install tensorflow==2.0.0
+pip install tensorflow==2.1.0
 pip install -e . --progress-bar off
 pip install -e git+https://github.com/brekelma/dsbox_corex@5ebdd6ee66aa5ddb48e3c97d98145586d95c9c1e#egg=dsbox_corex --progress-bar off
 pip list

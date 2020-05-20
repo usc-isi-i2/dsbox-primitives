@@ -114,7 +114,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
             file_path = file_path[7:]
             timeseries_output.append(pandas.read_csv(file_path))
             _logger.info(f"Timeseries data: {file_path} loaded.")
-        final_output = [d3mIndex_output, timeseries_output]
+        final_output = container.List([d3mIndex_output, timeseries_output])
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
         self._iterations_done = True
