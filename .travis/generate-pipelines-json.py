@@ -329,7 +329,7 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         
         if pp_path is not None:
             d3m_runtime_command = "python3 -m d3m pipeline describe {} > {}".format(pp_path, new_location)
-            self.execute_shell_code(d3m_runtime_command)
+            DsboxPrimitiveUnitTest.execute_shell_code(d3m_runtime_command)
 
         # copy pipeline_run files
         file_count = len(os.listdir(output_pipeline_runs_dir))
