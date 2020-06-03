@@ -19,8 +19,6 @@ from . import config
 Inputs = container.Dataset
 Outputs = container.DataFrame
 
-_logger = logging.getLogger(__name__)
-
 
 class MultiTableFeaturizationHyperparams(hyperparams.Hyperparams):
     VERBOSE = hyperparams.Hyperparameter[bool](
@@ -48,8 +46,8 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
             'uris': [config.REPOSITORY]
-            },
-            # The same path the primitive is registered with entry points in setup.py.
+        },
+        # The same path the primitive is registered with entry points in setup.py.
         'installation': [config.INSTALLATION],
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
@@ -68,13 +66,14 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
         self._has_finished = False
         self._iterations_done = False
         self._verbose = self.hyperparams['VERBOSE']
+        self.logger = logging.getLogger(__name__)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
         if (timeout is None):
             big_table = self._core(inputs)
             self._has_finished = True
             self._iterations_done = True
-            return CallResult(big_table, self._has_finished, self._iterations_done)
+            return CallResult(big_table, self._has_finished)
         else:
             # setup the timeout
             with stopit.ThreadingTimeout(timeout) as to_ctx_mrg:
@@ -86,11 +85,11 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             if to_ctx_mrg.state == to_ctx_mrg.EXECUTED:
                 self._has_finished = True
                 self._iterations_done = True
-                return CallResult(big_table, self._has_finished, self._iterations_done)
+                return CallResult(big_table, self._has_finished)
             elif to_ctx_mrg.state == to_ctx_mrg.TIMED_OUT:
                 self._has_finished = False
                 self._iterations_done = False
-                return CallResult(None, self._has_finished, self._iterations_done)
+                return CallResult(None, self._has_finished)
 
     def _core(self, inputs: Inputs) -> Outputs:
         """
@@ -112,14 +111,15 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 # find the main resource id
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in column_metadata['semantic_types']:
                     main_resource_id = resource_id
-                    _logger.debug("Main table ID is: %s", main_resource_id)
+                    self.logger.debug("Main table ID is: %s", main_resource_id)
                     if self._verbose:
-                        _logger.info("Main table ID is:", main_resource_id)
+                        self.logger.info("Main table ID is:", main_resource_id)
                 # find the foreign key relationship
                 if 'foreign_key' in column_metadata:
                     ref_resource_id = column_metadata['foreign_key']['resource_id']
-                    if "https://metadata.datadrivendiscovery.org/types/FilesCollection" in inputs.metadata.query((ref_resource_id,))['semantic_types']:
-                        _logger.debug('Skipping file collection resource id=%s', ref_resource_id)
+                    if "https://metadata.datadrivendiscovery.org/types/FilesCollection" in \
+                            inputs.metadata.query((ref_resource_id,))['semantic_types']:
+                        self.logger.debug('Skipping file collection resource id=%s', ref_resource_id)
                         continue
                     # Can reference by name or by column
                     if 'column_name' in column_metadata['foreign_key']:
@@ -138,28 +138,29 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
 
         # if no foreign key relationships found, return inputs directly
         if len(relations) == 0:
-            _logger.info("No table-based foreign_key relationship found in the dataset, will return the original dataset.")
-            _logger.info("[INFO] No table-based foreign_key relationship found in the dataset, will return the original dataset.")
+            self.logger.info("No table-based foreign_key relationship found in the dataset, will return the original dataset.")
+            self.logger.info(
+                "[INFO] No table-based foreign_key relationship found in the dataset, will return the original dataset.")
             return inputs
 
         # step 2.5: a fix (based on the problem occurred in `uu3_world_development_indicators` dataset)
-        if _logger.getEffectiveLevel() <= 10:
-            _logger.debug('Relations')
+        if self.logger.getEffectiveLevel() <= 10:
+            self.logger.debug('Relations')
             for target_column_name, resource_column_name in relations:
-                _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
+                self.logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
         relations = self._relations_correction(relations=relations)
         if self._verbose:
-            _logger.info("==========relations:=============")
-            _logger.info(relations) # to see if the relations make sense
-            _logger.info("=================================")
-        if _logger.getEffectiveLevel() <= 10:
-            _logger.debug('Corrected Relations')
+            self.logger.info("==========relations:=============")
+            self.logger.info(relations)  # to see if the relations make sense
+            self.logger.info("=================================")
+        if self.logger.getEffectiveLevel() <= 10:
+            self.logger.debug('Corrected Relations')
             for target_column_name, resource_column_name in relations:
-                _logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
+                self.logger.debug('  Target_column=%s Resource_column=%s', target_column_name, resource_column_name)
 
         # step 3: featurization
         start = time.clock()
-        _logger.info("[INFO] Multi-table join start.")
+        self.logger.info("[INFO] Multi-table join start.")
         aggregator = Aggregator(relations, data, self._verbose)
         for each_relation in relations:
             # if the target table found in second placfe of the set
@@ -171,7 +172,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 big_table = aggregator.forward(each_relation[0])
                 break
         finish = time.clock()
-        _logger.info("[INFO] Multi-table join finished, totally take ", finish-start, 'seconds.')
+        self.logger.info("[INFO] Multi-table join finished, totally take ", finish - start, 'seconds.')
         big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=False)
 
         # add back metadata
@@ -180,12 +181,14 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             big_table.metadata = big_table.metadata.update(selector=each_selector, metadata=each_metadata)
         for index in range(len(big_table.columns)):
             old_metadata = all_metadata[big_table.columns[index]]
-            # _logger.error("current column name is {}".format(str(big_table.columns[index])))
+            # self.logger.error("current column name is {}".format(str(big_table.columns[index])))
             # change index column name to original name
             if index == 0 and "d3mIndex" in big_table.columns[0]:
                 big_table = big_table.rename(columns={big_table.columns[0]: "d3mIndex"})
             # change target column name to original name
-            if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in old_metadata["semantic_types"] or 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'in old_metadata["semantic_types"]:
+            if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in old_metadata[
+                "semantic_types"] or 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in old_metadata[
+                "semantic_types"]:
                 original_target_col_name = old_metadata["name"]
                 big_table = big_table.rename(columns={big_table.columns[index]: original_target_col_name})
 
@@ -193,8 +196,8 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 old_metadata = dict(old_metadata)
                 old_metadata["name"] = big_table.columns[index]
             big_table.metadata = big_table.metadata.update((metadata_base.ALL_ELEMENTS, index), old_metadata)
-            # _logger.error("updating {} with {}".format(str((metadata_base.ALL_ELEMENTS, index)), str(old_metadata)))
-        _logger.error("output shape or input is " + str(big_table.shape))
+            # self.logger.error("updating {} with {}".format(str((metadata_base.ALL_ELEMENTS, index)), str(old_metadata)))
+        self.logger.error("output shape or input is " + str(big_table.shape))
         return big_table
 
     def _relations_correction(self, relations):
@@ -203,14 +206,14 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
             1. if more than one relation found btw. two tables, only pick one of them
         """
         # using easist way to fix: a set that avoid duplicates
-        table_tuple_set = set() # store the set of tuples of tables: {(table1, table2), (table1, table3), ...}
+        table_tuple_set = set()  # store the set of tuples of tables: {(table1, table2), (table1, table3), ...}
         relations_corrected = set()
 
         for foreign_key, primary_key in relations:
             foreign_table = re.split('_', foreign_key)[0]
             primary_table = re.split('_', primary_key)[0]
             table_tuple = (foreign_table, primary_table)
-            if (table_tuple in table_tuple_set):
+            if table_tuple in table_tuple_set:
                 continue
             else:
                 table_tuple_set.add(table_tuple)

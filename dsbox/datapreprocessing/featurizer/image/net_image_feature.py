@@ -6,20 +6,17 @@
 import importlib
 import logging
 import os
-import shutil
 import sys
 import typing
-import collections
 
 import numpy as np
 import pandas as pd
 
 from skimage.transform import resize as imresize
 
-import d3m.metadata.base as mbase
 from d3m.primitive_interfaces.featurization import FeaturizationTransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
-from d3m.metadata import hyperparams, base as metadata_base
+from d3m.metadata import hyperparams
 from d3m import container
 
 from .utils import image_utils
@@ -30,65 +27,77 @@ KERAS_MODULE = 'keras'
 TENSORFLOW_MODULE = 'tensorflow.keras'
 USE_MODULE = TENSORFLOW_MODULE
 
-logger = logging.getLogger(__name__)
 # Input image tensor has 4 dimensions: (num_images, 224, 224, 3)
 Inputs = container.List
 Inputs_inceptionV3 = container.DataFrame
 # Output feature has 2 dimensions: (num_images, layer_size[layer_index])
 Outputs = container.DataFrame  # extracted features
 
+
 class InceptionV3Hyperparams(hyperparams.Hyperparams):
     minimum_frame = hyperparams.UniformInt(
         lower=1,
         upper=100000,
         default=40,
-        description="Specify the least amount of the frame in a video, if the video is too short with less frame, we will not consider to use for training",
+        description="Specify the least amount of the frame in a video, if the video is too short with less frame, "
+                    "we will not consider to use for training",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
-        )
+    )
     maximum_frame = hyperparams.UniformInt(
         lower=1,
         upper=100000,
         default=300,
-        description="Specify the max amount of the frame in a video, if the video is too long, we will not consider to use for training",
+        description="Specify the max amount of the frame in a video, if the video is too long, "
+                    "we will not consider to use for training",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
-        )
+    )
     generate_metadata = hyperparams.UniformBool(
         default=True,
-        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        description="A control parameter to set whether to generate metada after the feature extraction."
+                    " It will be very slow if the columns length is very large. For the default condition, "
+                    "it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
     do_preprocess = hyperparams.UniformBool(
         default=True,
         description="A control parameter to set whether to do preprocess step on input tensor, it normally should be set as true",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
 
     do_resize = hyperparams.UniformBool(
         default=True,
-        description="A control parameter to set whether to resize the input tensor to be correct shape as input, it normally should be set as true",
+        description="A control parameter to set whether to resize the input tensor to be correct shape as input, "
+                    "it normally should be set as true",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
     use_limitation = hyperparams.UniformBool(
         default=True,
-        description="A control parameter to consider the limitation of the maximum/minimum frame amount during processing. If set False, we will ignore the input videos outsite the frame amount limitation.",
+        description="A control parameter to consider the limitation of the maximum/minimum frame amount during processing. "
+                    "If set False, we will ignore the input videos outsite the frame amount limitation.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
+
 
 class ResNet50Hyperparams(hyperparams.Hyperparams):
     layer_index = hyperparams.UniformInt(
         lower=0,
         upper=11,
         default=0,
-        description="Specify the layer of the neural network to use for features. Lower numbered layers correspond to higher-level abstract features. The number of features by layer index are [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704].",
+        description="Specify the layer of the neural network to use for features. "
+                    "Lower numbered layers correspond to higher-level abstract features. "
+                    "The number of features by layer index are "
+                    "[2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704].",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
     )
     # corresponding layer_size = [2048, 100352, 25088, 25088, 100352, 25088, 25088, 100352, 25088, 25088, 200704]
 
     generate_metadata = hyperparams.UniformBool(
         default=True,
-        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        description="A control parameter to set whether to generate metada after the feature extraction. "
+                    "It will be very slow if the columns length is very large. For the default condition, "
+                    "it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
 
 
 class Vgg16Hyperparams(hyperparams.Hyperparams):
@@ -96,15 +105,19 @@ class Vgg16Hyperparams(hyperparams.Hyperparams):
         lower=0,
         upper=4,
         default=0,
-        description="Specify the layer of the neural network to use for features. Lower numbered layers correspond to higher-level abstract features. The number of features by layer index are [25088, 100352, 200704, 401408]",
+        description="Specify the layer of the neural network to use for features. "
+                    "Lower numbered layers correspond to higher-level abstract features. "
+                    "The number of features by layer index are [25088, 100352, 200704, 401408]",
         semantic_types=["http://schema.org/Integer", "https://metadata.datadrivendiscovery.org/types/TuningParameter"]
     )
 
     generate_metadata = hyperparams.UniformBool(
         default=True,
-        description="A control parameter to set whether to generate metada after the feature extraction. It will be very slow if the columns length is very large. For the default condition, it will turn off to accelerate the program running.",
+        description="A control parameter to set whether to generate metada after the feature extraction. "
+                    "It will be very slow if the columns length is very large. For the default condition, "
+                    "it will turn off to accelerate the program running.",
         semantic_types=["http://schema.org/Boolean", "https://metadata.datadrivendiscovery.org/types/ControlParameter"]
-        )
+    )
     # corresponding layer_size = [25088, 100352, 200704, 401408]
 
 
@@ -113,6 +126,7 @@ class KerasPrimitive:
 
     def __init__(self):
         self._initialized = False
+        self.logger = logging.getLogger(__name__)
 
     def _lazy_init(self):
         if self._initialized:
@@ -121,11 +135,11 @@ class KerasPrimitive:
         # Lazy import modules as not to slow down d3m.index
         global keras_models, keras_backend, tf
         if USE_MODULE == TENSORFLOW_MODULE:
-            logger.info('Using tensorflow.keras modules')
+            self.logger.info('Using tensorflow.keras modules')
             keras_models = importlib.import_module('tensorflow.keras.models')
             keras_backend = importlib.import_module('tensorflow.keras.backend')
         elif USE_MODULE == KERAS_MODULE:
-            logger.info('Using keras modules')
+            self.logger.info('Using keras modules')
             keras_models = importlib.import_module('keras.models')
             keras_backend = importlib.import_module('keras.backend')
         tf = importlib.import_module('tensorflow')
@@ -169,10 +183,10 @@ class KerasPrimitive:
                 return self.volumes[file_info.name]
                 # dest = os.path.join(file_info.data_dir, file_info.name)
                 # if not os.path.exists(dest):
-                    # shutil.copy2(self.volumes[file_info.name], dest)
+                # shutil.copy2(self.volumes[file_info.name], dest)
             else:
                 # can only try to let keras load by itself
-                logger.warning('Keras weight file not in volume: {}'.format(file_info.name))
+                self.logger.warning('Keras weight file not in volume: {}'.format(file_info.name))
                 return "imagenet"
 
     def _get_weight_file(self, name):
@@ -181,7 +195,7 @@ class KerasPrimitive:
             print(self._weight_files)
             raise ValueError(f'Cannot find weight file definition: {name}')
         if len(file_info) > 1:
-            logger.warning('Found mulitple weight file definitions: %s', file_info)
+            self.logger.warning('Found mulitple weight file definitions: %s', file_info)
         file_info = file_info[0]
         if file_info.name in self.volumes:
             return self.volumes[file_info.name]
@@ -243,7 +257,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
             'uris': [config.REPOSITORY]
-            },
+        },
         # The same path the primitive is registered with entry points in setup.py.
         'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
@@ -254,7 +268,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: ResNet50Hyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
+    def __init__(self, *, hyperparams: ResNet50Hyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         KerasPrimitive.__init__(self)
         self.hyperparams = hyperparams
@@ -266,6 +280,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         self._layer_index = hyperparams['layer_index']
         self._preprocess_data = True
         self._resize_data = True
+        self.logger = logging.getLogger(__name__)
         # ===========================================================
 
     def _lazy_init(self):
@@ -285,7 +300,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         weight_file = self._get_weight_file(USE_MODULE + ':resnet50_weights_tf_dim_ordering_tf_kernels.h5')
         if not weight_file:
             weight_file = 'imagenet'
-        logger.debug('Using weight file: %s', weight_file)
+        self.logger.debug('Using weight file: %s', weight_file)
 
         keras_backend.clear_session()
 
@@ -299,7 +314,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         if self._layer_index < 0:
             self._layer_index = 0
         elif self._layer_index > len(self._layer_numbers):
-            self._layer_numbers = len(self._layer_numbers)-1
+            self._layer_numbers = len(self._layer_numbers) - 1
 
         self._layer_number = self._layer_numbers[self._layer_index]
 
@@ -351,7 +366,8 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
         #    output_ndarray = self._model.predict(data)
         output_ndarray = self._model.predict(data)
 
-        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype(
+            'float64')  # change to astype float64 to resolve pca output
 
         output_dataFrame = container.DataFrame(output_ndarray)
 
@@ -363,7 +379,7 @@ class ResNet50ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs
             output_dataFrame = image_utils.generate_all_metadata(output_dataFrame)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+        return CallResult(output_dataFrame, self._has_finished)
 
 
 class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, Vgg16Hyperparams], KerasPrimitive):
@@ -411,7 +427,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
             'uris': [config.REPOSITORY]
-            },
+        },
         # The same path the primitive is registered with entry points in setup.py.
         'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
@@ -462,7 +478,7 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         if self._layer_index < 0:
             self._layer_index = 0
         elif self._layer_index > len(self._layer_numbers):
-            self._layer_index = len(self._layer_numbers)-1
+            self._layer_index = len(self._layer_numbers) - 1
 
         self._layer_number = self._layer_numbers[self._layer_index]
 
@@ -514,7 +530,8 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
         #     output_ndarray = self._model.predict(data)
 
         output_ndarray = self._model.predict(data)
-        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype('float64') # change to astype float64 to resolve pca output
+        output_ndarray = output_ndarray.reshape(output_ndarray.shape[0], -1).astype(
+            'float64')  # change to astype float64 to resolve pca output
         output_dataFrame = container.DataFrame(output_ndarray)
 
         # update the original index to be d3mIndex
@@ -527,11 +544,11 @@ class Vgg16ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs, Outputs, V
 
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+        return CallResult(output_dataFrame, self._has_finished)
 
 
-
-class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_inceptionV3, Outputs, InceptionV3Hyperparams], KerasPrimitive):
+class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_inceptionV3, Outputs, InceptionV3Hyperparams],
+                              KerasPrimitive):
     """
     Image Feature Generation using pretrained deep neural network inception_V3.
     """
@@ -543,7 +560,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
                    ('https://github.com/fchollet/deep-learning-models/'
                     'releases/download/v0.5/'
                     'inception_v3_weights_tf_dim_ordering_tf_kernels.h5'),
-                    '00c9ea4e4762f716ac4d300d6d9c2935639cc5e4d139b5790d765dcbeea539d0'),
+                   '00c9ea4e4762f716ac4d300d6d9c2935639cc5e4d139b5790d765dcbeea539d0'),
     ]
 
     __author__ = 'USC ISI'
@@ -560,7 +577,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             'name': config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
             'uris': [config.REPOSITORY]
-            },
+        },
         # The same path the primitive is registered with entry points in setup.py.
         'installation': [config.INSTALLATION] + KerasPrimitive._get_weight_installation(_weight_files),
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
@@ -571,7 +588,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         'hyperparms_to_tune': []
     })
 
-    def __init__(self, *, hyperparams: InceptionV3Hyperparams, volumes: typing.Union[typing.Dict[str, str], None]=None) -> None:
+    def __init__(self, *, hyperparams: InceptionV3Hyperparams, volumes: typing.Union[typing.Dict[str, str], None] = None) -> None:
         super().__init__(hyperparams=hyperparams, volumes=volumes)
         KerasPrimitive.__init__(self)
         self.hyperparams = hyperparams
@@ -624,31 +641,24 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         """Apply neural network-based feature extraction to image_tensor"""
 
         self._lazy_init()
-
-        # if "d3mIndex" not in inputs.columns:
-        #     logger.warn("No d3mIndex found for the input in inceptionV3 feature extraction primitive.")
-        #     image_d3mIndex = None
-        # else:
-        #     image_d3mIndex = inputs["d3mIndex"]
-
         # take a look at the first row's last columns which should come from common-primitive's video reader
         # if it is a ndarray type data and it has 4 dimension, we can be sure that input has video format data
-        if len(inputs.index) > 0 and type(inputs.iloc[0,-1]) is container.ndarray and len(inputs.iloc[0,-1].shape) == 4:
+        if len(inputs.index) > 0 and type(inputs.iloc[0, -1]) is container.ndarray and len(inputs.iloc[0, -1].shape) == 4:
             # send the video ndarray part only
             # TODO: we now use fixed columns (last column), it should be updated to use semantic types to check
-            extracted_feature_dataframe = self._produce(inputs.iloc[:,-1])
+            extracted_feature_dataframe = self._produce(inputs.iloc[:, -1])
         else:
             raise ValueError('No video format input found from inputs.')
 
         # combine the extracted_feature_dataframe and input daraframe (but remove the video tensor to reduce the size of dataframe)
         last_column = len(inputs.columns) - 1
-        output_dataFrame = inputs.iloc[:,:-1]
+        output_dataFrame = inputs.iloc[:, :-1]
         output_dataFrame = output_dataFrame.reset_index()
         output_dataFrame['extraced_features'] = extracted_feature_dataframe
         output_dataFrame = image_utils.generate_all_metadata(output_dataFrame)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(output_dataFrame, self._has_finished, self._iterations_done)
+        return CallResult(output_dataFrame, self._has_finished)
 
     def _preprocess(self, image_tensor):
         """Preprocess image data"""
@@ -661,10 +671,10 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         features = []
         # extracted_feature_dataframe = container.DataFrame(columns = ["extraced_features"])
         for i, each_video in enumerate(input_videos):
-            logger.info("Now processing No. " + str(i)+ " video.")
+            self.logger.info("Now processing No. " + str(i) + " video.")
             frame_number = each_video.shape[0]
             if self._use_limitation and (frame_number > self._maximum_frame or frame_number < self._minimum_frame):
-                logger.info("skip No. %s", str(i))
+                self.logger.info("skip No. %s", str(i))
                 features.append(None)
                 continue
             each_feature = self._process_one_video(each_video)
@@ -680,7 +690,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
         """
         # initialize
         channel_at_first = False
-        #check input video's frame format
+        # check input video's frame format
         frame_number = input_video_ndarray.shape[0]
         if len(input_video_ndarray[0].shape) == 3:
             channel_number = 3
@@ -700,7 +710,7 @@ class InceptionV3ImageFeature(FeaturizationTransformerPrimitiveBase[Inputs_incep
             origin_frame_number = round(count * skip)
             each_frame = input_video_ndarray[origin_frame_number]
             if channel_number == 3 and channel_at_first:
-                each_frame = np.moveaxis(each_frame,0, 2)
+                each_frame = np.moveaxis(each_frame, 0, 2)
             elif channel_number == 1:
                 # if it is gray image(with only one channel)
                 each_frame = np.expand_dims(each_frame, axis=2)

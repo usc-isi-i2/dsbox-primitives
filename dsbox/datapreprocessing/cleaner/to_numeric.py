@@ -14,7 +14,6 @@ from common_primitives import utils
 from . import config
 
 __all__ = ('ToNumeric',)
-_logger = logging.getLogger(__name__)
 
 Inputs = container.DataFrame
 Outputs = container.DataFrame
@@ -71,6 +70,10 @@ class ToNumeric(transformer.TransformerPrimitiveBase[Inputs, Outputs, Hyperparam
         },
     )
 
+    def __init__(self, *, hyperparams: Hyperparams):
+        super().__init__(hyperparams=hyperparams)
+        self.logger = logging.getLogger(__name__)
+
     @classmethod
     def _can_use_column(cls, inputs_metadata: metadata_base.DataMetadata, column_index: int) -> bool:
         column_metadata = inputs_metadata.query((metadata_base.ALL_ELEMENTS, column_index))
@@ -91,8 +94,8 @@ class ToNumeric(transformer.TransformerPrimitiveBase[Inputs, Outputs, Hyperparam
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> base.CallResult[Outputs]:
         columns_to_use = self._get_columns(inputs.metadata, self.hyperparams)
-        _logger.debug(f'converting columns: {columns_to_use}')
-        _logger.debug(f'converting columns: {inputs.iloc[:, columns_to_use].columns}')
+        self.logger.debug(f'converting columns: {columns_to_use}')
+        self.logger.debug(f'converting columns: {inputs.iloc[:, columns_to_use].columns}')
         output = inputs.copy()
         for col in columns_to_use:
             output.iloc[:, col] = pd.to_numeric(output.iloc[:, col])
@@ -105,8 +108,8 @@ class ToNumeric(transformer.TransformerPrimitiveBase[Inputs, Outputs, Hyperparam
             # What to do with missing values?
             # has_missing_value = pd.isnull(output.iloc[:, col]).sum() > 0
         if self.hyperparams['drop_non_numeric_columns']:
-            _logger.debug(f'dropping columns: {list(np.where(output.dtypes == object)[0])}')
-            _logger.debug(f'dropping columns: {output.iloc[:, list(np.where(output.dtypes == object)[0])].columns}')
+            self.logger.debug(f'dropping columns: {list(np.where(output.dtypes == object)[0])}')
+            self.logger.debug(f'dropping columns: {output.iloc[:, list(np.where(output.dtypes == object)[0])].columns}')
             # np.where returns int64 instead of int, D3M metadata checks for int
             numeric_colum_indices = [int(x) for x in np.where(output.dtypes != object)[0]]
             output = output.iloc[:, numeric_colum_indices]

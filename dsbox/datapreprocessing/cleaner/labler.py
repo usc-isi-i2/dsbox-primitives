@@ -14,7 +14,6 @@ from d3m.primitive_interfaces.base import CallResult
 from . import config
 
 __all__ = ('Labler',)
-_logger = logging.getLogger(__name__)
 
 Inputs = container.DataFrame
 Outputs = container.DataFrame
@@ -31,7 +30,8 @@ class LablerHyperparams(hyperparams.Hyperparams):
         elements=hyperparams.Hyperparameter[int](-1),
         default=(),
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="A set of column indices to force primitive to operate on. If any specified column cannot be parsed, it is skipped.",
+        description="A set of column indices to force primitive to operate on. "
+                    "If any specified column cannot be parsed, it is skipped.",
     )
     exclude_columns = hyperparams.Set(
         elements=hyperparams.Hyperparameter[int](-1),
@@ -43,17 +43,21 @@ class LablerHyperparams(hyperparams.Hyperparams):
         values=['append', 'replace', 'new'],
         default='replace',
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Should parsed columns be appended, should they replace original columns, or should only parsed columns be returned? This hyperparam is ignored if use_semantic_types is set to false.",
+        description="Should parsed columns be appended, should they replace original columns,"
+                    " or should only parsed columns be returned? "
+                    "This hyperparam is ignored if use_semantic_types is set to false.",
     )
     use_semantic_types = hyperparams.UniformBool(
         default=False,
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Controls whether semantic_types metadata will be used for filtering columns in input dataframe. Setting this to false makes the code ignore return_result and will produce only the output dataframe"
+        description="Controls whether semantic_types metadata will be used for filtering columns in input dataframe. "
+                    "Setting this to false makes the code ignore return_result and will produce only the output dataframe"
     )
     add_index_columns = hyperparams.UniformBool(
         default=True,
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Also include primary index columns if input data has them. Applicable only if \"return_result\" is set to \"new\".",
+        description="Also include primary index columns if input data has them. "
+                    "Applicable only if \"return_result\" is set to \"new\".",
     )
 
 
@@ -90,6 +94,7 @@ class Labler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LablerHyp
         self._s_cols: List = []
         self._model: Dict = {}
         self._has_finished = False
+        self.logger = logging.getLogger(__name__)
 
     def set_training_data(self, *, inputs: Inputs) -> None:
         self._training_data = inputs
@@ -110,7 +115,7 @@ class Labler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LablerHyp
             )
 
         self._s_cols = container.List(set(all_attributes).intersection(categorical_attributes))
-        _logger.debug("%d of categorical attributes found." % (len(self._s_cols)))
+        self.logger.debug("%d of categorical attributes found." % (len(self._s_cols)))
 
         if len(self._s_cols) > 0:
             # temp_model = defaultdict(LabelEncoder)
