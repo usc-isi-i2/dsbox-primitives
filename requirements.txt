@@ -8,6 +8,6 @@ Keras>=2.2.7
 Pillow
 scipy>=1.2.0
 h5py
-pmdarima==1.0.0
+# pmdarima==1.0.0
 scikit-image
 easydict

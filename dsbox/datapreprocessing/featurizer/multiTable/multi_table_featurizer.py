@@ -109,7 +109,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 resource_column_name = resource_id + "_" + data[resource_id].columns[column_index]
                 all_metadata[resource_column_name] = column_metadata
                 # find the main resource id
-                if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in column_metadata['semantic_types']:
+                if 'https://metadata.datadrivendiscovery.org/types/Target' in column_metadata['semantic_types']:
                     main_resource_id = resource_id
                     self.logger.debug("Main table ID is: %s", main_resource_id)
                     if self._verbose:
@@ -172,7 +172,7 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 big_table = aggregator.forward(each_relation[0])
                 break
         finish = time.clock()
-        self.logger.info("[INFO] Multi-table join finished, totally take ", finish - start, 'seconds.')
+        self.logger.info("Multi-table join finished, totally take {} seconds.".format(finish - start))
         big_table = container.DataFrame(pd.DataFrame(big_table), generate_metadata=False)
 
         # add back metadata

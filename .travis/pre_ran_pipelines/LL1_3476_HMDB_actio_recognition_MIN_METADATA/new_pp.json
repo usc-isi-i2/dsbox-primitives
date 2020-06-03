@@ -1,0 +1,209 @@
+{
+  "id": "1c008c67-94a0-4a23-b08a-0017bb5c435e",
+  "schema": "https://metadata.datadrivendiscovery.org/schemas/v0/pipeline.json",
+  "created": "2019-11-22T19:37:13.050794Z",
+  "inputs": [
+    {
+      "name": "input dataset"
+    }
+  ],
+  "outputs": [
+    {
+      "data": "steps.6.produce",
+      "name": "predictions of input dataset"
+    }
+  ],
+  "steps": [
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "f31f8c1f-d1c5-43e5-a4b2-2ae4a761ef2e",
+        "version": "0.2.0",
+        "python_path": "d3m.primitives.data_transformation.denormalize.Common",
+        "name": "Denormalize datasets",
+        "digest": "c4177842020cea66c8904a5567098a7040c98a8270a1297abb57353ca54f5b37"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "inputs.0"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ]
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4b42ce1e-9b98-4a25-b68e-fad13311eb65",
+        "version": "0.3.0",
+        "python_path": "d3m.primitives.data_transformation.dataset_to_dataframe.Common",
+        "name": "Extract a DataFrame from a Dataset",
+        "digest": "8457eeb19b44f5b26a5fb721a51087d618962a35f0aff17f4ad25d341a2170f2"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.0.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ]
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4503a4c6-42f7-45a1-a1d4-ed69699cf5e1",
+        "version": "0.4.0",
+        "python_path": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+        "name": "Extracts columns by semantic type",
+        "digest": "f036d0219339094750e3408253e07b670d1398c6c8f5d95de4fe69a3e9884017"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.1.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "semantic_types": {
+          "type": "VALUE",
+          "data": [
+            "https://metadata.datadrivendiscovery.org/types/PrimaryKey",
+            "https://metadata.datadrivendiscovery.org/types/FileName"
+          ]
+        }
+      }
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4503a4c6-42f7-45a1-a1d4-ed69699cf5e1",
+        "version": "0.4.0",
+        "python_path": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+        "name": "Extracts columns by semantic type",
+        "digest": "f036d0219339094750e3408253e07b670d1398c6c8f5d95de4fe69a3e9884017"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.1.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "semantic_types": {
+          "type": "VALUE",
+          "data": [
+            "https://metadata.datadrivendiscovery.org/types/TrueTarget"
+          ]
+        }
+      }
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "a29b0080-aeff-407d-9edb-0aa3eefbde01",
+        "version": "0.2.0",
+        "python_path": "d3m.primitives.data_preprocessing.video_reader.Common",
+        "name": "Columns video reader",
+        "digest": "03f0f8af5cd434ce8781738e5f4d4b38e5fbeb98cf220756d4fd3060b17dfbc7"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.2.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ]
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "dsbox-featurizer-image-inceptionV3",
+        "version": "1.5.3",
+        "python_path": "d3m.primitives.feature_extraction.inceptionV3_image_feature.DSBOX",
+        "name": "DSBox Image Featurizer inceptionV3",
+        "digest": "28831430dcbb8d887e82d2ebdadde112e4656cc9fb4ae8b6b0d03fdda6d40345"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.4.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "use_limitation": {
+          "type": "VALUE",
+          "data": true
+        }
+      }
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "dsbox-featurizer-video-classification-lstm",
+        "version": "1.5.3",
+        "python_path": "d3m.primitives.classification.lstm.DSBOX",
+        "name": "DSBox Video Classification LSTM",
+        "digest": "a007a0230169883a48ca6ebc180bd6c5c19c942103bc677b60ba7fac30e38046"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.5.produce"
+        },
+        "outputs": {
+          "type": "CONTAINER",
+          "data": "steps.3.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "LSTM_units": {
+          "type": "VALUE",
+          "data": 2048
+        },
+        "epochs": {
+          "type": "VALUE",
+          "data": 2000
+        },
+        "validate_data_percent": {
+          "type": "VALUE",
+          "data": 0.1
+        }
+      }
+    }
+  ],
+  "name": "DefaultVideoClassificationTemplate:140592677584832",
+  "description": "",
+  "digest": "accbd34fb8626f409c99a6ca7d6a339088a80ccf61a4e78d48828c9143930917"
+}

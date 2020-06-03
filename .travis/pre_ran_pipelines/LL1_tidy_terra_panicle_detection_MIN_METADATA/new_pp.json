@@ -1,0 +1,181 @@
+{
+  "id": "dd2d98ed-5d94-4245-a0c9-0861ed7bc177",
+  "schema": "https://metadata.datadrivendiscovery.org/schemas/v0/pipeline.json",
+  "created": "2020-01-24T01:01:01.853055Z",
+  "inputs": [
+    {
+      "name": "input dataset"
+    }
+  ],
+  "outputs": [
+    {
+      "data": "steps.4.produce",
+      "name": "predictions of input dataset"
+    }
+  ],
+  "steps": [
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "f31f8c1f-d1c5-43e5-a4b2-2ae4a761ef2e",
+        "version": "0.2.0",
+        "python_path": "d3m.primitives.data_transformation.denormalize.Common",
+        "name": "Denormalize datasets",
+        "digest": "c4177842020cea66c8904a5567098a7040c98a8270a1297abb57353ca54f5b37"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "inputs.0"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ]
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4b42ce1e-9b98-4a25-b68e-fad13311eb65",
+        "version": "0.3.0",
+        "python_path": "d3m.primitives.data_transformation.dataset_to_dataframe.Common",
+        "name": "Extract a DataFrame from a Dataset",
+        "digest": "8457eeb19b44f5b26a5fb721a51087d618962a35f0aff17f4ad25d341a2170f2"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.0.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ]
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4503a4c6-42f7-45a1-a1d4-ed69699cf5e1",
+        "version": "0.4.0",
+        "python_path": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+        "name": "Extracts columns by semantic type",
+        "digest": "f036d0219339094750e3408253e07b670d1398c6c8f5d95de4fe69a3e9884017"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.1.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "semantic_types": {
+          "type": "VALUE",
+          "data": [
+            "https://metadata.datadrivendiscovery.org/types/PrimaryMultiKey",
+            "https://metadata.datadrivendiscovery.org/types/FileName"
+          ]
+        }
+      }
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "4503a4c6-42f7-45a1-a1d4-ed69699cf5e1",
+        "version": "0.4.0",
+        "python_path": "d3m.primitives.data_transformation.extract_columns_by_semantic_types.Common",
+        "name": "Extracts columns by semantic type",
+        "digest": "f036d0219339094750e3408253e07b670d1398c6c8f5d95de4fe69a3e9884017"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.1.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "semantic_types": {
+          "type": "VALUE",
+          "data": [
+            "https://metadata.datadrivendiscovery.org/types/TrueTarget"
+          ]
+        }
+      }
+    },
+    {
+      "type": "PRIMITIVE",
+      "primitive": {
+        "id": "dsbox-featurizer-object-detection-yolo",
+        "version": "1.5.3",
+        "python_path": "d3m.primitives.feature_extraction.yolo.DSBOX",
+        "name": "DSBox Object Detection YOLO",
+        "digest": "441cd7b2eba4311c4a96be3ab2ae051f96e625b57d1a5930f995eceb0e8ee9a3"
+      },
+      "arguments": {
+        "inputs": {
+          "type": "CONTAINER",
+          "data": "steps.2.produce"
+        },
+        "outputs": {
+          "type": "CONTAINER",
+          "data": "steps.3.produce"
+        }
+      },
+      "outputs": [
+        {
+          "id": "produce"
+        }
+      ],
+      "hyperparams": {
+        "epochs": {
+          "type": "VALUE",
+          "data": 100
+        },
+        "use_fitted_weight": {
+          "type": "VALUE",
+          "data": false
+        },
+        "test_batch_size": {
+          "type": "VALUE",
+          "data": 4
+        },
+        "train_batch_size": {
+          "type": "VALUE",
+          "data": 4
+        },
+        "nms_threshold": {
+          "type": "VALUE",
+          "data": 0.4
+        },
+        "lr_init": {
+          "type": "VALUE",
+          "data": 0.001
+        },
+        "lr_end": {
+          "type": "VALUE",
+          "data": 1.0e-06
+        },
+        "confidences_threshold": {
+          "type": "VALUE",
+          "data": 0.5
+        }
+      }
+    }
+  ],
+  "name": "DefaultObjectDetectionTemplate:140186136032384",
+  "description": "",
+  "digest": "469c7c94e6c86f45a5606e0ab70b380d7ea8d60a21ae6d316e015058b4746c66"
+}

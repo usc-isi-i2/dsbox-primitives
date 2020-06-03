@@ -21,18 +21,18 @@ from dsbox.datapreprocessing.cleaner import config as cleaner_config
 TEMPLATE_LIST = []
 
 # add templates here
-# TEMPLATE_LIST.append(UU3TestTemplate()) # no enough memory for travis ci
-TEMPLATE_LIST.append(DefaultRegressionTemplate())
-TEMPLATE_LIST.append(DefaultObjectDetectionTemplate())
-# TEMPLATE_LIST.append(ARIMATemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
-TEMPLATE_LIST.append(DefaultClassificationTemplate())
-TEMPLATE_LIST.append(DefaultClassificationTemplate2())
-TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
-TEMPLATE_LIST.append(DefaultRegressionTemplate2())
-TEMPLATE_LIST.append(VotingTemplate())
-TEMPLATE_LIST.append(HorizontalVotingTemplate())
+# TEMPLATE_LIST.append(UU3TestTemplate()) # success
+TEMPLATE_LIST.append(DefaultRegressionTemplate())   # success
+TEMPLATE_LIST.append(DefaultObjectDetectionTemplate()) # success
+# TEMPLATE_LIST.append(ARIMATemplate())   #error on arima
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate()) # success
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2()) # succsess
+TEMPLATE_LIST.append(DefaultClassificationTemplate()) # succsess
+TEMPLATE_LIST.append(DefaultClassificationTemplate2()) # succsess
+TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate()) # succsess
+TEMPLATE_LIST.append(DefaultRegressionTemplate2()) # succsess
+TEMPLATE_LIST.append(VotingTemplate()) # succsess
+TEMPLATE_LIST.append(HorizontalVotingTemplate()) # succsess
 # ends
 
 
@@ -324,9 +324,13 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
         os.makedirs(output_pipeline_dir, exist_ok=True)
         os.makedirs(output_pipeline_runs_dir, exist_ok=True)
+
         new_location = os.path.join(output_pipeline_dir, pipeline_id + ".json")
+        
         if pp_path is not None:
-            shutil.copy(pp_path, new_location)
+            d3m_runtime_command = "python3 -m d3m pipeline describe {} > {}".format(pp_path, new_location)
+            self.execute_shell_code(d3m_runtime_command)
+
         # copy pipeline_run files
         file_count = len(os.listdir(output_pipeline_runs_dir))
         file_name = "pipeline_runs_{}_{}.yaml.gz".format(dataset_ID,str(file_count + 1))

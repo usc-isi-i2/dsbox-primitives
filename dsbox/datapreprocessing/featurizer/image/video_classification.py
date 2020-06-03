@@ -170,10 +170,10 @@ class LSTM(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, LSTMHyperpara
         return param
 
     def set_params(self, *, params: Params) -> None:
-        from tensorflow.keras.models import Model
+        from tensorflow.keras import Sequential
         # self._model = self._lazy_init_lstm()
         config_lstm = params['keras_model']
-        self._model = Model.from_config(config_lstm)
+        self._model = Sequential.from_config(config_lstm)
         self._class_name_to_number = params["class_name_to_number"]
         self._target_column_name = params["target_column_name"]
         self._feature_shape = params["feature_shape"]
