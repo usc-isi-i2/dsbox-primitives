@@ -423,7 +423,8 @@ DATASET_MAPPER = {
             'image_regression': '22_handgeometry_MIN_METADATA',
             'time_series_forecasting': 'LL1_736_population_spawn_MIN_METADATA',
             'object_detection': 'LL1_penn_fudan_pedestrian_MIN_METADATA',
-            'multitable_dataset': 'uu3_world_development_indicators_MIN_METADATA'
+            'multitable_dataset': 'uu3_world_development_indicators_MIN_METADATA',
+            "augment_dataset":"DA_college_debt"
         }
 
 

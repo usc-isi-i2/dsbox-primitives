@@ -24,7 +24,7 @@ TEMPLATE_LIST = []
 # TEMPLATE_LIST.append(UU3TestTemplate()) # success
 TEMPLATE_LIST.append(DefaultRegressionTemplate())   # success
 TEMPLATE_LIST.append(DefaultObjectDetectionTemplate()) # success
-# TEMPLATE_LIST.append(ARIMATemplate())   #error on arima
+TEMPLATE_LIST.append(ARIMATemplate())   #error on arima
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate()) # success
 TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2()) # succsess
 TEMPLATE_LIST.append(DefaultClassificationTemplate()) # succsess
@@ -33,6 +33,7 @@ TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate()) # succsess
 TEMPLATE_LIST.append(DefaultRegressionTemplate2()) # succsess
 TEMPLATE_LIST.append(VotingTemplate()) # succsess
 TEMPLATE_LIST.append(HorizontalVotingTemplate()) # succsess
+# TEMPLATE_LIST.append(AugmentTestTemplate())
 # ends
 
 
