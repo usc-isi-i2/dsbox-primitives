@@ -12,7 +12,7 @@ wget https://github.com/fchollet/deep-learning-models/releases/download/v0.2/res
 mv resnet50_weights_tf_dim_ordering_tf_kernels.h5 bdc6c9f787f9f51dffd50d895f86e469cc0eb8ba95fd61f0801b1a264acb4819
 wget https://github.com/fchollet/deep-learning-models/releases/download/v0.1/vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5 --no-verbose
 mv vgg16_weights_tf_dim_ordering_tf_kernels_notop.h5 bfe5187d0a272bed55ba430631598124cff8e880b98d38c9e56c8d66032abdc1
-wget https://pjreddie.com/media/files/yolov3.weights --no-verbose
+wget https://pjreddie.com/media/files/yolov3.weights
 mv yolov3.weights 523e4e69e1d015393a1b0a441cef1d9c7659e3eb2d7e15f793f060a21b32f297
 wget https://github.com/keras-team/keras-applications/releases/download/resnet/resnet50_weights_tf_dim_ordering_tf_kernels.h5 --no-verbose
 mv resnet50_weights_tf_dim_ordering_tf_kernels.h5 7011d39ea4f61f4ddb8da99c4addf3fae4209bfda7828adb4698b16283258fbe
