@@ -2,13 +2,13 @@ import pandas
 import logging
 import numpy as np
 import d3m.metadata.base as mbase
+import d3m.exceptions
 from d3m.metadata import hyperparams
 from d3m import container
 from d3m.primitive_interfaces.featurization import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 from . import config
 
-_logger = logging.getLogger(__name__)
 
 Inputs = container.DataFrame
 Outputs = container.List  # [container.DataFrame]
@@ -68,6 +68,7 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
         # All other attributes must be private with leading underscore
         self._has_finished = False
         self._iterations_done = False
+        self.logger = logging.getLogger(__name__)
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
 
@@ -95,15 +96,14 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
                         #column_name = each_selector['name']
                         break
 
-        timeseries_output = list()
         # if no 'csv' related mime_types found, return a empty list
-        if (timeseries_index == -1):
-            _logger.info("Warning: Can't find timeseries index!")
-            _logger.info("No timeseries dataset detected!")
+        timeseries_output = []
+        if timeseries_index == -1:
+            self.logger.info("Warning: Can't find timeseries index!")
+            self.logger.info("No timeseries dataset detected!")
             self._has_finished = True
             self._iterations_done = True
-            #raise exceptions.InvalidArgumentValueError("no image related metadata found!")
-            return CallResult(timeseries_output, self._has_finished, self._iterations_done)
+            raise d3m.exceptions.InvalidArgumentValueError("no timeseries related metadata found!")
 
         input_file_name_list = inputs.iloc[:,[timeseries_index]].values.tolist()
         input_file_amount = len(input_file_name_list)
@@ -113,9 +113,9 @@ class TimeseriesToList(TransformerPrimitiveBase[Inputs, Outputs, TimeseriesToLis
             file_path = location_base_uris + input_file_name_list[input_file_number][0]
             file_path = file_path[7:]
             timeseries_output.append(pandas.read_csv(file_path))
-            _logger.info(f"Timeseries data: {file_path} loaded.")
-        final_output = [d3mIndex_output, timeseries_output]
+            self.logger.info(f"Timeseries data: {file_path} loaded.")
+        final_output = container.List([d3mIndex_output, timeseries_output])
         # return a 4-d array (d0 is the amount of the images, d1 and d2 are size of the image, d4 is 3 for color image)
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(final_output, self._has_finished, self._iterations_done)
+        return CallResult(final_output, self._has_finished)

@@ -29,7 +29,6 @@ TRUE_TARGET_TYPE = 'https://metadata.datadrivendiscovery.org/types/TrueTarget'
 # Inputs = container.List
 Inputs = DataFrame
 Outputs = DataFrame
-_logger = logging.getLogger(__name__)
 
 
 class ArimaParams(params.Params):
@@ -228,13 +227,14 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
         self._time_indicator: TimeIndicator = None
         self._extract_timeseries: ExtractTimeseries = None
         self._input_data_processed = dict()
+        self.logger = logging.getLogger(__name__)
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         ########################################################
         # need to use inputs to figure out the params of ARIMA #
         ########################################################
         # if len(inputs) == 0:
-        #     _logger.info(
+        #     self.logger.info(
         #         "Warning: Inputs timeseries data to timeseries_featurization primitive's length is 0.")
         #     return
         # if 'd3mIndex' in outputs.columns:
@@ -262,7 +262,7 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
                 target_column_names.append(self._training_inputs.columns[i])
 
         if len(target_column_names) > 1:
-            logger.warning("Multiple target detected!")
+            self.logger.warning("Multiple target detected!")
         target_column_name = target_column_names[0]
 
         for name, one_timeseries_df in self._extract_timeseries.groupby():
@@ -315,13 +315,13 @@ class AutoArima(SupervisedLearnerPrimitiveBase[Inputs, Outputs, ArimaParams, Ari
             last_produce_time = one_timeseries_df.index[-1]
             n_periods = int(self._time_indicator.get_difference(last_training_time, last_produce_time))
             if n_periods <= 0:
-                # _logger.error("processing on " + str(name) + "failed!")
-                # _logger.error("last training time is" + str(last_training_time))
-                # _logger.error("last produce time is, " + str(last_produce_time))
-                # _logger.error(str(one_timeseries_df))
-                # _logger.error(str(inputs0))
+                # self.logger.error("processing on " + str(name) + "failed!")
+                # self.logger.error("last training time is" + str(last_training_time))
+                # self.logger.error("last produce time is, " + str(last_produce_time))
+                # self.logger.error(str(one_timeseries_df))
+                # self.logger.error(str(inputs0))
                 # _
-                _logger.warning(
+                self.logger.warning(
                     'Testing period is not after training period! last_training_time={last_training_time} last_produce_time={last_produce_time}'.format(
                     last_training_time=str(last_training_time), 
                     last_produce_time=str(last_produce_time))

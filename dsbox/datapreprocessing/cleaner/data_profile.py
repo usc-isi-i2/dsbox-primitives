@@ -23,10 +23,6 @@ from dsbox.datapreprocessing.cleaner.dependencies import category_detection, dty
     feature_compute_hih as fc_hih, feature_compute_lfh as fc_lfh
 from . import config
 
-# from . import date_detector
-
-
-_logger = logging.getLogger(__name__)
 
 Input = container.DataFrame
 Output = container.DataFrame
@@ -128,6 +124,8 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
         self._input_data = None
         self._fitted = False
         self._mapping = ""
+        self._logger = logging.getLogger(__name__)
+
 
     def get_params(self) -> ProfilerParams:
         if not self._fitted:
@@ -174,7 +172,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
         try:
             cols = self._DateFeaturizer.detect_date_columns(self._sample_df)
         except Exception:
-            _logger.error("Detect date failed", exec_info=True)
+            self._logger.error("Detect date failed", exec_info=True)
             cols = list()
         if cols:
             indices = [inputs.columns.get_loc(c) for c in cols if c in inputs.columns]
@@ -197,7 +195,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 # else:
                 #     old_metadata["structural_type"] = type(10.2)
 
-                _logger.info(
+                self._logger.info(
                     "Date detector. 'column_index': '%(column_index)d', 'old_metadata': '%(old_metadata)s', 'new_metadata': '%(new_metadata)s'",
                     {
                         'column_index': i,
@@ -213,7 +211,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
         try:
             PhoneParser_indices = PhoneParser.detect(df=self._sample_df)
         except Exception:
-            _logger.error("Phone parser failed", exc_info=True)
+            self._logger.error("Phone parser failed", exc_info=True)
             PhoneParser_indices = dict()
         if PhoneParser_indices.get("columns_to_perform"):
             for i in PhoneParser_indices["columns_to_perform"]:
@@ -231,7 +229,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 # else:
                 #     old_metadata["structural_type"] = type(10.2)
 
-                _logger.info(
+                self._logger.info(
                     "Phone detector. 'column_index': '%(column_index)d', 'old_metadata': '%(old_metadata)s', 'new_metadata': '%(new_metadata)s'",
                     {
                         'column_index': i,
@@ -247,7 +245,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
             PunctuationSplitter_indices = PunctuationParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'])
         except Exception:
-            _logger.error("Punctuation parser failed", exc_info=True)
+            self._logger.error("Punctuation parser failed", exc_info=True)
             PunctuationSplitter_indices = dict()
         if PunctuationSplitter_indices.get("columns_to_perform"):
             for i in PunctuationSplitter_indices["columns_to_perform"]:
@@ -264,7 +262,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 # else:
                 #     old_metadata["structural_type"] = type(10.2)
 
-                _logger.info(
+                self._logger.info(
                     "Punctuation detector. 'column_index': '%(column_index)d', 'old_metadata': '%(old_metadata)s', 'new_metadata': '%(new_metadata)s'",
                     {
                         'column_index': i,
@@ -280,7 +278,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
             NumAlphaSplitter_indices = NumAlphaParser.detect(df=self._sample_df, max_avg_length=self.hyperparams[
                 'split_on_column_with_avg_len'], )
         except Exception:
-            _logger.error("Num alpha parser failed", exc_info=True)
+            self._logger.error("Num alpha parser failed", exc_info=True)
             NumAlphaSplitter_indices = dict()
 
         if NumAlphaSplitter_indices.get("columns_to_perform"):
@@ -298,7 +296,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 # else:
                 #     old_metadata["structural_type"] = type(10.2)
 
-                _logger.info(
+                self._logger.info(
                     "NumAlpha detector. 'column_index': '%(column_index)d', 'old_metadata': '%(old_metadata)s', 'new_metadata': '%(new_metadata)s'",
                     {
                         'column_index': i,
@@ -398,10 +396,10 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
                 memo_name = each_memo["metadata"]['name']
                 original_metadata = dict(inputs.metadata.query(each_selector))
                 if "name" not in original_metadata or memo_name != original_metadata['name']:
-                    _logger.warning("The input name is different from fit procedue at selector {}".format(str(each_selector)))
+                    self._logger.warning("The input name is different from fit procedue at selector {}".format(str(each_selector)))
 
                 if original_metadata['semantic_types'] != each_updated_semantic_types:
-                    _logger.debug("Update semantic type from {} to {}".format(str(original_metadata['semantic_types']), str(each_updated_semantic_types)))
+                    self._logger.debug("Update semantic type from {} to {}".format(str(original_metadata['semantic_types']), str(each_updated_semantic_types)))
                     original_metadata['semantic_types'] = each_updated_semantic_types
                 inputs.metadata = inputs.metadata.update(each_selector, original_metadata)
         return inputs
@@ -503,7 +501,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
             #         each_res["semantic_types"] = (
             #             'https://metadata.datadrivendiscovery.org/types/CategoricalData', temp_value[-2],
             #             temp_value[-1])
-            #     _logger.info(f'Category type detected "{column_name}": old={temp_value} new={each_res["semantic_types"]}')
+            #     self._logger.info(f'Category type detected "{column_name}": old={temp_value} new={each_res["semantic_types"]}')
 
             if (("spearman_correlation_of_features" in self._specified_features) and
                     (column_name in corr_columns)):
@@ -579,7 +577,7 @@ class Profiler(UnsupervisedLearnerPrimitiveBase[Input, Output, ProfilerParams, H
             # update metadata for a specific column
             metadata = metadata.update(prefix + [ALL_ELEMENTS, column_counter], each_res)
 
-            # _logger.info(
+            # self._logger.info(
             #     "category detector. 'column_index': '%(column_index)d', 'old_metadata': '%(old_metadata)s', 'new_metadata': '%(new_metadata)s'",
             #     {
             #         'column_index': column_counter,

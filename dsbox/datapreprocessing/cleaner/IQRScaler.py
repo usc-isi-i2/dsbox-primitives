@@ -3,13 +3,11 @@ import pandas as pd
 import d3m.metadata.base as mbase
 from . import config
 import logging
-# from d3m.primitive_interfaces.featurization import FeaturizationLearnerPrimitiveBase, FeaturizationTransformerPrimitiveBase
-# changed primitive class to fit in devel branch of d3m (2019-1-17)
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from typing import Any, Callable, List, Dict, Union, Optional, Sequence, Tuple
 from d3m import container
 from numpy import ndarray
-from common_primitives import utils
+from d3m.base.utils import get_columns_to_use
 from sklearn.preprocessing import RobustScaler
 from d3m.metadata import hyperparams, params
 from d3m.metadata.base import DataMetadata
@@ -21,7 +19,7 @@ __all__ = ('IQRScaler',)
 
 Inputs = container.DataFrame
 Outputs = container.DataFrame
-_logger = logging.getLogger(__name__)
+
 
 class Params(params.Params):
     center: Optional[ndarray]
@@ -129,7 +127,7 @@ class IQRScaler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, IQRHyp
                                    with_scaling=self.hyperparams['with_scaling'],
                                    quantile_range=(self.hyperparams['quantile_range_lowerbound'],
                                                    self.hyperparams['quantile_range_upperbound']))
-
+        self.logger = logging.getLogger(__name__)
         self._training_data = None
         self._fitted = False
         self._s_cols = None
@@ -203,12 +201,11 @@ class IQRScaler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, IQRHyp
         def can_produce_column(column_index: int) -> bool:
             return cls._can_produce_column(inputs_metadata, column_index, hyperparams)
 
-        columns_to_produce, columns_not_to_produce = common_utils.get_columns_to_use(inputs_metadata,
-                                                                             use_columns=hyperparams['use_columns'],
-                                                                             exclude_columns=hyperparams['exclude_columns'],
-                                                                             can_use_column=can_produce_column)
+        columns_to_produce, columns_not_to_produce = get_columns_to_use(inputs_metadata,
+                                                                        use_columns=hyperparams['use_columns'],
+                                                                        exclude_columns=hyperparams['exclude_columns'],
+                                                                        can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
-
 
     @classmethod
     def _can_produce_column(cls, inputs_metadata: mbase.DataMetadata, column_index: int, hyperparams: IQRHyperparams) -> bool:
@@ -225,10 +222,10 @@ class IQRScaler(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, IQRHyp
 
     def get_params(self) -> Params:
         return Params(
-            fitted = self._fitted,
-            center = getattr(self._model, 'center_', None),
-            scale = getattr(self._model, 'scale_', None),
-            s_cols = self._s_cols
+            fitted=self._fitted,
+            center=getattr(self._model, 'center_', None),
+            scale=getattr(self._model, 'scale_', None),
+            s_cols=self._s_cols
         )
 
     def set_params(self, *, params: Params) -> None:

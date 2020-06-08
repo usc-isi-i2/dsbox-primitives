@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import pandas as pd
 import d3m
-from dsbox_corex import corextext
+# from dsbox_corex import corextext
 
 from template import DATASET_MAPPER
 from template import DSBoxTemplate
@@ -21,18 +21,19 @@ from dsbox.datapreprocessing.cleaner import config as cleaner_config
 TEMPLATE_LIST = []
 
 # add templates here
-# TEMPLATE_LIST.append(UU3TestTemplate()) # no enough memory for travis ci
-TEMPLATE_LIST.append(DefaultObjectDetectionTemplate())
-TEMPLATE_LIST.append(ARIMATemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate())
-TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2())
-TEMPLATE_LIST.append(DefaultClassificationTemplate())
-TEMPLATE_LIST.append(DefaultClassificationTemplate2())
-TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate())
-TEMPLATE_LIST.append(DefaultRegressionTemplate())
-TEMPLATE_LIST.append(DefaultRegressionTemplate2())
-TEMPLATE_LIST.append(VotingTemplate())
-TEMPLATE_LIST.append(HorizontalVotingTemplate())
+# TEMPLATE_LIST.append(UU3TestTemplate()) # success
+TEMPLATE_LIST.append(DefaultRegressionTemplate())   # success
+TEMPLATE_LIST.append(DefaultObjectDetectionTemplate()) # success
+TEMPLATE_LIST.append(ARIMATemplate())   #error on arima
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate()) # success
+TEMPLATE_LIST.append(TA1ImageProcessingRegressionTemplate2()) # succsess
+TEMPLATE_LIST.append(DefaultClassificationTemplate()) # succsess
+TEMPLATE_LIST.append(DefaultClassificationTemplate2()) # succsess
+TEMPLATE_LIST.append(DefaultTimeseriesCollectionTemplate()) # succsess
+TEMPLATE_LIST.append(DefaultRegressionTemplate2()) # succsess
+TEMPLATE_LIST.append(VotingTemplate()) # succsess
+TEMPLATE_LIST.append(HorizontalVotingTemplate()) # succsess
+# TEMPLATE_LIST.append(AugmentTestTemplate())
 # ends
 
 
@@ -101,24 +102,26 @@ class DsboxPrimitiveUnitTest:
         else:
             raise ValueError("Scoring pipeline not find!")
 
-        # genereate corex primitive.json
-        corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corextext.__path__._path[0]),"..", 'generate_primitive_json.py'))
-        generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
-        self.execute_shell_code(generate_corex_primitive_json_files)
-        corex_primitives_json_loc = os.path.join("output", "v" + cleaner_config.D3M_API_VERSION,
-                                                 cleaner_config.D3M_PERFORMER_TEAM)
-        corex_primitives_generate_failed = True
-        if os.path.exists(corex_primitives_json_loc):
-            self.corex_primitives = os.listdir(corex_primitives_json_loc)
-            if len(self.corex_primitives) != 0:
-                corex_primitives_generate_failed = True
+        # not necessary to generate corex primitives here
+        # # genereate corex primitive.json
+        # corex_package_path = os.path.abspath(os.path.join(os.path.dirname(corextext.__path__._path[0]),"..", 'generate_primitive_json.py'))
+        # generate_corex_primitive_json_files = "python3 " + corex_package_path + " output"
+        # self.execute_shell_code(generate_corex_primitive_json_files)
+        # corex_primitives_json_loc = os.path.join("output", "v" + cleaner_config.D3M_API_VERSION,
+        #                                          cleaner_config.D3M_PERFORMER_TEAM)
+        # corex_primitives_generate_failed = True
+        # if os.path.exists(corex_primitives_json_loc):
+        #     self.corex_primitives = os.listdir(corex_primitives_json_loc)
+        #     if len(self.corex_primitives) != 0:
+        #         corex_primitives_generate_failed = True
 
-        print("*" * 100)
-        if corex_primitives_generate_failed:
-            print("[WARNING]: corex primitives generate failed!")
-        else:
-            print("following corex primitives found:")
-            print(str(self.corex_primitives))
+        # print("*" * 100)
+        # if corex_primitives_generate_failed:
+        #     print("[WARNING]: corex primitives generate failed!")
+        # else:
+        #     print("following corex primitives found:")
+        #     print(str(self.corex_primitives))
+
         print("preparing finished!")
 
     def get_primitive_hitted(self, config):
@@ -141,7 +144,7 @@ class DsboxPrimitiveUnitTest:
                 self.all_primitives_hit_count[temp] += 1
         return primitive_hitted
 
-    def generate_pipelines(self, each_template, config: dict):
+    def generate_pipelines(self, each_template, config: dict, dataset_ID):
         """
             Generate sample pipelines and corresponding meta
         """
@@ -173,7 +176,8 @@ class DsboxPrimitiveUnitTest:
 
                 # copy pipeline_run files
                 file_count = len(os.listdir(output_pipeline_runs_dir))
-                pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gz".format(str(file_count + 1)))
+                file_name = "pipeline_run_{}_{}.yaml.gz".format(dataset_ID,str(file_count + 1))
+                pipeline_runs_file = os.path.join(output_pipeline_runs_dir, file_name)
                 with open("tmp/pipeline_runs.yaml", "rb") as f:
                     data = f.read()
                 bindata = bytearray(data)
@@ -263,7 +267,7 @@ class DsboxPrimitiveUnitTest:
             # only generate the pipelines with it pass the test
             if result:
                 print("Test pipeline passed! Now generating the pipeline json files...")
-                failed = self.generate_pipelines(each_template, config)
+                failed = self.generate_pipelines(each_template, config, datasetID)
                 self.remove_temp_files_generate_pipeline_runs()
             else:
                 print("Test pipeline not passed! Please check the detail errors")
@@ -280,6 +284,7 @@ class DsboxPrimitiveUnitTest:
 def copy_one_pre_ran_pipeline(in_folder: str) -> None:
     pp_path = None
     pp_run_path = None
+    dataset_ID = in_folder.split("/")[-1]
     for each_ in os.listdir(in_folder):
         # this is the pipeline.json file
         if each_.endswith("json"):
@@ -287,10 +292,15 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         elif each_.endswith("yaml.gz"):
             pp_run_path = os.path.join(in_folder, each_)
     
-    if pp_run_path is None or pp_path is None:
-        raise ValueError("Failed to find pipeline or pipeline run files on folder {}".format(in_folder))
-    print("Found pipeline file at {}".format(pp_path))
-    print("Found pipeline-run file at {}".format(pp_run_path))
+    if pp_run_path is None:
+        print("[WARNING] Failed to find pipeline run files on folder {}".format(in_folder))
+    else:
+        print("Found pipeline-run file at {}".format(pp_run_path))
+
+    if pp_path is None:
+        print("[WARNING] Failed to find pipeline files on folder {}".format(in_folder))
+    else:
+        print("Found pipeline file at {}".format(pp_path))
 
     with open(pp_path, "r") as f:
         pp_read = json.load(f)
@@ -315,12 +325,19 @@ def copy_one_pre_ran_pipeline(in_folder: str) -> None:
         output_pipeline_runs_dir = os.path.join(output_dir, "pipeline_runs")
         os.makedirs(output_pipeline_dir, exist_ok=True)
         os.makedirs(output_pipeline_runs_dir, exist_ok=True)
+
         new_location = os.path.join(output_pipeline_dir, pipeline_id + ".json")
-        shutil.copy(pp_path, new_location)
+        
+        if pp_path is not None:
+            d3m_runtime_command = "python3 -m d3m pipeline describe {} > {}".format(pp_path, new_location)
+            DsboxPrimitiveUnitTest.execute_shell_code(d3m_runtime_command)
+
         # copy pipeline_run files
         file_count = len(os.listdir(output_pipeline_runs_dir))
-        pipeline_runs_file = os.path.join(output_pipeline_runs_dir, "pipeline_run_{}.yaml.gz".format(str(file_count + 1)))
-        shutil.copy(pp_run_path, pipeline_runs_file)
+        file_name = "pipeline_runs_{}_{}.yaml.gz".format(dataset_ID,str(file_count + 1))
+        pipeline_runs_file = os.path.join(output_pipeline_runs_dir, file_name)
+        if pp_run_path is not None:
+            shutil.copy(pp_run_path, pipeline_runs_file)
         # with open(pp_run_path, "rb") as f:
         #     data = f.read()
         # bindata = bytearray(data)

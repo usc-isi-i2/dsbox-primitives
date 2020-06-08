@@ -18,7 +18,6 @@ from . import missing_value_pred as mvp
 
 Input = container.DataFrame
 Output = container.DataFrame
-_logger = logging.getLogger(__name__)
 
 # store the regression models for each missing-value column in training data
 
@@ -40,7 +39,8 @@ class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
         elements=hyperparams.Hyperparameter[int](-1),
         default=(),
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="A set of column indices to force primitive to operate on. If any specified column cannot be parsed, it is skipped.",
+        description="A set of column indices to force primitive to operate on. "
+                    "If any specified column cannot be parsed, it is skipped.",
     )
     exclude_columns = hyperparams.Set(
         elements=hyperparams.Hyperparameter[int](-1),
@@ -52,17 +52,21 @@ class IterativeRegressionHyperparameter(hyperparams.Hyperparams):
         values=['append', 'replace', 'new'],
         default='replace',
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Should parsed columns be appended, should they replace original columns, or should only parsed columns be returned? This hyperparam is ignored if use_semantic_types is set to false.",
+        description="Should parsed columns be appended, should they replace original columns, "
+                    "or should only parsed columns be returned? "
+                    "This hyperparam is ignored if use_semantic_types is set to false.",
     )
     use_semantic_types = hyperparams.UniformBool(
         default=False,
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Controls whether semantic_types metadata will be used for filtering columns in input dataframe. Setting this to false makes the code ignore return_result and will produce only the output dataframe"
+        description="Controls whether semantic_types metadata will be used for filtering columns in input dataframe."
+                    " Setting this to false makes the code ignore return_result and will produce only the output dataframe"
     )
     add_index_columns = hyperparams.UniformBool(
         default=True,
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
-        description="Also include primary index columns if input data has them. Applicable only if \"return_result\" is set to \"new\".",
+        description="Also include primary index columns if input data has them. "
+                    "Applicable only if \"return_result\" is set to \"new\".",
     )
 
 
@@ -114,6 +118,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         self._has_finished = True
         self._iterations_done = True
         self._verbose = hyperparams['verbose'] if hyperparams else False
+        self.logger = logging.getLogger(__name__)
 
     def set_params(self, *, params: IR_Params) -> None:
         self._is_fitted = params['fitted']
@@ -142,9 +147,9 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         inputs : Input
             The inputs.
         """
-        if (pd.isnull(inputs).sum().sum() == 0):    # no missing value exists
+        if pd.isnull(inputs).sum().sum() == 0:    # no missing value exists
             if self._verbose:
-                _logger.info("Warning: no missing value in train dataset")
+                self.logger.info("Warning: no missing value in train dataset")
 
         self._train_x = inputs
         self._is_fitted = False
@@ -183,7 +188,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
 
             # start fitting
             if self._verbose:
-                _logger.info("=========> iteratively regress method:")
+                self.logger.info("=========> iteratively regress method:")
 
             attribute = DataMetadata.list_columns_with_semantic_types(
                 data.metadata, ['https://metadata.datadrivendiscovery.org/types/Attribute'])
@@ -252,7 +257,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
 
         if (pd.isnull(numeric_data).sum().sum() == 0):    # no missing value exists
             if self._verbose:
-                _logger.info("Warning: no missing value in test dataset")
+                self.logger.info("Warning: no missing value in test dataset")
             self._has_finished = True
             return CallResult(inputs, self._has_finished, self._iterations_done)
 
@@ -273,7 +278,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
 
             # start completing data...
             if self._verbose:
-                _logger.info("=========> iteratively regress method:")
+                self.logger.info("=========> iteratively regress method:")
             data_clean = self.__regressImpute(numeric_data, self._best_imputation, iterations)
 
         value = inputs.copy()
@@ -283,7 +288,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
             self._is_fitted = True
             self._has_finished = True
         elif to_ctx_mrg.state == to_ctx_mrg.TIMED_OUT:
-            _logger.info("Timed Out...")
+            self.logger.info("Timed Out...")
             self._is_fitted = False
             self._has_finished = False
             self._iterations_done = False
@@ -366,10 +371,10 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         for i in range(len(missing_col_id)):
             name = col_names[missing_col_id[i]]
             # if there is a column that not appears in trained model, impute it as "mean"
-            if (name not in model_dict.keys()):
+            if name not in model_dict.keys():
                 data = mvp.imputeData(data, [missing_col_id[i]], ["mean"], self._verbose)
                 # mask[missing_col_id[i]] = False
-                _logger.info("fill" + name + "with mean")
+                self.logger.info("fill" + name + "with mean")
                 # offset += 1
             else:
                 model_list.append(model_dict[name])
@@ -384,7 +389,7 @@ class IterativeRegressionImputation(UnsupervisedLearnerPrimitiveBase[Input, Outp
         init_imputation = ["mean"] * len(new_missing_col_id)
         next_data = mvp.imputeData(to_impute_data, new_missing_col_id, init_imputation, self._verbose)
 
-        while (counter < epoch):
+        while counter < epoch:
             for i in range(len(new_missing_col_id)):
                 target_col = new_missing_col_id[i]
                 next_data[:, target_col] = missing_col_data[:, i]  # recover the column that to be imputed

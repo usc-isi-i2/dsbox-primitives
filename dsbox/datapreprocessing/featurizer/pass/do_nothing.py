@@ -51,4 +51,4 @@ class DoNothing(TransformerPrimitiveBase[Inputs, Outputs, DoNothingHyperparams])
 
         self._has_finished = True
         self._iterations_done = True
-        return CallResult(inputs, self._has_finished, self._iterations_done)
+        return CallResult(inputs, self._has_finished)

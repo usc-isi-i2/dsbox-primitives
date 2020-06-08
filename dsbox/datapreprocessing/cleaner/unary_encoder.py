@@ -86,7 +86,7 @@ class Label_encoder(object):
                 self.class_index[f][item] = index
                 index += 1
 
-    def transform_pd(self,df,cols=[]):
+    def transform_pd(self, df, cols=[]):
         '''
         transform all columns in the df or specific list from lable to index, return and update dataframe.
         '''
@@ -95,7 +95,7 @@ class Label_encoder(object):
             cols = df.columns
         for f in cols:
             if f in self.class_index:
-                newdf[f] = df[f].apply(lambda d: self.__update_label(f,d))
+                newdf[f] = df[f].apply(lambda d: self.__update_label(f, d))
         return newdf
 
     def get_params(self):
@@ -104,14 +104,14 @@ class Label_encoder(object):
     def set_params(self, textmapping):
         self.class_index = textmapping
 
-    def __update_label(self,f,x):
+    def __update_label(self, f, x):
         '''
         update the label to index, if not found in the dict, add and update the dict.
         '''
         try:
             return self.class_index[f][x]
         except:
-            self.class_index[f][x] = max(self.class_index[f].values())+1
+            self.class_index[f][x] = max(self.class_index[f].values()) + 1
             return self.class_index[f][x]
 
 
@@ -129,25 +129,25 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         "description": "Encode using unary code for orinal data",
         "python_path": "d3m.primitives.data_preprocessing.unary_encoder.DSBOX",
         "primitive_family": "DATA_PREPROCESSING",
-        "algorithm_types": [ "ENCODE_ONE_HOT" ],
+        "algorithm_types": ["ENCODE_ONE_HOT"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
             "contact": config.D3M_CONTACT,
-            "uris": [ config.REPOSITORY ]
-            },
+            "uris": [config.REPOSITORY]
+        },
         ### Automatically generated
         # "primitive_code"
         # "original_python_path"
         # "schema"
         # "structural_type"
         ### Optional
-        "keywords": [ "preprocessing",  "encoding"],
-        "installation": [ config.INSTALLATION ],
-        #"location_uris": [],
-        #"precondition": [],
-        #"effects": [],
-        #"hyperparms_to_tune": []
-        })
+        "keywords": ["preprocessing", "encoding"],
+        "installation": [config.INSTALLATION],
+        # "location_uris": [],
+        # "precondition": [],
+        # "effects": [],
+        # "hyperparms_to_tune": []
+    })
 
     def __repr__(self):
         return "%s(%r)" % ('UnaryEncoder', self.__dict__)
@@ -174,13 +174,13 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         for key in self._mapping.keys():
             self._mapping[key] = [np.nan if np.isnan(x) else int(x) for x in self._mapping[key]]
 
-        param = Params(mapping = self._mapping,
-                       all_columns = self._all_columns,
-                       empty_columns = self._empty_columns,
-                       textmapping = self._textmapping,
-                       requirement = self._requirement,
-                       cat_columns = self._cat_columns,
-                       cat_col_index = self._cat_col_index
+        param = Params(mapping=self._mapping,
+                       all_columns=self._all_columns,
+                       empty_columns=self._empty_columns,
+                       textmapping=self._textmapping,
+                       requirement=self._requirement,
+                       cat_columns=self._cat_columns,
+                       cat_col_index=self._cat_col_index
                        )
         return param
 
@@ -218,8 +218,8 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         numeric = data.metadata.list_columns_with_semantic_types(['http://schema.org/Integer', 'http://schema.org/Float'])
         numeric = [x for x in numeric if x in all_attributes]
         for element in numeric:
-            if data.metadata.query((mbase.ALL_ELEMENTS, element)).get('structural_type', ())==str:
-                if pd.isnull(pd.to_numeric(data.iloc[:,element], errors='coerce')).sum() == data.shape[0]:
+            if data.metadata.query((mbase.ALL_ELEMENTS, element)).get('structural_type', ()) == str:
+                if pd.isnull(pd.to_numeric(data.iloc[:, element], errors='coerce')).sum() == data.shape[0]:
                     self._empty_columns.append(element)
 
         # Remove columns with all empty values, structural numeric
@@ -237,15 +237,15 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
             semantic_types=[
                 "https://metadata.datadrivendiscovery.org/types/OrdinalData",
                 "https://metadata.datadrivendiscovery.org/types/CategoricalData"
-                ]
-            )
+            ]
+        )
         all_attributes = data.metadata.list_columns_with_semantic_types(
             semantic_types=["https://metadata.datadrivendiscovery.org/types/Attribute"]
-            )
+        )
         self._cat_col_index = container.List(set(all_attributes).intersection(numeric))
         self._cat_columns = container.List(data.columns[self._cat_col_index].tolist())
-        #import pdb
-        #pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
         numerical_values = data.iloc[:, self._cat_col_index].apply(
             lambda col: pd.to_numeric(col, errors='coerce'))
 
@@ -259,7 +259,7 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         self._mapping = idict
 
         if self._text2int:
-            texts = data.drop(self._mapping.keys(),axis=1)
+            texts = data.drop(self._mapping.keys(), axis=1)
             texts = texts.select_dtypes(include=[object])
             le = Label_encoder()
             le.fit_pd(texts)
@@ -283,7 +283,7 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
     def __encode_column(self, col):
         unary = pd.DataFrame(col)
         for v in self._mapping[col.name]:
-            unary[col.name+"_"+str(v)] = (col >= v).astype(int)
+            unary[col.name + "_" + str(v)] = (col >= v).astype(int)
         return unary.drop(col.name, axis=1)
 
     def produce(self, *, inputs: Input, timeout: float = None, iterations: int = None) -> CallResult[Output]:
@@ -294,13 +294,13 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
         Missing(NaN) cells in a column one-hot encoded would give
         out a row of all-ZERO columns for the target column.
         """
-        #if self._target_columns == []:
+        # if self._target_columns == []:
         #    return CallResult(inputs, True, 1)
         if not self._fitted:
             raise ValueError('Encoder model not fitted. Use fit()')
 
         # Return if there is nothing to encode
-        if len(self._cat_columns)==0:
+        if len(self._cat_columns) == 0:
             return CallResult(inputs, True, 1)
 
         if isinstance(inputs, pd.DataFrame):
@@ -315,14 +315,14 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
 
         # core part: encode the unary columns
         data_enc = data.iloc[:, self._cat_col_index].apply(lambda col: pd.to_numeric(col, errors='coerce'))
-        data_else = data.drop(self._mapping.keys(),axis=1)
+        data_else = data.drop(self._mapping.keys(), axis=1)
         res = []
         for column_name in data_enc:
             col = data_enc[column_name]
             col.is_copy = False
             # only apply unary encoder when the amount of the numerical data is less than 12
             if self._requirement[column_name]:
-                chg_v = lambda x: min(self._mapping[col.name], key=lambda a:abs(a-x)) if x is not None else x
+                chg_v = lambda x: min(self._mapping[col.name], key=lambda a: abs(a - x)) if x is not None else x
                 # only encode the values which is not null
                 col[col.notnull()] = col[col.notnull()].apply(chg_v)
                 encoded = self.__encode_column(col)
@@ -370,7 +370,8 @@ class UnaryEncoder(UnsupervisedLearnerPrimitiveBase[Input, Output, Params, UEncH
 
         columns_to_produce, columns_not_to_produce = utils.get_columns_to_use(
             metadata=inputs_metadata,
-            use_columns=hyperparams['use_columns'], exclude_columns=hyperparams['exclude_columns'], can_use_column=can_produce_column)
+            use_columns=hyperparams['use_columns'], exclude_columns=hyperparams['exclude_columns'],
+            can_use_column=can_produce_column)
         return inputs.iloc[:, columns_to_produce], columns_to_produce
 
     @classmethod

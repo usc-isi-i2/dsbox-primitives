@@ -17,8 +17,6 @@ from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPr
 
 from . import config
 
-_logger = logging.getLogger(__name__)
-
 Input = container.DataFrame
 Output = container.DataFrame
 
@@ -101,6 +99,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         self._cat_columns: typing.List[str] = []
         # self._col_index = None
         self._empty_columns: typing.List[str] = []
+        self.logger = logging.getLogger(__name__)
 
     def set_training_data(self, *, inputs: Input) -> None:
         self._input_data = inputs
@@ -142,35 +141,36 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         numeric = [x for x in numeric if x in all_attributes]
 
         self._empty_columns = []
-        _logger.debug(f'Numeric columns: {numeric}')
+        self.logger.debug(f'Numeric columns: {numeric}')
         for element in numeric:
             if data.metadata.query((mbase.ALL_ELEMENTS, element)).get('structural_type', ()) == str:
                 if pd.isnull(pd.to_numeric(data.iloc[:, element])).sum() == data.shape[0]:
-                    _logger.debug(f'Empty numeric str column: {element}')
+                    self.logger.debug(f'Empty numeric str column: {element}')
                     self._empty_columns.append(element)
 
         # Remove columns with all empty values, structural numeric
         is_empty = pd.isnull(data).sum(axis=0) == data.shape[0]
         for i in all_attributes:
             if is_empty.iloc[i] and i not in self._empty_columns:
-                _logger.debug(f'Empty numeric str column: {element}')
+                self.logger.debug(f'Empty numeric str column: {element}')
                 self._empty_columns.append(i)
 
-        _logger.debug('Removing entirely empty columns: {}'.format(data.columns[self._empty_columns]))
+        self.logger.debug('Removing entirely empty columns: {}'.format(data.columns[self._empty_columns]))
 
         data = container.DataFrame.remove_columns(data, self._empty_columns)
 
-        categorical_attributes = DataMetadata.list_columns_with_semantic_types(data.metadata,
-                                                                        semantic_types=[
-                                                                            "https://metadata.datadrivendiscovery.org/types/OrdinalData",
-                                                                            "https://metadata.datadrivendiscovery.org/types/CategoricalData"])
+        categorical_attributes = DataMetadata. \
+            list_columns_with_semantic_types(data.metadata,
+                                             semantic_types=[
+                                                 "https://metadata.datadrivendiscovery.org/types/OrdinalData",
+                                                 "https://metadata.datadrivendiscovery.org/types/CategoricalData"])
         all_attributes = DataMetadata.list_columns_with_semantic_types(data.metadata, semantic_types=[
             "https://metadata.datadrivendiscovery.org/types/Attribute"])
 
         self._cat_col_index = list(set(all_attributes).intersection(categorical_attributes))
         self._cat_columns = data.columns[self._cat_col_index].tolist()
 
-        _logger.debug('Encoding columns: {}'.format(self._cat_columns))
+        self.logger.debug('Encoding columns: {}'.format(self._cat_columns))
 
         mapping = {}
         for column_name in self._cat_columns:
@@ -193,14 +193,14 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         self._input_data_copy = inputs.copy()
 
         # Remove columns with all empty values
-        _logger.debug('Removing entirely empty columns: {}'.format(self._input_data_copy.columns[self._empty_columns]))
+        self.logger.debug('Removing entirely empty columns: {}'.format(self._input_data_copy.columns[self._empty_columns]))
         self._input_data_copy = container.DataFrame.remove_columns(self._input_data_copy, self._empty_columns)
 
         # Return if there is nothing to encode
         if len(self._cat_columns) == 0:
             return CallResult(self._input_data_copy, True, 1)
 
-        _logger.debug('Encoding columns: {}'.format(self._cat_columns))
+        self.logger.debug('Encoding columns: {}'.format(self._cat_columns))
 
         data_encode = self._input_data_copy[list(self._mapping.keys())]
 
@@ -245,7 +245,7 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         try:
             self._input_data_copy = container.DataFrame.remove_columns(self._input_data_copy, drop_indices)
         except ValueError:
-            _logger.warning("[warn] All the attributes are categorical!")
+            self.logger.warning("[warn] All the attributes are categorical!")
             all_categorical = True
 
         # metadata for columns that are not one hot encoded
