@@ -73,8 +73,8 @@ class Encoder(UnsupervisedLearnerPrimitiveBase[Input, Output, EncParams, EncHype
         "version": config.VERSION,
         "name": "ISI DSBox Data Encoder",
         "description": "Encode data, such as one-hot encoding for categorical data",
-        "python_path": "d3m.primitives.data_preprocessing.encoder.DSBOX",
-        "primitive_family": "DATA_PREPROCESSING",
+        "python_path": "d3m.primitives.data_transformation.encoder.DSBOX",
+        "primitive_family": "DATA_TRANSFORMATION",
         "algorithm_types": ["ENCODE_ONE_HOT"],
         "source": {
             "name": config.D3M_PERFORMER_TEAM,
