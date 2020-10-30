@@ -41,16 +41,19 @@ while line:
 f.close()
 
 for p in PRIMITIVES:
+    print()
     print('Generating json for primitive ' + p)
+    
     primitive_name = PREFIX + p
-    outdir = os.path.join(arguments.dirname, 'v' + cleaner_config.D3M_API_VERSION,
+    outdir = os.path.join(arguments.dirname, 'primitives', #'v' + cleaner_config.D3M_API_VERSION,
                           cleaner_config.D3M_PERFORMER_TEAM, primitive_name,
                           cleaner_config.VERSION) # at here, cleaner_config and featurizer config are the same thing
     subprocess.run(['mkdir', '-p', outdir])
 
     json_filename = os.path.join(outdir, 'primitive.json')
     print('    at ' + json_filename)
-    command = ['python', '-m', 'd3m.index',
-               'describe', '-i', '4', primitive_name]
+    command = ['python3', '-m', 'd3m', 'primitive', 'describe', '-i','4', primitive_name]
+    #    'python3', '-m', 'd3m.index',
+    #           'describe', '-i', '4', primitive_name]
     with open(json_filename, 'w') as out:
         subprocess.run(command, stdout=out)
