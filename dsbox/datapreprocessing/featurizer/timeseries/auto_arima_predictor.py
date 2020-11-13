@@ -17,8 +17,8 @@ from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimit
 import d3m.metadata.base as mbase
 import common_primitives.utils as common_utils
 
-from . import config
-#import config
+#from . import config
+import config
 from .utils import TimeIndicator, ExtractTimeseries
 
 

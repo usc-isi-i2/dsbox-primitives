@@ -21,8 +21,8 @@ from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPr
 from d3m.primitive_interfaces.base import CallResult
 import pandas as pd
 
-#import config
-from . import config
+import config
+#from . import config
 
 Inputs = container.List#[container.DataFrame]  # this format is for old version of d3m
 Outputs = container.DataFrame

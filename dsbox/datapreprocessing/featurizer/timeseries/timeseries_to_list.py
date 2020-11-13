@@ -8,8 +8,8 @@ from d3m import container
 from d3m.primitive_interfaces.featurization import TransformerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 
-from . import config
-#import config
+#from . import config
+import config
 
 
 Inputs = container.DataFrame
