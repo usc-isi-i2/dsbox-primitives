@@ -109,7 +109,9 @@ class MultiTableFeaturization(FeaturizationTransformerPrimitiveBase[Inputs, Outp
                 resource_column_name = resource_id + "_" + data[resource_id].columns[column_index]
                 all_metadata[resource_column_name] = column_metadata
                 # find the main resource id
-                if 'https://metadata.datadrivendiscovery.org/types/Target' in column_metadata['semantic_types']:
+                if ('https://metadata.datadrivendiscovery.org/types/Target' in column_metadata['semantic_types']) \
+                   or ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in column_metadata['semantic_types']) \
+                   or ('https://metadata.datadrivendiscovery.org/types/TrueTarget' in column_metadata['semantic_types']):
                     main_resource_id = resource_id
                     self.logger.debug("Main table ID is: %s", main_resource_id)
                     if self._verbose:
