@@ -18,8 +18,8 @@ from d3m.metadata.hyperparams import UniformBool
 import d3m.metadata.base as mbase
 import common_primitives.utils as utils
 
-from . import config
-
+#from . import config
+import config
 
 
 _logger = logging.getLogger(__name__)

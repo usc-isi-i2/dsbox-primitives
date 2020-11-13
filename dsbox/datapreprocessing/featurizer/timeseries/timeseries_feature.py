@@ -20,7 +20,9 @@ from sklearn.random_projection import johnson_lindenstrauss_min_dim, GaussianRan
 from d3m.primitive_interfaces.unsupervised_learning import UnsupervisedLearnerPrimitiveBase
 from d3m.primitive_interfaces.base import CallResult
 import pandas as pd
-from . import config
+
+import config
+#from . import config
 
 Inputs = container.List#[container.DataFrame]  # this format is for old version of d3m
 Outputs = container.DataFrame

@@ -6,8 +6,8 @@ import importlib
 
 # from pyramid.arima import ARIMA, auto_arima
 
-from . import config
-
+#from . import config
+import config
 
 import sklearn
 import sklearn.preprocessing
