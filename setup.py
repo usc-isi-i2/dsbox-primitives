@@ -60,7 +60,7 @@ setup(name='dsbox-primitives',
               'feature_extraction.yolo.DSBOX = dsbox.datapreprocessing.featurizer.image:Yolo',
               'normalization.iqr_scaler.DSBOX = dsbox.datapreprocessing.cleaner:IQRScaler',
               'schema_discovery.profiler.DSBOX = dsbox.datapreprocessing.cleaner:Profiler',
-              'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
+              #'time_series_forecasting.arima.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:AutoArima',
               # 'time_series_forecasting.rnn_time_series.DSBOX = dsbox.datapreprocessing.featurizer.timeseries:RNNTimeSeries',
           ],
       })
